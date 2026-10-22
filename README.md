@@ -44,6 +44,7 @@ chargement de données, build Vite. Ce projet n'utilise que le routage et le SSR
 ```
 src/
   app.html                     # squelette HTML, SvelteKit injecte %sveltekit.head% et %sveltekit.body%
+  service-worker.ts            # hors ligne : application, données et vignettes en cache
   routes/
     +layout.svelte             # enveloppe toutes les pages (nav, thème)
     +page.svelte               # route "/"
@@ -57,8 +58,11 @@ src/
       filtering.ts             # filtrage et recherche texte, purs et testés
       imageInfo.ts             # extraction EXIF/IPTC/XMP côté client
       index.ts                 # point d'entrée : quel adapter est actif
-    ml/embedder.ts             # CLIP dans le navigateur (transformers.js), chargé à la demande
+    ml/embedder.ts             # client : envoie les images au worker, repli sur le fil principal
+    ml/embed.worker.ts         # Web Worker : modèle CLIP (transformers.js) et calcul des embeddings
     ml/status.svelte.ts        # progression du chargement du modèle
+    stores/query.svelte.ts     # dernière photo de référence (pour l'export du dossier)
+    utils/imgFallback.ts       # repli vignette si l'image grand format ne charge pas
     i18n/messages.ts           # textes d'interface par langue (fr, en)
     i18n/index.svelte.ts       # store de langue : i18n.locale, i18n.t(), i18n.l()
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
@@ -367,9 +371,16 @@ et le Proche-Orient. `npm run data` lance `scripts/build-data.mjs`, qui :
    `static/data/items.json`.
 
 Côté navigateur, `localAdapter.ts` charge ce fichier. Quand une photo est déposée,
-`ml/embedder.ts` charge le **même modèle** avec transformers.js (ONNX Runtime Web, ~90 Mo
-quantifiés, téléchargés une fois puis en cache), calcule le vecteur de la photo et classe les objets
-par similarité cosinus. Les seuils « forte / moyenne / faible » sont dans `schema.similarity`.
+`ml/embedder.ts` confie le travail à un **Web Worker** (`ml/embed.worker.ts`) qui charge le **même
+modèle** avec transformers.js (ONNX Runtime Web, ~90 Mo quantifiés, téléchargés une fois puis en
+cache), calcule le vecteur de la photo et renvoie le résultat ; l'interface ne gèle jamais, même
+pendant le chargement. Le modèle est préchargé dès qu'une image est choisie, avant même que la
+recherche parte. Les objets sont classés par similarité cosinus ; les seuils « forte / moyenne /
+faible » sont dans `schema.similarity`.
+
+**Recadrage.** Tracer un cadre sur l'aperçu limite la recherche à cette zone : l'objet est rarement
+seul sur une photo de terrain. L'original reste intact pour les métadonnées et l'archivage ; seule
+la zone découpée (puis réduite) part à la recherche. Le classement change immédiatement.
 
 Ce que ça change :
 
@@ -425,6 +436,12 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 
 | Détail | Fichier | Mécanisme |
 |---|---|---|
+| Recadrer la photo avant recherche | `ImageUpload.svelte` | cadre tracé au pointeur sur l'aperçu, découpe dans un canvas, l'original est conservé |
+| Position GPS exclue par défaut | `+page.svelte` | `includeGps = false` : la position ne part que si l'agent le demande |
+| Délai sur la saisie (250 ms) | `+page.svelte` | `$effect` avec `setTimeout` et nettoyage : `text` (saisie) alimente `query` (recherche) |
+| Export du dossier et impression | `compare/+page.svelte` | JSON avec photo de référence (empreinte, pas l'image), candidats et scores ; feuille de style `@media print` pour un PDF propre |
+| Piège de focus dans le volet | `ItemDrawer.svelte` | Tab et Maj+Tab restent dans le dialogue, le focus revient à l'élément d'origine à la fermeture |
+| Hors ligne | `service-worker.ts` | application, données et vignettes en cache à l'installation ; le modèle est mis en cache par transformers.js ; l'image grand format retombe sur la vignette |
 | Prendre une photo sur mobile | `ImageUpload.svelte` | second `<input type="file" capture="environment">`, bouton visible seulement sur écran tactile |
 | Image réduite avant envoi | `utils/resizeImage.ts`, `schema.upload` | politique configurable : `maxPx` (1600), `skipBelowBytes` (2 Mo, en dessous rien n'est touché), `quality` ; l'original reste côté client pour l'aperçu, les métadonnées et `adapter.archiveImage` |
 | Déposer une image **n'importe où** sur la page | `+page.svelte` | `<svelte:window ondragenter ondrop …>` + compteur de profondeur pour l'overlay |
@@ -495,10 +512,14 @@ plateforme : le code applicatif ne change pas.
 
 ## 14. Tests
 
-`npm test` lance Vitest sur les modules purs : sérialisation d'URL, libellés, filtrage et recherche
-texte, similarité. Le workflow les exécute avant chaque déploiement. Les parcours complets sont
-vérifiés en navigateur headless pendant le développement ; les transformer en tests Playwright
-est l'étape suivante.
+Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
+
+- `npm test` : Vitest sur les modules purs (sérialisation d'URL, libellés, filtrage et recherche
+  texte, similarité).
+- `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
+  (`e2e/`). Cinq parcours : filtres et URL partageable, recherche texte avec délai, attributs
+  cochables, volet puis comparaison, bascule de langue. La recherche par image n'est pas testée en
+  CI pour éviter de télécharger le modèle à chaque exécution.
 
 ---
 

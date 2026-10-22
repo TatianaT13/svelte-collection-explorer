@@ -7,11 +7,14 @@
   import { fieldGroups } from '$lib/config/schema';
   import { formatValue, fieldLabel } from '$lib/utils/labels';
   import { i18n } from '$lib/i18n/index.svelte';
+  import { fallbackToThumb } from '$lib/utils/imgFallback';
   import { base } from '$app/paths';
   import { flagEmoji } from '$lib/utils/flag';
   import MetadataValue from '$lib/components/MetadataValue.svelte';
   import ScoreRing from '$lib/components/ScoreRing.svelte';
   import ImageCompare from '$lib/components/ImageCompare.svelte';
+  import { lastQuery } from '$lib/stores/query.svelte';
+  import { schema } from '$lib/config/schema';
 
   const items = $derived(compare.items);
   let onlyDiff = $state(false);
@@ -30,6 +33,30 @@
   );
 
   const diffCount = $derived(fieldGroups.flatMap((g) => g.fields).filter((f) => differs(f.key)).length);
+
+  /** Dossier : photo de référence (sans l'image), candidats, métadonnées et scores. */
+  function exportCase() {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      collection: i18n.l(schema.name),
+      locale: i18n.locale,
+      referencePhoto: lastQuery.record,
+      candidates: items.map((it) => ({
+        id: it.id,
+        title: it.title,
+        score: it.score,
+        imageUrl: it.imageUrl,
+        metadata: it.metadata
+      }))
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dossier-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   async function copyTable() {
     const rows: string[][] = [[i18n.t('compare.field'), ...items.map((it) => it.title)]];
@@ -70,6 +97,8 @@
       <button type="button" class="btn" onclick={copyTable} disabled={!items.length}>
         {copied ? i18n.t('compare.copied') : i18n.t('compare.copy')}
       </button>
+      <button type="button" class="btn" onclick={exportCase}>{i18n.t('compare.export')}</button>
+      <button type="button" class="btn" onclick={() => window.print()}>{i18n.t('compare.print')}</button>
       <button type="button" class="btn ghost" onclick={() => compare.clear()}>{i18n.t('compare.clear')}</button>
     </div>
   {/if}
@@ -85,6 +114,13 @@
   {#if items.length === 1}
     <p class="hint">{i18n.t('compare.oneHint')} <a href="{base}/">{i18n.t('compare.back')}</a></p>
   {/if}
+  {#if lastQuery.record}
+    <p class="query">
+      <strong>{i18n.t('compare.query')}</strong> : {lastQuery.record.fileName}
+      {#if lastQuery.record.cropped}({i18n.t('compare.queryCropped')}){/if}
+      {#if lastQuery.record.sha256}<code>SHA-256 {lastQuery.record.sha256.slice(0, 16)}…</code>{/if}
+    </p>
+  {/if}
   {#if items.length >= 2}
     <ImageCompare {items} />
   {/if}
@@ -95,7 +131,7 @@
           <th class="label"></th>
           {#each items as item (item.id)}
             <th>
-              <img src={item.imageUrl} alt={item.title} />
+              <img src={item.imageUrl} alt={item.title} onerror={(e) => fallbackToThumb(e, item.thumbnailUrl)} />
               <div class="title">
                 {#if item.metadata.origin}<span aria-hidden="true">{flagEmoji(String(item.metadata.origin))}</span>{/if}
                 {item.title}
@@ -202,6 +238,50 @@
     font-size: 0.88rem;
     color: var(--muted);
     margin: 0 0 1rem;
+  }
+  .query {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .query code {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+  }
+  @media print {
+    .actions,
+    .hint,
+    :global(nav),
+    :global(.tray),
+    :global(.vc .tools),
+    :global(.vc .hint),
+    .link {
+      display: none !important;
+    }
+    :global(body) {
+      background: #fff;
+      color: #000;
+    }
+    .scroller {
+      border: none;
+      overflow: visible;
+    }
+    table {
+      min-width: 0;
+    }
+    thead th {
+      position: static;
+    }
+    tr.diff td {
+      background: #eef2ff;
+    }
+    thead img {
+      max-width: 160px;
+      height: 110px;
+    }
+    :global(.vc .panes) {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
   .scroller {
     overflow-x: auto;

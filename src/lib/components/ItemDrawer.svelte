@@ -7,6 +7,7 @@
   import type { ActiveFilters, CollectionItem } from '$lib/api/types';
   import AttributeList from './AttributeList.svelte';
   import { i18n } from '$lib/i18n/index.svelte';
+  import { fallbackToThumb } from '$lib/utils/imgFallback';
   import ScoreRing from './ScoreRing.svelte';
 
   let {
@@ -22,14 +23,38 @@
   } = $props();
 
   let closeBtn = $state<HTMLButtonElement | null>(null);
+  let drawerEl = $state<HTMLDivElement | null>(null);
+
+  const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+  /** Garde Tab / Maj+Tab à l'intérieur du dialogue. */
+  function trapTab(e: KeyboardEvent) {
+    if (e.key !== 'Tab' || !drawerEl) return;
+    const nodes = [...drawerEl.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((n) => n.offsetParent !== null);
+    if (nodes.length === 0) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !drawerEl.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   $effect(() => {
     if (!item) return;
+    const opener = document.activeElement as HTMLElement | null;
     closeBtn?.focus();
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', trapTab);
     return () => {
       document.body.style.overflow = prev;
+      document.removeEventListener('keydown', trapTab);
+      opener?.focus?.();
     };
   });
 
@@ -39,7 +64,7 @@
 
 {#if item}
   <div class="backdrop" transition:fade={{ duration: 150 }} onclick={onclose} aria-hidden="true"></div>
-  <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" transition:fly={{ x: 40, duration: 200 }}>
+  <div bind:this={drawerEl} class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" transition:fly={{ x: 40, duration: 200 }}>
     <header>
       <div>
         <h2 id="drawer-title">{item.title}</h2>
@@ -53,7 +78,7 @@
 
     <div class="scroll">
       <figure>
-        <img src={item.imageUrl} alt={item.title} />
+        <img src={item.imageUrl} alt={item.title} onerror={(e) => fallbackToThumb(e, item?.thumbnailUrl)} />
         {#if item.score !== undefined}
           <figcaption><ScoreRing score={item.score} size={40} /> <span>{i18n.t('drawer.similarity')}</span></figcaption>
         {/if}

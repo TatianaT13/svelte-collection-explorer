@@ -6,6 +6,7 @@
    */
   import type { CollectionItem } from '$lib/api/types';
   import { i18n } from '$lib/i18n/index.svelte';
+  import { fallbackToThumb } from '$lib/utils/imgFallback';
 
   let { items }: { items: CollectionItem[] } = $props();
 
@@ -94,8 +95,8 @@
   {#if overlay && canOverlay}
     <div class="panes one">
       <div class="pane" onwheel={onWheel} onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} onpointercancel={onUp} ondblclick={onDblClick} class:grab={scale > 1} role="img" aria-label="{items[0].title} / {items[1].title}">
-        <img src={items[0].imageUrl} alt="" style="transform: {transform}" draggable="false" />
-        <img src={items[1].imageUrl} alt="" style="transform: {transform}; opacity: {opacity}" draggable="false" />
+        <img src={items[0].imageUrl} alt="" style="transform: {transform}" draggable="false" onerror={(e) => fallbackToThumb(e, items[0].thumbnailUrl)} />
+        <img src={items[1].imageUrl} alt="" style="transform: {transform}; opacity: {opacity}" draggable="false" onerror={(e) => fallbackToThumb(e, items[1].thumbnailUrl)} />
         <span class="cap">{items[0].title} <em>{Math.round((1 - opacity) * 100)} %</em> · {items[1].title} <em>{Math.round(opacity * 100)} %</em></span>
       </div>
     </div>
@@ -103,7 +104,7 @@
     <div class="panes" style="--n: {items.length}">
       {#each items as item (item.id)}
         <div class="pane" onwheel={onWheel} onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} onpointercancel={onUp} ondblclick={onDblClick} class:grab={scale > 1} role="img" aria-label={item.title}>
-          <img src={item.imageUrl} alt="" style="transform: {transform}" draggable="false" />
+          <img src={item.imageUrl} alt="" style="transform: {transform}" draggable="false" onerror={(e) => fallbackToThumb(e, item.thumbnailUrl)} />
           <span class="cap">{item.title}</span>
         </div>
       {/each}

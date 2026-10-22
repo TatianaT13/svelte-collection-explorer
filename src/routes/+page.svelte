@@ -31,17 +31,20 @@
   import ImageInfoPanel from '$lib/components/ImageInfoPanel.svelte';
   import ItemDrawer from '$lib/components/ItemDrawer.svelte';
   import ModelStatus from '$lib/components/ModelStatus.svelte';
+  import { lastQuery } from '$lib/stores/query.svelte';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
   // L'état part vide, puis est lu depuis l'URL au montage ; les effets attendent `ready`.
   let ready = $state(false);
-  let text = $state('');
+  let text = $state(''); // saisie
+  let query = $state(''); // saisie après délai, utilisée pour chercher
   let filters = $state<ActiveFilters>({});
   let pageNo = $state(1);
-  let image = $state<File | null>(null); // original : aperçu + métadonnées
-  let imageToSend = $state<ResizeResult | null>(null); // version réduite envoyée au backend
+  let image = $state<File | null>(null); // original : aperçu + métadonnées + archivage
+  let crop = $state<File | null>(null); // zone cadrée par l'utilisateur, si demandée
+  let imageToSend = $state<ResizeResult | null>(null); // version réduite envoyée à la recherche
   let imageInfo = $state<ImageInfo | null>(null);
-  let includeGps = $state(true);
+  let includeGps = $state(false); // vie privée par défaut : la position ne part que si on le demande
 
   let facets = $state<FacetValues>({});
   let result = $state<SearchResult | null>(null);
@@ -66,7 +69,7 @@
     error = null;
     try {
       const info = imageInfo ? (includeGps ? imageInfo : withoutGps(imageInfo)) : undefined;
-      const res = await api.search({ text, image: imageToSend?.file, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
+      const res = await api.search({ text: query, image: imageToSend?.file, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
       if (id === requestId) result = res;
     } catch (e) {
       if (id === requestId) error = e instanceof Error ? e.message : i18n.t('error.unknown');
@@ -77,14 +80,28 @@
 
   // Relance la recherche dès qu'un critère change (ou la langue : libellés du mock).
   $effect(() => {
-    void text; void imageToSend; void imageInfo; void includeGps; void filters; void pageNo; void i18n.locale;
+    void query; void imageToSend; void imageInfo; void includeGps; void filters; void pageNo; void i18n.locale;
     if (!ready) return;
     runSearch();
   });
 
-  // Réduit l'image avant envoi (photo de téléphone → ~200 Ko).
+  // Délai sur la saisie : on ne cherche qu'après 250 ms sans frappe.
   $effect(() => {
-    const f = image;
+    const v = text;
+    if (v === query) return;
+    const id = setTimeout(() => (query = v), 250);
+    return () => clearTimeout(id);
+  });
+
+  // Mémorise la recherche par image pour l'export du dossier.
+  $effect(() => {
+    if (imageInfo) lastQuery.set(imageInfo, !!crop);
+    else lastQuery.clear();
+  });
+
+  // Réduit l'image (ou la zone cadrée) avant envoi.
+  $effect(() => {
+    const f = crop ?? image;
     if (!f) {
       imageToSend = null;
       return;
@@ -101,17 +118,18 @@
   // Reflète l'état dans l'URL sans recharger ni empiler l'historique.
   $effect(() => {
     if (!ready) return;
-    const url = writeSearchState(new URL(location.href), { text, filters, page: pageNo });
+    const url = writeSearchState(new URL(location.href), { text: query, filters, page: pageNo });
     if (url.href !== location.href) replaceState(url, {});
   });
 
-  // Lit les métadonnées dès qu'une image est choisie.
+  // Lit les métadonnées dès qu'une image est choisie, et lance le chargement du modèle.
   $effect(() => {
     const f = image;
     if (!f) {
       imageInfo = null;
       return;
     }
+    import('$lib/ml/embedder').then(({ preloadModel }) => preloadModel());
     let cancelled = false;
     extractImageInfo(f).then((info) => {
       if (!cancelled) imageInfo = info;
@@ -124,6 +142,7 @@
   onMount(async () => {
     const initial = readSearchState(page.url.searchParams);
     text = initial.text;
+    query = initial.text;
     filters = initial.filters;
     pageNo = initial.page;
     ready = true;
@@ -136,11 +155,15 @@
 
   function setImage(f: File | null) {
     image = f;
+    crop = null;
     resetPage();
   }
 
   function removeFilter(key: string, value?: string) {
-    if (key === '__text') text = '';
+    if (key === '__text') {
+      text = '';
+      query = '';
+    }
     else if (value !== undefined && Array.isArray(filters[key])) {
       filters = { ...filters, [key]: (filters[key] as string[]).filter((v) => v !== value) };
     } else filters = { ...filters, [key]: '' };
@@ -162,6 +185,7 @@
 
   function clearAll() {
     text = '';
+    query = '';
     filters = {};
     resetPage();
   }
@@ -185,6 +209,7 @@
       else if (filtersOpen) filtersOpen = false;
       else if (document.activeElement === searchEl && text) {
         text = '';
+        query = '';
         resetPage();
       }
     }
@@ -231,7 +256,7 @@
       <span>{i18n.t('filters.panel')}</span>
       <button type="button" class="close" aria-label={i18n.t('filters.close')} onclick={() => (filtersOpen = false)}>×</button>
     </div>
-    <ImageUpload bind:file={image} onchange={resetPage} />
+    <ImageUpload bind:file={image} onchange={() => { crop = null; resetPage(); }} oncrop={(f) => { crop = f; resetPage(); }} />
     {#if image}
       <ModelStatus />
     {/if}
@@ -269,7 +294,7 @@
 
     <div class="progress" class:on={loading} aria-hidden="true"></div>
 
-    <FilterChips {filters} {text} onremove={removeFilter} onclear={clearAll} />
+    <FilterChips {filters} text={query} onremove={removeFilter} onclear={clearAll} />
 
     <div class="results-head">
       <span class="status" aria-live="polite">
