@@ -42,10 +42,13 @@ chargement de données, build Vite. Ce projet n'utilise que le routage et le SSR
 ## 2. Structure du projet
 
 ```
+scripts/build-data.mjs         # constitution du jeu de données (API du Met, vignettes, embeddings)
+e2e/explore.spec.ts            # parcours Playwright sur le build statique
 src/
   app.html                     # squelette HTML, SvelteKit injecte %sveltekit.head% et %sveltekit.body%
   service-worker.ts            # hors ligne : application, données et vignettes en cache
   routes/
+    +layout.ts                 # prerender = true, trailingSlash = 'always' (build statique)
     +layout.svelte             # enveloppe toutes les pages (nav, thème)
     +page.svelte               # route "/"
     compare/+page.svelte       # route "/compare"
@@ -69,6 +72,7 @@ src/
     config/countries.ts        # codes ISO 3166 + noms localisés via Intl.DisplayNames
     config/vocabularies.ts     # vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets)
     components/Logo.svelte     # marque : écrin hexagonal en trois chevrons, cœur turquoise
+    components/ModelStatus.svelte # progression du modèle de reconnaissance
     components/*.svelte        # composants réutilisables
     stores/compare.svelte.ts   # sélection pour comparaison (persistée en session)
     stores/theme.svelte.ts     # thème clair / sombre / système (localStorage)
