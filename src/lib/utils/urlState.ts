@@ -12,7 +12,7 @@ export interface SearchState {
   page: number;
 }
 
-const isMulti = (kind: string) => kind === 'country' || kind === 'vocab' || kind === 'select';
+const isMulti = (kind: string) => kind === 'country' || kind === 'vocab' || kind === 'select' || kind === 'place';
 
 export function readSearchState(params: URLSearchParams): SearchState {
   const filters: ActiveFilters = {};

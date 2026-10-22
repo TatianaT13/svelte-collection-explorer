@@ -1,4 +1,4 @@
-import type { CollectionItem, Insights, Share } from './types';
+import type { CollectionItem, GeoBucket, Insights, Share } from './types';
 
 /**
  * Agrège les meilleurs résultats d'une recherche par image en une lecture simple :
@@ -41,6 +41,7 @@ export function computeInsights(ranked: CollectionItem[], topK = 12): Insights {
   return {
     topK: top.length,
     origins: shares(top, 'origin', weights).slice(0, 3),
+    places: shares(top, 'place', weights).slice(0, 6),
     categories: shares(top, 'category', weights).slice(0, 3),
     materials: shares(top, 'material', weights).slice(0, 3),
     techniques: shares(top, 'technique', weights).slice(0, 3),
@@ -54,4 +55,19 @@ export function computeInsights(ranked: CollectionItem[], topK = 12): Insights {
       origin: it.metadata.origin ? String(it.metadata.origin) : undefined
     }))
   };
+}
+
+/** Regroupe des résultats par lieu (pour la carte). */
+export function geoBuckets(items: CollectionItem[]): GeoBucket[] {
+  const acc = new Map<string, GeoBucket>();
+  for (const it of items) {
+    const place = it.metadata.place ? String(it.metadata.place) : '';
+    if (!place) continue;
+    const b = acc.get(place) ?? { place, count: 0, ids: [] };
+    b.count++;
+    b.ids.push(it.id);
+    if (typeof it.score === 'number') b.bestScore = Math.max(b.bestScore ?? 0, it.score);
+    acc.set(place, b);
+  }
+  return [...acc.values()].sort((a, b) => (b.bestScore ?? 0) - (a.bestScore ?? 0) || b.count - a.count);
 }

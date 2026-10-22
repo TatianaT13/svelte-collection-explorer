@@ -24,7 +24,8 @@
   let query = $state('');
   let searchEl = $state<HTMLInputElement | null>(null);
 
-  const nameOf = (code: string) => options.find((o) => o.code === code)?.name ?? code;
+  // Les options hiérarchiques sont indentées par des espaces insécables : on les retire dans les puces.
+  const nameOf = (code: string) => (options.find((o) => o.code === code)?.name ?? code).replace(/^[\u00a0\s]+/, '');
 
   const visible = $derived.by(() => {
     const q = query.trim().toLowerCase();

@@ -3,7 +3,8 @@ import type { ArchiveReceipt, CollectionAdapter } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { matchesFilters, matchesText, paginate } from './filtering';
-import { computeInsights } from './insights';
+import { computeInsights, geoBuckets } from './insights';
+import { places } from '$lib/stores/places.svelte';
 import { schema } from '$lib/config/schema';
 import { i18n } from '$lib/i18n/index.svelte';
 
@@ -24,12 +25,24 @@ interface Dataset {
 
 let dataset: Promise<Dataset> | null = null;
 
+async function loadPlaces() {
+  try {
+    const r = await fetch(`${base}/data/places.json`);
+    if (r.ok) places.set((await r.json()).places ?? {});
+  } catch {
+    /* gazetier absent : les lieux s'affichent par identifiant */
+  }
+}
+
 function loadDataset(): Promise<Dataset> {
-  dataset ??= fetch(`${base}/data/items.json`)
-    .then((r) => {
+  dataset ??= Promise.all([
+    fetch(`${base}/data/items.json`).then((r) => {
       if (!r.ok) throw new Error(`items.json ${r.status}`);
       return r.json() as Promise<Dataset>;
-    })
+    }),
+    loadPlaces()
+  ])
+    .then(([d]) => d)
     .then((d) => ({
       ...d,
       items: d.items.map((it) => ({ ...it, thumbnailUrl: it.thumbnailUrl ? `${base}/${it.thumbnailUrl}` : it.thumbnailUrl }))
@@ -90,7 +103,14 @@ export const localAdapter: CollectionAdapter = {
       insights = computeInsights(results, schema.similarity.topK);
     }
 
-    return { items: paginate(results, query.page, query.pageSize), total: results.length, page: query.page, pageSize: query.pageSize, insights };
+    return {
+      items: paginate(results, query.page, query.pageSize),
+      total: results.length,
+      page: query.page,
+      pageSize: query.pageSize,
+      insights,
+      geo: geoBuckets(results)
+    };
   },
 
   async getItem(id: string): Promise<CollectionItem | null> {

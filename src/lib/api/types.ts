@@ -61,11 +61,22 @@ export interface Insights {
   topK: number;
   origins: Share[];
   categories: Share[];
+  /** Lieux précis (identifiants du gazetier), pour détailler la provenance sous le pays. */
+  places: Share[];
   materials: Share[];
   techniques: Share[];
   subjects: Share[];
   periods: Share[];
   references: Reference[];
+}
+
+/** Regroupement géographique de l'ensemble des résultats (pas seulement la page). */
+export interface GeoBucket {
+  place: string;
+  count: number;
+  /** Meilleur score du groupe, si recherche par image. */
+  bestScore?: number;
+  ids: string[];
 }
 
 export interface SearchResult {
@@ -75,6 +86,8 @@ export interface SearchResult {
   pageSize: number;
   /** Présent seulement pour une recherche par image. */
   insights?: Insights;
+  /** Résultats regroupés par lieu, pour la carte. */
+  geo?: GeoBucket[];
 }
 
 /** Valeurs possibles d'un champ à facettes (pour alimenter les listes déroulantes). */

@@ -75,6 +75,8 @@ src/
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
     config/countries.ts        # codes ISO 3166 + noms localisés via Intl.DisplayNames
     config/risk.ts             # Listes rouges ICOM : origine × catégorie → signal de risque
+    stores/places.svelte.ts    # gazetier Wikidata : libellés, hiérarchie, coordonnées, options de filtre
+    components/MapView.svelte  # carte des résultats (Leaflet), lieu de la photo à part
     config/vocabularies.ts     # vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets)
     components/Logo.svelte     # marque : écrin hexagonal en trois chevrons, cœur turquoise
     components/ModelStatus.svelte # progression du modèle de reconnaissance
@@ -299,6 +301,7 @@ Chaque champ déclare son `kind`, et les composants s'adaptent :
 |------------|-------------------------------|----------------------------------|-------------------------------------|
 | `vocab`    | code d'un vocabulaire (`gold`)| multi-sélection, liste complète  | `termLabel()` dans la locale        |
 | `country`  | code ISO 3166-1 (`UA`)        | multi-sélection, les 249 pays    | `Intl.DisplayNames` dans la locale  |
+| `place`    | identifiant Wikidata (`Q1899`)| multi-sélection hiérarchique, un pays inclut ses lieux | gazetier : « Kyiv, Ukraine » |
 | `select`   | chaîne libre                  | multi-sélection, facettes backend| la valeur telle quelle              |
 | `text`     | chaîne libre                  | champ « contient »               | la valeur telle quelle              |
 | `number`   | nombre                        | champ numérique (minimum)        | valeur + `unit`                     |
@@ -407,6 +410,20 @@ sans rapport avec la collection ne doit jamais produire une alerte.
 L'agent enregistre ensuite une **décision** (retenir, laisser passer, demander un avis), reprise
 dans l'export du dossier avec le résumé de la lecture. Le calcul est dans l'adapter : un backend
 le ferait côté serveur avec le même contrat.
+
+**Géographie plus fine que le pays.** Le script de données lit la ville, le site de fouille ou la
+région fournis par le musée, les résout dans **Wikidata** (recherche, puis chaîne administrative
+P131 jusqu'au pays, coordonnées P625) et écrit un gazetier `static/data/places.json`. Chaque objet
+porte l'identifiant du lieu le plus précis connu, ou celui du pays. Côté front :
+
+- le filtre **Lieu** est hiérarchique : cocher un pays inclut ses villes et régions ;
+- la provenance probable détaille sous chaque pays les lieux dominants (« Ukraine 72 %, dont Kyiv 50 % ») ;
+- une **carte** regroupe l'ensemble des résultats par lieu, cercle pointillé pour un pays seulement,
+  plein pour un lieu précis, teinte selon la meilleure similarité ; un clic filtre sur ce lieu.
+
+La **position GPS de la photo** n'entre jamais dans la provenance : elle dit où la photo a été prise,
+pas d'où vient l'objet. Si l'agent a autorisé son envoi, elle apparaît comme un marqueur distinct,
+légendé « lieu de la photo ».
 
 **Recadrage.** Tracer un cadre sur l'aperçu limite la recherche à cette zone : l'objet est rarement
 seul sur une photo de terrain. L'original reste intact pour les métadonnées et l'archivage ; seule

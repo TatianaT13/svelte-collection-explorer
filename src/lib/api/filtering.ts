@@ -2,6 +2,7 @@ import type { CollectionItem, SearchQuery } from './types';
 import { schema } from '$lib/config/schema';
 import { countryName } from '$lib/config/countries';
 import { termLabel } from '$lib/config/vocabularies';
+import { places } from '$lib/stores/places.svelte';
 
 /**
  * Filtrage et recherche texte côté client, partagés par les adapters locaux.
@@ -22,6 +23,11 @@ export function matchesFilters(item: CollectionItem, filters: SearchQuery['filte
       return actualList.join(' ').toLowerCase().includes(wantedList[0].toLowerCase());
     }
     if (field?.kind === 'number') return Number(actual) >= Number(wanted);
+    if (field?.kind === 'place') {
+      // Un filtre sur une région ou un pays inclut les lieux qu'il contient.
+      const own = new Set(actualList.flatMap((a) => places.selfAndAncestors(a)));
+      return wantedList.some((w) => own.has(w));
+    }
     return wantedList.some((w) => actualList.some((a) => a.toLowerCase() === w.toLowerCase()));
   });
 }
@@ -37,6 +43,7 @@ export function searchableText(item: CollectionItem, locale: string): string {
       const s = String(x);
       parts.push(s);
       if (f.kind === 'country') parts.push(countryName(s, locale));
+      if (f.kind === 'place') parts.push(places.fullLabel(s, locale));
       if (f.kind === 'vocab' && f.vocabulary) parts.push(termLabel(f.vocabulary, s, locale));
     }
   }

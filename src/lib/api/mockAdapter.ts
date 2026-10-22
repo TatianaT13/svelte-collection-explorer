@@ -6,7 +6,7 @@ import { schema } from '$lib/config/schema';
 import { termLabel, vocabCodes } from '$lib/config/vocabularies';
 import { i18n } from '$lib/i18n/index.svelte';
 import { matchesFilters, matchesText, paginate } from './filtering';
-import { computeInsights } from './insights';
+import { computeInsights, geoBuckets } from './insights';
 
 /**
  * Backend simulé : données en mémoire, latence artificielle.
@@ -118,7 +118,8 @@ export const mockAdapter: CollectionAdapter = {
       total: results.length,
       page: query.page,
       pageSize: query.pageSize,
-      insights
+      insights,
+      geo: geoBuckets(results)
     };
   },
 

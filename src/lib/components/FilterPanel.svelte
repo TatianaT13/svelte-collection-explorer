@@ -10,6 +10,7 @@
   import { countryOptions } from '$lib/config/countries';
   import { vocabOptions, type TermOption } from '$lib/config/vocabularies';
   import { i18n } from '$lib/i18n/index.svelte';
+  import { places } from '$lib/stores/places.svelte';
   import type { ActiveFilters, FacetValues, MetadataValue } from '$lib/api/types';
   import MultiSelect from './MultiSelect.svelte';
 
@@ -24,6 +25,10 @@
 
   function optionsFor(field: FieldSchema): TermOption[] {
     if (field.kind === 'country') return countryOptions(i18n.locale);
+    if (field.kind === 'place') {
+      void places.version;
+      return places.options(i18n.locale);
+    }
     if (field.kind === 'vocab' && field.vocabulary) return vocabOptions(field.vocabulary, i18n.locale);
     return (facets[field.key] ?? []).map((v) => ({ code: v, name: v }));
   }
@@ -54,7 +59,7 @@
   </header>
 
   {#each filterFields as field (field.key)}
-    {#if field.kind === 'country' || field.kind === 'vocab' || field.kind === 'select'}
+    {#if field.kind === 'country' || field.kind === 'vocab' || field.kind === 'select' || field.kind === 'place'}
       <MultiSelect label={i18n.l(field.label)} options={optionsFor(field)} selected={asArray(filters[field.key])} onchange={(v) => update(field.key, v)} />
     {:else}
       <label>

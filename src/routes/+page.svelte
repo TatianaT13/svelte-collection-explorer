@@ -32,6 +32,7 @@
   import ItemDrawer from '$lib/components/ItemDrawer.svelte';
   import ModelStatus from '$lib/components/ModelStatus.svelte';
   import InsightsPanel from '$lib/components/InsightsPanel.svelte';
+  import MapView from '$lib/components/MapView.svelte';
   import { lastQuery } from '$lib/stores/query.svelte';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
@@ -54,6 +55,8 @@
 
   let selected = $state<CollectionItem | null>(null);
   let filtersOpen = $state(false);
+  let showMap = $state(false);
+  const photoGps = $derived(includeGps && imageInfo?.gps ? imageInfo.gps : null);
   let dragging = $state(false);
   let dragDepth = 0;
   let searchEl = $state<HTMLInputElement | null>(null);
@@ -183,7 +186,7 @@
   function toggleFilterValue(key: string, value: string) {
     const field = schema.fields.find((f) => f.key === key);
     const current = filters[key];
-    if (field && (field.kind === 'country' || field.kind === 'vocab' || field.kind === 'select')) {
+    if (field && (field.kind === 'country' || field.kind === 'vocab' || field.kind === 'select' || field.kind === 'place')) {
       const list = Array.isArray(current) ? current : current ? [String(current)] : [];
       filters = { ...filters, [key]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] };
     } else {
@@ -311,6 +314,12 @@
     <FilterChips {filters} text={query} onremove={removeFilter} onclear={clearAll} />
 
     <div class="results-head">
+      {#if result?.geo?.length}
+        <button type="button" class="btn map-toggle" aria-pressed={showMap} onclick={() => (showMap = !showMap)}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>
+          {showMap ? i18n.t('map.hide') : i18n.t('map.show')}
+        </button>
+      {/if}
       <span class="status" aria-live="polite">
         {#if result}
           <strong>{result.total}</strong> {i18n.t('results.count', { n: result.total }).replace(/^\d+\s*/, '')}
@@ -336,6 +345,11 @@
         {/if}
       </div>
     {:else}
+      {#if showMap && result.geo?.length}
+        <div class="map-wrap">
+          <MapView buckets={result.geo} photo={photoGps} onselect={(code) => toggleFilterValue('place', code)} />
+        </div>
+      {/if}
       {#if result.insights && result.insights.topK > 0}
         <InsightsPanel insights={result.insights} onopen={openById} onfilterOrigin={(code) => toggleFilterValue('origin', code)} />
       {/if}
@@ -483,9 +497,25 @@
   .results-head {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
+    gap: 0.8rem;
     margin-bottom: 0.7rem;
     min-height: 1.2em;
+  }
+  .map-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    order: 2;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.82rem;
+  }
+  .map-toggle[aria-pressed='true'] {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .map-wrap {
+    margin-bottom: 1rem;
   }
   .status {
     font-size: 0.85rem;

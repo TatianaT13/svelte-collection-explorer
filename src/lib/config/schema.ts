@@ -17,6 +17,7 @@ export type FieldKind =
   | 'boolean'
   | 'select' // options fournies par le backend (facettes dynamiques)
   | 'country' // code ISO 3166-1, liste complète, nom via Intl.DisplayNames
+  | 'place' // identifiant Wikidata d'un lieu, hiérarchie et coordonnées via le gazetier
   | 'vocab'; // code d'un vocabulaire contrôlé (voir vocabularies.ts)
 
 export interface FieldGroup {
@@ -97,6 +98,7 @@ export const schema: CollectionSchema = {
   fields: [
     { key: 'category', label: { fr: 'Type d’objet', en: 'Object type' }, kind: 'vocab', vocabulary: 'category', showOnCard: true, filterable: true, group: G.identification },
     { key: 'origin', label: { fr: 'Origine', en: 'Origin' }, kind: 'country', showOnCard: true, filterable: true, group: G.identification },
+    { key: 'place', label: { fr: 'Lieu', en: 'Place' }, kind: 'place', filterable: true, group: G.identification },
     { key: 'period', label: { fr: 'Période', en: 'Period' }, kind: 'vocab', vocabulary: 'period', showOnCard: true, filterable: true, group: G.identification },
     { key: 'year', label: { fr: 'Date estimée', en: 'Estimated date' }, kind: 'number', group: G.identification },
     { key: 'maker', label: { fr: 'Auteur / atelier', en: 'Maker / workshop' }, kind: 'text', filterable: true, group: G.identification },

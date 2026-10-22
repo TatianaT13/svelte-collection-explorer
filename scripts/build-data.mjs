@@ -4,20 +4,23 @@
  *
  *   node scripts/build-data.mjs            # ~64 objets
  *   node scripts/build-data.mjs --max 40
+ *   node scripts/build-data.mjs --reuse    # mêmes objets que le items.json existant
  *
  * Produit :
  *   static/data/thumbs/<id>.jpg   vignettes 512 px
  *   static/data/items.json        objets au format CollectionItem + embedding CLIP
+ *   static/data/places.json       gazetier : lieux Wikidata (libellés, hiérarchie, coordonnées)
  *
  * Les embeddings sont calculés avec le même modèle que celui chargé dans le
  * navigateur (src/lib/ml/embedder.ts), pour que la recherche par image soit cohérente.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { AutoProcessor, CLIPVisionModelWithProjection, RawImage, env } from '@huggingface/transformers';
 
 const API = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const MODEL = 'Xenova/clip-vit-base-patch32';
 const MAX = Number(process.argv[process.argv.indexOf('--max') + 1]) || 64;
+const REUSE = process.argv.includes('--reuse');
 const PER_QUERY = 4;
 const THUMB_PX = 512;
 
@@ -163,6 +166,139 @@ function toMeasures(o) {
   return { height_cm: r(e.Height), width_cm: r(e.Width), depth_cm: r(e.Depth), weight_g: Number.isFinite(e.Weight) ? Math.round(e.Weight * 1000) : null };
 }
 
+// ---------- lieux : Wikidata ----------
+
+const WD = 'https://www.wikidata.org';
+const WD_HEADERS = { 'user-agent': 'svelte-collection-explorer/0.1 (demo; https://github.com/TatianaT13/svelte-collection-explorer)', accept: 'application/json' };
+const entityCache = new Map();
+const isoQid = new Map();
+
+async function wdJson(url) {
+  const res = await fetch(url, { headers: WD_HEADERS });
+  if (!res.ok) throw new Error(`${res.status} ${url}`);
+  return res.json();
+}
+
+function claimId(e, p) {
+  return e.claims?.[p]?.[0]?.mainsnak?.datavalue?.value?.id;
+}
+/** Toutes les valeurs d'une propriété d'entité, rang « preferred » en tête. */
+function claimIds(e, p) {
+  const claims = [...(e.claims?.[p] ?? [])].sort((a, b) => (b.rank === 'preferred') - (a.rank === 'preferred'));
+  return claims.map((c) => c.mainsnak?.datavalue?.value?.id).filter(Boolean);
+}
+
+function parseEntity(e) {
+  const coords = e.claims?.P625?.[0]?.mainsnak?.datavalue?.value;
+  const en = e.labels?.en?.value;
+  const fr = e.labels?.fr?.value;
+  return {
+    id: e.id,
+    label: { fr: fr ?? en ?? e.id, en: en ?? fr ?? e.id },
+    parent: claimId(e, 'P131'),
+    country: claimIds(e, 'P17')[0],
+    countries: claimIds(e, 'P17'),
+    iso: e.claims?.P297?.[0]?.mainsnak?.datavalue?.value,
+    lat: coords?.latitude,
+    lon: coords?.longitude
+  };
+}
+
+async function getEntities(ids) {
+  const missing = [...new Set(ids.filter((i) => i && !entityCache.has(i)))];
+  for (let i = 0; i < missing.length; i += 50) {
+    const chunk = missing.slice(i, i + 50);
+    const d = await wdJson(`${WD}/w/api.php?action=wbgetentities&ids=${chunk.join('|')}&props=labels|claims&languages=fr|en&format=json`);
+    for (const [id, e] of Object.entries(d.entities ?? {})) if (!e.missing) entityCache.set(id, parseEntity(e));
+    await sleep(250);
+  }
+  return ids.map((i) => entityCache.get(i)).filter(Boolean);
+}
+
+/** QID des pays à partir des codes ISO (une requête SPARQL). */
+async function resolveCountries(isos) {
+  const list = [...new Set(isos.filter(Boolean))].filter((c) => !isoQid.has(c));
+  if (!list.length) return;
+  const q = `SELECT ?item ?iso WHERE { VALUES ?iso { ${list.map((c) => `"${c}"`).join(' ')} } ?item wdt:P297 ?iso }`;
+  const d = await wdJson(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(q)}`);
+  for (const b of d.results.bindings) isoQid.set(b.iso.value, b.item.value.split('/').pop());
+  await getEntities([...isoQid.values()]);
+}
+
+function cleanPlaceName(raw) {
+  return String(raw)
+    .replace(/\((?:probably|possibly)\)/gi, '')
+    .replace(/^(near|probably|possibly|vicinity of)\s+/i, '')
+    .split(/\s+or\s+/)[0]
+    .trim();
+}
+
+/** Nom de lieu le plus précis fourni par le Met, du plus fin au plus large. */
+function placeQuery(o) {
+  for (const k of ['city', 'locale', 'locus', 'excavation', 'state', 'county', 'subregion', 'region']) {
+    if (o[k]) {
+      const name = cleanPlaceName(o[k]);
+      if (name && !/^(unknown|various)$/i.test(name)) return name;
+    }
+  }
+  return '';
+}
+
+/** Cherche un lieu ; préfère un candidat situé dans le pays attendu et pourvu de coordonnées. */
+async function searchPlace(name, countryQid) {
+  const d = await wdJson(`${WD}/w/api.php?action=wbsearchentities&search=${encodeURIComponent(name)}&language=en&format=json&type=item&limit=6`);
+  await sleep(250);
+  const cands = (d.search ?? []).map((x) => x.id);
+  if (!cands.length) return null;
+  const ents = await getEntities(cands);
+  const withCoords = ents.filter((e) => e.lat !== undefined);
+  // Une ville peut lister plusieurs pays historiques (Empire russe, URSS, Ukraine) : on accepte si l'un d'eux correspond.
+  return (withCoords.find((e) => countryQid && e.countries.includes(countryQid)) ?? withCoords[0])?.id ?? null;
+}
+
+/** Chaîne administrative du lieu vers le pays (P131), pays ajouté si absent. */
+async function chainOf(qid, countryQid) {
+  const chain = [];
+  let cur = qid;
+  for (let i = 0; i < 6 && cur; i++) {
+    const [e] = await getEntities([cur]);
+    if (!e || chain.some((x) => x.id === e.id)) break;
+    chain.push(e);
+    if (e.iso || e.id === countryQid) break;
+    cur = e.parent;
+  }
+  if (countryQid && !chain.some((e) => e.id === countryQid)) {
+    const [c] = await getEntities([countryQid]);
+    if (c) {
+      // Lieu historique sans rattachement administratif actuel : on le relie au pays d'origine.
+      const last = chain[chain.length - 1];
+      if (last && !last.parent) last.parent = countryQid;
+      chain.push(c);
+    }
+  }
+  return chain;
+}
+
+const placeCache = new Map();
+/** Retourne { place: QID du lieu le plus précis, nodes: entités de la chaîne } */
+async function resolvePlace(o, originIso) {
+  const countryQid = isoQid.get(originIso);
+  const name = placeQuery(o);
+  const key = `${name}|${originIso}`;
+  if (placeCache.has(key)) return placeCache.get(key);
+  let result = { place: countryQid ?? '', nodes: countryQid ? await getEntities([countryQid]) : [] };
+  if (name) {
+    try {
+      const qid = await searchPlace(name, countryQid);
+      if (qid) result = { place: qid, nodes: await chainOf(qid, countryQid) };
+    } catch (e) {
+      console.warn('lieu non résolu', name, e.message);
+    }
+  }
+  placeCache.set(key, result);
+  return result;
+}
+
 // ---------- collecte ----------
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -176,7 +312,25 @@ async function getJson(url, attempt = 0) {
   return res.json();
 }
 
+async function collectReuse() {
+  const prev = JSON.parse(await readFile('static/data/items.json', 'utf8'));
+  const objects = [];
+  for (const it of prev.items) {
+    await sleep(120);
+    try {
+      const o = await getJson(`${API}/objects/${it.id}`);
+      if (o.isPublicDomain && o.primaryImageSmall) objects.push({ o, query: 'reuse', category: toCategory(o) });
+    } catch (e) {
+      console.warn('objet indisponible', it.id, e.message);
+    }
+    process.stdout.write(`\r${objects.length} objets… (reprise)      `);
+  }
+  console.log();
+  return objects;
+}
+
 async function collect() {
+  if (REUSE) return collectReuse();
   const seen = new Set();
   const objects = [];
   for (const q of QUERIES) {
@@ -220,6 +374,24 @@ async function main() {
   await mkdir('static/data/thumbs', { recursive: true });
   const collected = await collect();
 
+  console.log('résolution des lieux (Wikidata)');
+  await resolveCountries(collected.map(({ o }) => toOrigin(o)));
+  const gazetteer = new Map();
+  const placeById = new Map();
+  for (const { o } of collected) {
+    const { place, nodes } = await resolvePlace(o, toOrigin(o));
+    placeById.set(o.objectID, place);
+    for (const n of nodes) gazetteer.set(n.id, n);
+  }
+  // Parents référencés mais non chargés (chaîne coupée) : on les retire des nœuds
+  for (const n of gazetteer.values()) if (n.parent && !gazetteer.has(n.parent)) n.parent = undefined;
+  const isoByQid = new Map([...isoQid.entries()].map(([iso, q]) => [q, iso]));
+  const places = Object.fromEntries(
+    [...gazetteer.values()].map((n) => [n.id, { id: n.id, label: n.label, parent: n.parent, countryIso: isoByQid.get(n.id) ?? isoByQid.get(n.country), lat: n.lat, lon: n.lon }])
+  );
+  await writeFile('static/data/places.json', JSON.stringify({ source: 'Wikidata (CC0)', generatedAt: new Date().toISOString(), places }));
+  console.log(`écrit static/data/places.json (${Object.keys(places).length} lieux)`);
+
   env.allowLocalModels = false;
   console.log('chargement du modèle', MODEL);
   const processor = await AutoProcessor.from_pretrained(MODEL);
@@ -252,6 +424,7 @@ async function main() {
       metadata: {
         category,
         origin: toOrigin(o),
+        place: placeById.get(o.objectID) ?? '',
         period: toPeriod(o),
         year: Number.isFinite(o.objectBeginDate) ? o.objectBeginDate : null,
         maker: o.artistDisplayName || '',

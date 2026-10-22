@@ -13,6 +13,7 @@
   import { i18n } from '$lib/i18n/index.svelte';
   import { lastQuery, type Decision } from '$lib/stores/query.svelte';
   import { fallbackToThumb } from '$lib/utils/imgFallback';
+  import { places } from '$lib/stores/places.svelte';
 
   let {
     insights,
@@ -28,6 +29,13 @@
   /** Fiable seulement si au moins un objet de référence est réellement proche. */
   const reliable = $derived(best >= schema.similarity.reliable);
   const origins = $derived(insights.origins.filter((o) => o.share >= 0.005));
+  /** Lieux précis (hors pays entier) rattachés à chaque pays, pour détailler la provenance. */
+  function placesIn(iso: string) {
+    void places.version;
+    return insights.places
+      .filter((p) => !places.isCountry(p.code) && places.chain(p.code).at(-1)?.countryIso === iso && p.share >= 0.02)
+      .slice(0, 2);
+  }
   const confidence = $derived(
     !reliable || !topCategory
       ? 'weak'
@@ -102,6 +110,9 @@
             </button>
             <i style="--w: {o.share * 100}%"></i>
             <b>{pct(o.share)}</b>
+            {#each placesIn(o.code) as p (p.code)}
+              <small class="place">{i18n.t('insights.inCountry')} {places.chain(p.code)[0]?.label[L.startsWith('fr') ? 'fr' : 'en']} {pct(p.share)}</small>
+            {/each}
           </li>
         {:else}
           <li class="none">{i18n.t('insights.unknownOrigin')}</li>
@@ -228,6 +239,12 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.82rem;
+  }
+  .bars li .place {
+    grid-column: 1 / -1;
+    padding-left: 0.2rem;
+    font-size: 0.74rem;
+    color: var(--muted);
   }
   .bars li.none {
     display: block;

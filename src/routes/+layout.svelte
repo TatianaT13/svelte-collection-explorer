@@ -26,12 +26,12 @@
     <Logo size={28} wordmark={i18n.l(schema.name)} />
   </a>
   <div class="links">
-    <a href="{base}/controle/" aria-current={onControl ? 'page' : undefined}>{i18n.t('nav.control')}</a>
     <a href="{base}/" aria-current={onExplore ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
     <a href="{base}/compare/" aria-current={onCompare ? 'page' : undefined}>
       {i18n.t('nav.compare')}
       {#if compare.count}<span class="badge cmp">{compare.count}</span>{/if}
     </a>
+    <a href="{base}/controle/" aria-current={onControl ? 'page' : undefined}>{i18n.t('nav.control')}</a>
     <LanguageSwitch />
     <ThemeToggle />
   </div>
