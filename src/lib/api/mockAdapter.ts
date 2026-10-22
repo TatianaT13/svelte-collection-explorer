@@ -1,0 +1,156 @@
+import type { CollectionAdapter } from './adapter';
+import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
+import { countryName } from '$lib/config/countries';
+import { schema } from '$lib/config/schema';
+import { termLabel, vocabCodes } from '$lib/config/vocabularies';
+
+/**
+ * Backend simulé : données en mémoire, latence artificielle.
+ * Sert à développer le front sans API, et de modèle pour un vrai adapter.
+ * Les valeurs sont des codes (pays ISO, termes de vocabulaire), jamais des libellés.
+ */
+
+const ORIGINS = ['UA', 'GR', 'EG', 'IT', 'PE', 'CN', 'TR', 'IR', 'FR', 'SY'];
+const CATEGORIES = vocabCodes('category');
+const MATERIALS = vocabCodes('material');
+const TECHNIQUES = vocabCodes('technique');
+const PERIODS = vocabCodes('period').filter((p) => p !== 'unknown');
+const SUBJECTS = vocabCodes('subject');
+const MAKERS = ['Atelier inconnu', 'Atelier de Kyiv', 'Maître anonyme', 'École de Novgorod', 'Manufacture royale', ''];
+
+function pick<T>(arr: T[], i: number): T {
+  return arr[i % arr.length];
+}
+
+function pickMany<T>(arr: T[], i: number, n: number): T[] {
+  const out: T[] = [];
+  for (let k = 0; k < n; k++) out.push(arr[(i * 7 + k * 13) % arr.length]);
+  return [...new Set(out)];
+}
+
+const L = schema.locale;
+
+const ITEMS: CollectionItem[] = Array.from({ length: 48 }, (_, i) => {
+  const id = String(i + 1).padStart(3, '0');
+  const hue = (i * 37) % 360;
+  const category = pick(CATEGORIES, i * 3);
+  const origin = pick(ORIGINS, i * 3 + 1);
+  const material = pickMany(MATERIALS, i, 1 + (i % 2));
+  const technique = pickMany(TECHNIQUES, i + 3, 1 + (i % 3 === 0 ? 1 : 0));
+  const catLabel = termLabel('category', category, L);
+  return {
+    id,
+    title: `${catLabel} n°${id}`,
+    imageUrl: `https://placehold.co/800x600/${hslToHex(hue, 40, 35)}/ffffff?text=${encodeURIComponent(catLabel)}`,
+    thumbnailUrl: `https://placehold.co/400x300/${hslToHex(hue, 40, 35)}/ffffff?text=${encodeURIComponent(catLabel)}`,
+    metadata: {
+      category,
+      origin,
+      period: pick(PERIODS, i * 7 + 2),
+      year: 1200 + ((i * 53) % 800),
+      maker: pick(MAKERS, i * 11),
+      material,
+      technique,
+      height_cm: 10 + ((i * 17) % 120),
+      width_cm: 5 + ((i * 23) % 90),
+      depth_cm: i % 4 === 0 ? null : 2 + ((i * 7) % 40),
+      weight_g: 50 + ((i * 131) % 5000),
+      subject: pick(SUBJECTS, i * 5),
+      inscriptions: i % 3 === 0 ? `Marque « ${String.fromCharCode(65 + (i % 26))}${i} » au revers.` : '',
+      distinguishing_features: i % 4 === 1 ? 'Éclat sur le bord supérieur, restauration ancienne visible.' : '',
+      inventory: `INV-${2020 + (i % 6)}-${id}`,
+      description: `${catLabel} attribué à la région ${countryName(origin, L)}, ${material
+        .map((m) => termLabel('material', m, L).toLowerCase())
+        .join(' et ')}.`
+    }
+  };
+});
+
+function hslToHex(h: number, s: number, l: number): string {
+  const a = (s * Math.min(l, 100 - l)) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round((c * 255) / 100)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `${f(0)}${f(8)}${f(4)}`;
+}
+
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Un filtre correspond si la valeur de l'objet (scalaire ou tableau) contient la valeur demandée. */
+function matchesFilters(item: CollectionItem, filters: SearchQuery['filters']): boolean {
+  return Object.entries(filters).every(([key, wanted]) => {
+    if (wanted === null || wanted === undefined || wanted === '') return true;
+    const field = schema.fields.find((f) => f.key === key);
+    const actual = item.metadata[key];
+    const actualList = Array.isArray(actual) ? actual.map(String) : [String(actual ?? '')];
+    const wantedList = Array.isArray(wanted) ? wanted.map(String) : [String(wanted)];
+
+    if (field?.kind === 'text' || field?.kind === 'longtext') {
+      return actualList.join(' ').toLowerCase().includes(wantedList[0].toLowerCase());
+    }
+    if (field?.kind === 'number') return Number(actual) >= Number(wanted);
+    return wantedList.some((w) => actualList.some((a) => a.toLowerCase() === w.toLowerCase()));
+  });
+}
+
+/** Recherche texte sur le titre, les libellés traduits et les valeurs brutes. */
+function searchableText(item: CollectionItem): string {
+  const parts: string[] = [item.title];
+  for (const f of schema.fields) {
+    const v = item.metadata[f.key];
+    if (v === null || v === undefined) continue;
+    const list = Array.isArray(v) ? v : [v];
+    for (const x of list) {
+      const s = String(x);
+      parts.push(s);
+      if (f.kind === 'country') parts.push(countryName(s, L));
+      if (f.kind === 'vocab' && f.vocabulary) parts.push(termLabel(f.vocabulary, s, L));
+    }
+  }
+  return parts.join(' ').toLowerCase();
+}
+
+function matchesText(item: CollectionItem, text?: string): boolean {
+  if (!text) return true;
+  return searchableText(item).includes(text.toLowerCase());
+}
+
+export const mockAdapter: CollectionAdapter = {
+  async search(query: SearchQuery): Promise<SearchResult> {
+    await delay(300);
+    let results = ITEMS.filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text));
+
+    if (query.image) {
+      // Simule une recherche visuelle : score pseudo-aléatoire dérivé du fichier.
+      const seed = query.image.name.length + query.image.size + (query.imageInfo?.width ?? 0);
+      results = results
+        .map((it, i) => ({ ...it, score: Number((((seed * (i + 7)) % 97) / 100).toFixed(2)) }))
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    }
+
+    const start = (query.page - 1) * query.pageSize;
+    return {
+      items: results.slice(start, start + query.pageSize),
+      total: results.length,
+      page: query.page,
+      pageSize: query.pageSize
+    };
+  },
+
+  async getItem(id: string): Promise<CollectionItem | null> {
+    await delay(150);
+    return ITEMS.find((it) => it.id === id) ?? null;
+  },
+
+  /** Facettes dynamiques : seulement pour les champs `select` (aucun dans le schéma actuel). */
+  async getFacets(): Promise<FacetValues> {
+    await delay(100);
+    return {};
+  }
+};
