@@ -6,9 +6,10 @@
    * - 'number' : minimum.
    * Les filtres sont combinés en ET.
    */
-  import { filterFields, schema, type FieldSchema } from '$lib/config/schema';
+  import { filterFields, type FieldSchema } from '$lib/config/schema';
   import { countryOptions } from '$lib/config/countries';
   import { vocabOptions, type TermOption } from '$lib/config/vocabularies';
+  import { i18n } from '$lib/i18n/index.svelte';
   import type { ActiveFilters, FacetValues, MetadataValue } from '$lib/api/types';
   import MultiSelect from './MultiSelect.svelte';
 
@@ -22,8 +23,8 @@
   const activeCount = $derived(Object.values(filters).filter(isSet).length);
 
   function optionsFor(field: FieldSchema): TermOption[] {
-    if (field.kind === 'country') return countryOptions(schema.locale);
-    if (field.kind === 'vocab' && field.vocabulary) return vocabOptions(field.vocabulary, schema.locale);
+    if (field.kind === 'country') return countryOptions(i18n.locale);
+    if (field.kind === 'vocab' && field.vocabulary) return vocabOptions(field.vocabulary, i18n.locale);
     return (facets[field.key] ?? []).map((v) => ({ code: v, name: v }));
   }
 
@@ -46,21 +47,21 @@
 
 <aside class="panel">
   <header>
-    <h2>Filtres {#if activeCount}<span class="badge">{activeCount}</span>{/if}</h2>
+    <h2>{i18n.t('filters.title')} {#if activeCount}<span class="badge">{activeCount}</span>{/if}</h2>
     {#if activeCount}
-      <button type="button" class="link" onclick={reset}>Réinitialiser</button>
+      <button type="button" class="link" onclick={reset}>{i18n.t('filters.reset')}</button>
     {/if}
   </header>
 
   {#each filterFields as field (field.key)}
     {#if field.kind === 'country' || field.kind === 'vocab' || field.kind === 'select'}
-      <MultiSelect label={field.label} options={optionsFor(field)} selected={asArray(filters[field.key])} onchange={(v) => update(field.key, v)} />
+      <MultiSelect label={i18n.l(field.label)} options={optionsFor(field)} selected={asArray(filters[field.key])} onchange={(v) => update(field.key, v)} />
     {:else}
       <label>
-        <span>{field.label}</span>
+        <span>{i18n.l(field.label)}</span>
         <input
           type={field.kind === 'number' ? 'number' : 'text'}
-          placeholder={field.kind === 'text' ? 'Contient…' : ''}
+          placeholder={field.kind === 'text' ? i18n.t('filters.contains') : ''}
           value={String(filters[field.key] ?? '')}
           oninput={(e) => update(field.key, e.currentTarget.value)}
         />

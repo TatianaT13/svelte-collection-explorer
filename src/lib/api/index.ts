@@ -8,6 +8,6 @@ import { mockAdapter } from './mockAdapter';
  */
 export const api: CollectionAdapter = mockAdapter;
 
-export type { CollectionAdapter } from './adapter';
+export type { CollectionAdapter, ArchiveReceipt } from './adapter';
 export * from './types';
 export { extractImageInfo, withoutGps, type ImageInfo } from './imageInfo';

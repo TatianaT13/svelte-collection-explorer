@@ -55,7 +55,9 @@ src/
       mockAdapter.ts           # backend simulé en mémoire
       imageInfo.ts             # extraction EXIF/IPTC/XMP côté client
       index.ts                 # point d'entrée : quel adapter est actif
-    config/schema.ts           # schéma des métadonnées (pilote l'UI)
+    i18n/messages.ts           # textes d'interface par langue (fr, en)
+    i18n/index.svelte.ts       # store de langue : i18n.locale, i18n.t(), i18n.l()
+    config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
     config/countries.ts        # codes ISO 3166 + noms localisés via Intl.DisplayNames
     config/vocabularies.ts     # vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets)
     components/*.svelte        # composants réutilisables
@@ -64,6 +66,7 @@ src/
     utils/urlState.ts          # état de recherche <-> paramètres d'URL
     utils/labels.ts            # formatage des valeurs selon le schéma
     utils/flag.ts              # emoji drapeau depuis un code ISO
+    utils/resizeImage.ts       # réduction de l'image côté client avant envoi
 ```
 
 **Routage** : chaque dossier sous `src/routes` est une URL. `+page.svelte` est la page,
@@ -318,11 +321,16 @@ backend, sans toucher aux composants.
 ```ts
 // src/lib/api/adapter.ts
 export interface CollectionAdapter {
-  search(query: SearchQuery): Promise<SearchResult>;
+  search(query: SearchQuery): Promise<SearchResult>;       // reçoit l'image réduite
   getItem(id: string): Promise<CollectionItem | null>;
   getFacets(): Promise<FacetValues>;
+  archiveImage(original: File, info?: ImageInfo): Promise<ArchiveReceipt>; // reçoit l'original
 }
 ```
+
+La quatrième méthode, `archiveImage(original, info)`, reçoit l'image **non réduite** : la recherche
+travaille sur une version légère, l'archivage d'un cas garde la pièce originale. Le mock renvoie un
+accusé factice.
 
 Les pages importent `api` depuis `$lib/api` et ne voient que cette interface. `mockAdapter.ts`
 fournit 48 objets en mémoire avec une latence simulée. Pour brancher une vraie API :
@@ -355,12 +363,35 @@ et falsifiables. Le backend doit refaire l'extraction de référence et calculer
 
 ---
 
-## 9. Détails d'interface côté utilisateur
+## 9. Multilingue
+
+Trois couches, toutes pilotées par un seul store `i18n` (`src/lib/i18n/index.svelte.ts`) :
+
+| Quoi | Où | Comment |
+|---|---|---|
+| Textes d'interface (boutons, messages, aria-labels) | `i18n/messages.ts` | `i18n.t('results.count', { n })` ; une clé `_plural` est choisie quand `n !== 1` |
+| Libellés du schéma (champs, groupes, nom de la collection) | `config/schema.ts` | objets `{ fr, en }`, lus par `i18n.l(label)` |
+| Vocabulaires et pays | `config/vocabularies.ts`, `config/countries.ts` | `termLabel(vocab, code, i18n.locale)`, `Intl.DisplayNames` |
+
+- La langue est détectée dans l'ordre : `localStorage`, langue du navigateur, français. `LanguageSwitch`
+  l'enregistre et met à jour `<html lang>`.
+- `i18n.locale` est un `$state` : tout composant qui le lit, directement ou via `t()` / `l()`, se
+  met à jour quand la langue change. Aucun rechargement.
+- Les données ne contiennent que des codes ; seul l'affichage est traduit. Le mock recalcule titres
+  et descriptions à chaque requête, un vrai backend recevrait `Accept-Language`.
+- Pour ajouter une langue : une entrée dans `messages`, une dans `locales`, les libellés du schéma,
+  et une colonne dans les vocabulaires (repli sur l'anglais sinon).
+
+---
+
+## 10. Détails d'interface côté utilisateur
 
 Quelques mécanismes qui font la différence à l'usage, et comment ils sont faits en Svelte.
 
 | Détail | Fichier | Mécanisme |
 |---|---|---|
+| Prendre une photo sur mobile | `ImageUpload.svelte` | second `<input type="file" capture="environment">`, bouton visible seulement sur écran tactile |
+| Image réduite avant envoi | `utils/resizeImage.ts`, `schema.upload` | politique configurable : `maxPx` (1600), `skipBelowBytes` (2 Mo, en dessous rien n'est touché), `quality` ; l'original reste côté client pour l'aperçu, les métadonnées et `adapter.archiveImage` |
 | Déposer une image **n'importe où** sur la page | `+page.svelte` | `<svelte:window ondragenter ondrop …>` + compteur de profondeur pour l'overlay |
 | Coller une image (⌘/Ctrl + V) | `+page.svelte` | `onpaste` sur `window`, lecture de `clipboardData.items` |
 | `/` pour aller à la recherche, Échap pour effacer / fermer | `+page.svelte` | `onkeydown` global, ignoré quand on tape déjà dans un champ |
@@ -382,22 +413,23 @@ Règles suivies : jamais d'information portée par la couleur seule, `:focus-vis
 
 ---
 
-## 10. SSR : ce qu'il faut savoir
+## 11. SSR : ce qu'il faut savoir
 
 SvelteKit rend chaque page une première fois côté serveur, puis l'« hydrate » dans le navigateur.
 Conséquences dans ce projet :
 
 - `onMount` ne s'exécute que dans le navigateur : on y charge les facettes.
 - `$effect` ne s'exécute jamais côté serveur.
-- `theme.svelte.ts` lit `localStorage` à l'import, gardé par `browser` ; `ThemeToggle` calcule son
-  icône dans `onMount` pour que le HTML serveur et le premier rendu client soient identiques.
+- `theme.svelte.ts` et `i18n/index.svelte.ts` lisent `localStorage` à l'import, gardés par `browser` ;
+  `ThemeToggle` et `LanguageSwitch` calculent leur valeur dans `onMount` pour que le HTML serveur et
+  le premier rendu client coïncident.
 - Tout accès à `window`, `sessionStorage`, `URL.createObjectURL` doit être gardé par `browser`
   ou placé dans un effet/`onMount`.
 - `page` de `$app/state` donne l'URL courante de façon réactive (utilisé pour `aria-current` dans la nav).
 
 ---
 
-## 11. Pour aller plus loin
+## 12. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.

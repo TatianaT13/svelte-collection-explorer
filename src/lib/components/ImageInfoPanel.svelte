@@ -4,38 +4,52 @@
    * Permet d'exclure la position GPS avant l'envoi au backend.
    */
   import type { ImageInfo } from '$lib/api/imageInfo';
+  import { i18n } from '$lib/i18n/index.svelte';
 
-  let { info, includeGps = $bindable(true) }: { info: ImageInfo; includeGps?: boolean } = $props();
+  let {
+    info,
+    includeGps = $bindable(true),
+    sent
+  }: { info: ImageInfo; includeGps?: boolean; sent?: { bytes: number; width: number; height: number; resized: boolean } } = $props();
+
+  const t = i18n.t;
 
   const rows = $derived.by(() => {
     const r: { label: string; value: string }[] = [];
-    r.push({ label: 'Fichier', value: `${info.mimeType || 'type inconnu'} · ${formatBytes(info.sizeBytes)}` });
-    if (info.width && info.height) r.push({ label: 'Dimensions', value: `${info.width} × ${info.height} px` });
-    if (info.camera) r.push({ label: 'Appareil', value: info.camera });
-    if (info.software) r.push({ label: 'Logiciel', value: info.software });
-    if (info.takenAt) r.push({ label: 'Prise le', value: info.takenAt.toLocaleString('fr-FR') });
-    if (info.orientation && info.orientation !== 1) r.push({ label: 'Orientation', value: `EXIF ${info.orientation}` });
-    if (info.author) r.push({ label: 'Auteur', value: info.author });
-    if (info.title) r.push({ label: 'Titre', value: info.title });
-    if (info.description) r.push({ label: 'Légende', value: info.description });
-    if (info.keywords?.length) r.push({ label: 'Mots-clés', value: info.keywords.join(', ') });
-    if (info.copyright) r.push({ label: 'Copyright', value: info.copyright });
+    r.push({ label: t('info.file'), value: `${info.mimeType || t('info.unknownType')} · ${formatBytes(info.sizeBytes)}` });
+    if (info.width && info.height) r.push({ label: t('info.dimensions'), value: `${info.width} × ${info.height} px` });
+    if (sent?.resized) {
+      r.push({
+        label: t('info.sent'),
+        value: t('info.sentResized', { size: `${sent.width} × ${sent.height} px · ${formatBytes(sent.bytes)}`, orig: formatBytes(info.sizeBytes) })
+      });
+    }
+    if (info.camera) r.push({ label: t('info.camera'), value: info.camera });
+    if (info.software) r.push({ label: t('info.software'), value: info.software });
+    if (info.takenAt) r.push({ label: t('info.takenAt'), value: info.takenAt.toLocaleString(i18n.locale) });
+    if (info.orientation && info.orientation !== 1) r.push({ label: t('info.orientation'), value: `EXIF ${info.orientation}` });
+    if (info.author) r.push({ label: t('info.author'), value: info.author });
+    if (info.title) r.push({ label: t('info.titleField'), value: info.title });
+    if (info.description) r.push({ label: t('info.caption'), value: info.description });
+    if (info.keywords?.length) r.push({ label: t('info.keywords'), value: info.keywords.join(', ') });
+    if (info.copyright) r.push({ label: t('info.copyright'), value: info.copyright });
     if (info.sha256) r.push({ label: 'SHA-256', value: info.sha256.slice(0, 16) + '…' });
     return r;
   });
 
   function formatBytes(n: number): string {
-    if (n < 1024) return `${n} o`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} Ko`;
-    return `${(n / 1024 / 1024).toFixed(1)} Mo`;
+    const nf = new Intl.NumberFormat(i18n.locale, { maximumFractionDigits: 1 });
+    if (n < 1024) return `${n} ${t('unit.b')}`;
+    if (n < 1024 * 1024) return `${nf.format(Math.round(n / 1024))} ${t('unit.kb')}`;
+    return `${nf.format(n / 1024 / 1024)} ${t('unit.mb')}`;
   }
 </script>
 
 <section class="panel">
-  <h3>Métadonnées de l'image</h3>
+  <h3>{t('info.title')}</h3>
 
   {#if info.stripped}
-    <p class="warn">Aucune métadonnée EXIF/IPTC trouvée : image probablement passée par une messagerie, un réseau social ou une capture d'écran.</p>
+    <p class="warn">{t('info.stripped')}</p>
   {/if}
 
   <dl>
@@ -49,13 +63,13 @@
     <label class="gps">
       <input type="checkbox" bind:checked={includeGps} />
       <span>
-        Inclure la position GPS<br />
+        {t('info.includeGps')}<br />
         <small>{info.gps.latitude.toFixed(5)}, {info.gps.longitude.toFixed(5)}</small>
       </span>
     </label>
   {/if}
 
-  <p class="note">Indicatif : ces champs peuvent être absents ou modifiés. Le serveur fait l'extraction de référence.</p>
+  <p class="note">{t('info.note')}</p>
 </section>
 
 <style>
@@ -82,9 +96,8 @@
   }
   dd {
     margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .warn {
     margin: 0 0 0.5rem;

@@ -3,6 +3,7 @@
   import { cardFields } from '$lib/config/schema';
   import { compare } from '$lib/stores/compare.svelte';
   import AttributeList from './AttributeList.svelte';
+  import { i18n } from '$lib/i18n/index.svelte';
   import ScoreRing from './ScoreRing.svelte';
 
   let {
@@ -22,7 +23,7 @@
 </script>
 
 <article class="card" class:selected>
-  <button type="button" class="media" onclick={() => onopen?.(item)} aria-label="Voir le détail de {item.title}">
+  <button type="button" class="media" onclick={() => onopen?.(item)} aria-label={i18n.t('card.open', { title: item.title })}>
     <img src={item.thumbnailUrl ?? item.imageUrl} alt="" loading="lazy" />
     {#if item.score !== undefined}
       <span class="score"><ScoreRing score={item.score} size={40} /></span>
@@ -34,13 +35,13 @@
       <button type="button" class="title" onclick={() => onopen?.(item)}>{item.title}</button>
     </h3>
     <AttributeList fields={cardFields} {item} {filters} {onfilter} compact />
-    <button type="button" class="cmp" class:active={selected} {disabled} onclick={() => compare.toggle(item)} title={disabled ? `Maximum ${compare.max} objets` : ''}>
+    <button type="button" class="cmp" class:active={selected} {disabled} onclick={() => compare.toggle(item)} title={disabled ? i18n.t('card.max', { n: compare.max }) : ''}>
       {#if selected}
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        Sélectionné
+        {i18n.t('card.selected')}
       {:else}
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        Comparer
+        {i18n.t('card.compare')}
       {/if}
     </button>
   </div>

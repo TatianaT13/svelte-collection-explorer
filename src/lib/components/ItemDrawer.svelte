@@ -6,6 +6,7 @@
   import { flagEmoji } from '$lib/utils/flag';
   import type { ActiveFilters, CollectionItem } from '$lib/api/types';
   import AttributeList from './AttributeList.svelte';
+  import { i18n } from '$lib/i18n/index.svelte';
   import ScoreRing from './ScoreRing.svelte';
 
   let {
@@ -47,24 +48,24 @@
           <span class="mono">{item.metadata.inventory ?? item.id}</span>
         </p>
       </div>
-      <button bind:this={closeBtn} type="button" class="close" aria-label="Fermer" onclick={onclose}>×</button>
+      <button bind:this={closeBtn} type="button" class="close" aria-label={i18n.t('drawer.close')} onclick={onclose}>×</button>
     </header>
 
     <div class="scroll">
       <figure>
         <img src={item.imageUrl} alt={item.title} />
         {#if item.score !== undefined}
-          <figcaption><ScoreRing score={item.score} size={40} /> <span>Similarité avec l'image envoyée</span></figcaption>
+          <figcaption><ScoreRing score={item.score} size={40} /> <span>{i18n.t('drawer.similarity')}</span></figcaption>
         {/if}
       </figure>
 
       {#if onfilter}
-        <p class="tip">Cochez un attribut pour ne garder que les objets qui le partagent.</p>
+        <p class="tip">{i18n.t('drawer.tip')}</p>
       {/if}
 
-      {#each fieldGroups as group (group.name)}
+      {#each fieldGroups as group (group.group?.id ?? '')}
         <section>
-          {#if group.name}<h3>{group.name}</h3>{/if}
+          {#if group.group}<h3>{i18n.l(group.group.label)}</h3>{/if}
           <AttributeList fields={group.fields} {item} {filters} {onfilter} />
         </section>
       {/each}
@@ -72,7 +73,7 @@
 
     <footer>
       <button type="button" class="primary" class:active={selected} disabled={!selected && compare.isFull} onclick={() => item && compare.toggle(item)}>
-        {selected ? 'Retirer de la comparaison' : 'Ajouter à la comparaison'}
+        {selected ? i18n.t('drawer.removeCompare') : i18n.t('drawer.addCompare')}
       </button>
     </footer>
   </div>

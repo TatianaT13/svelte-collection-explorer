@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { theme } from '$lib/stores/theme.svelte';
+  import { i18n } from '$lib/i18n/index.svelte';
 
   // Résolu après montage pour éviter un écart SSR / client.
   let dark = $state(false);
@@ -14,7 +15,7 @@
   }
 </script>
 
-<button type="button" class="toggle" onclick={toggle} aria-label={dark ? 'Passer en thème clair' : 'Passer en thème sombre'} title={dark ? 'Thème clair' : 'Thème sombre'}>
+<button type="button" class="toggle" onclick={toggle} aria-label={dark ? i18n.t('theme.toLight') : i18n.t('theme.toDark')} title={dark ? i18n.t('theme.light') : i18n.t('theme.dark')}>
   {#if dark}
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
   {:else}

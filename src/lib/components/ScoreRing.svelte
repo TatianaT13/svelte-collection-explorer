@@ -1,14 +1,17 @@
 <script lang="ts">
   /** Score de similarité 0..1 : anneau + pourcentage + libellé (jamais la couleur seule). */
+  import { i18n } from '$lib/i18n/index.svelte';
+
   let { score, size = 44 }: { score: number; size?: number } = $props();
 
   const pct = $derived(Math.round(Math.max(0, Math.min(1, score)) * 100));
-  const label = $derived(pct >= 80 ? 'Forte' : pct >= 50 ? 'Moyenne' : 'Faible');
+  const label = $derived(i18n.t(pct >= 80 ? 'score.strong' : pct >= 50 ? 'score.medium' : 'score.weak'));
+  const text = $derived(i18n.t('score.label', { label, pct }));
   const r = $derived((size - 4) / 2);
   const c = $derived(2 * Math.PI * r);
 </script>
 
-<span class="ring" style="--size: {size}px" title="Similarité {label.toLowerCase()} : {pct} %" aria-label="Similarité {pct} %, {label.toLowerCase()}">
+<span class="ring" style="--size: {size}px" title={text} aria-label={text}>
   <svg viewBox="0 0 {size} {size}" width={size} height={size} aria-hidden="true">
     <circle cx={size / 2} cy={size / 2} {r} fill="none" stroke="var(--ring-track)" stroke-width="3" />
     <circle

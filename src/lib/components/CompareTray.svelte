@@ -2,15 +2,16 @@
   /** Barre flottante : objets sélectionnés pour comparaison, accès direct à la page Comparer. */
   import { fly } from 'svelte/transition';
   import { compare } from '$lib/stores/compare.svelte';
+  import { i18n } from '$lib/i18n/index.svelte';
 </script>
 
 {#if compare.count > 0}
-  <div class="tray" transition:fly={{ y: 24, duration: 180 }} role="region" aria-label="Sélection pour comparaison">
+  <div class="tray" transition:fly={{ y: 24, duration: 180 }} role="region" aria-label={i18n.t('tray.label')}>
     <ul class="thumbs">
       {#each compare.items as item (item.id)}
         <li>
           <img src={item.thumbnailUrl ?? item.imageUrl} alt="" />
-          <button type="button" class="rm" aria-label="Retirer {item.title}" onclick={() => compare.remove(item.id)}>×</button>
+          <button type="button" class="rm" aria-label={i18n.t('tray.remove', { title: item.title })} onclick={() => compare.remove(item.id)}>×</button>
         </li>
       {/each}
       {#each Array(compare.max - compare.count) as _, i (i)}
@@ -19,9 +20,9 @@
     </ul>
     <div class="actions">
       <span class="count">{compare.count} / {compare.max}</span>
-      <button type="button" class="ghost" onclick={() => compare.clear()}>Vider</button>
+      <button type="button" class="ghost" onclick={() => compare.clear()}>{i18n.t('tray.clear')}</button>
       <a class="primary" href="/compare" aria-disabled={compare.count < 2} class:disabled={compare.count < 2}>
-        Comparer
+        {i18n.t('tray.compare')}
       </a>
     </div>
   </div>

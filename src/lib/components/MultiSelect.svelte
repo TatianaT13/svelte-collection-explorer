@@ -4,6 +4,7 @@
    * valeurs choisies rappelées en puces supprimables. Logique "OU" entre les valeurs.
    */
   import type { TermOption } from '$lib/config/vocabularies';
+  import { i18n } from '$lib/i18n/index.svelte';
 
   let {
     label,
@@ -31,7 +32,7 @@
   });
 
   const summary = $derived(
-    selected.length === 0 ? 'Tous' : selected.length === 1 ? nameOf(selected[0]) : `${selected.length} sélectionnés`
+    selected.length === 0 ? i18n.t('filters.all') : selected.length === 1 ? nameOf(selected[0]) : i18n.t('filters.selected', { n: selected.length })
   );
 
   function emit(next: string[]) {
@@ -73,7 +74,7 @@
       {#each selected as code (code)}
         <span class="chip">
           {nameOf(code)}
-          <button type="button" aria-label="Retirer {nameOf(code)}" onclick={() => toggle(code)}>×</button>
+          <button type="button" aria-label={i18n.t('chips.remove', { label: '', value: nameOf(code) })} onclick={() => toggle(code)}>×</button>
         </span>
       {/each}
     </div>
@@ -82,17 +83,17 @@
   {#if open}
     <div class="panel">
       {#if searchable}
-        <input bind:this={searchEl} type="search" bind:value={query} placeholder="Filtrer la liste…" aria-label="Filtrer {label}" onkeydown={onKey} />
+        <input bind:this={searchEl} type="search" bind:value={query} placeholder={i18n.t('filters.filterList')} aria-label={i18n.t('filters.filterLabel', { label })} onkeydown={onKey} />
       {/if}
       {#if selected.length}
         <div class="chips in-panel">
           {#each selected as code (code)}
             <span class="chip">
               {nameOf(code)}
-              <button type="button" aria-label="Retirer {nameOf(code)}" onclick={() => toggle(code)}>×</button>
+              <button type="button" aria-label={i18n.t('chips.remove', { label: '', value: nameOf(code) })} onclick={() => toggle(code)}>×</button>
             </span>
           {/each}
-          <button type="button" class="link" onclick={() => emit([])}>Effacer</button>
+          <button type="button" class="link" onclick={() => emit([])}>{i18n.t('filters.clear')}</button>
         </div>
       {/if}
       <ul>
@@ -104,7 +105,7 @@
             </label>
           </li>
         {:else}
-          <li class="none">Aucune option ne correspond</li>
+          <li class="none">{i18n.t('filters.noOption')}</li>
         {/each}
       </ul>
     </div>

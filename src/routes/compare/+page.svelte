@@ -4,8 +4,9 @@
    * différences surlignées, option "différences seulement", copie du tableau.
    */
   import { compare } from '$lib/stores/compare.svelte';
-  import { fieldGroups, type FieldSchema } from '$lib/config/schema';
-  import { formatValue } from '$lib/utils/labels';
+  import { fieldGroups } from '$lib/config/schema';
+  import { formatValue, fieldLabel } from '$lib/utils/labels';
+  import { i18n } from '$lib/i18n/index.svelte';
   import { flagEmoji } from '$lib/utils/flag';
   import MetadataValue from '$lib/components/MetadataValue.svelte';
   import ScoreRing from '$lib/components/ScoreRing.svelte';
@@ -22,16 +23,16 @@
 
   const visibleGroups = $derived(
     fieldGroups
-      .map((g) => ({ name: g.name, fields: onlyDiff ? g.fields.filter((f) => differs(f.key)) : g.fields }))
+      .map((g) => ({ group: g.group, fields: onlyDiff ? g.fields.filter((f) => differs(f.key)) : g.fields }))
       .filter((g) => g.fields.length > 0)
   );
 
   const diffCount = $derived(fieldGroups.flatMap((g) => g.fields).filter((f) => differs(f.key)).length);
 
   async function copyTable() {
-    const rows: string[][] = [['Champ', ...items.map((it) => it.title)]];
+    const rows: string[][] = [[i18n.t('compare.field'), ...items.map((it) => it.title)]];
     for (const g of visibleGroups) {
-      for (const f of g.fields) rows.push([f.label, ...items.map((it) => formatValue(f, it.metadata[f.key]))]);
+      for (const f of g.fields) rows.push([fieldLabel(f), ...items.map((it) => formatValue(f, it.metadata[f.key]))]);
     }
     const tsv = rows.map((r) => r.join('\t')).join('\n');
     try {
@@ -45,15 +46,15 @@
 </script>
 
 <svelte:head>
-  <title>Comparaison · {items.length} objet{items.length > 1 ? 's' : ''}</title>
+  <title>{i18n.t('compare.titleTag', { n: items.length })}</title>
 </svelte:head>
 
 <header class="head">
   <div>
-    <h1>Comparaison</h1>
+    <h1>{i18n.t('compare.title')}</h1>
     <p class="muted">
-      {items.length} / {compare.max} objets
-      {#if items.length >= 2} · {diffCount} champ{diffCount > 1 ? 's' : ''} différent{diffCount > 1 ? 's' : ''}{/if}
+      {i18n.t('compare.count', { n: items.length, max: compare.max })}
+      {#if items.length >= 2} · {i18n.t('compare.diff', { n: diffCount })}{/if}
     </p>
   </div>
   {#if items.length}
@@ -61,26 +62,26 @@
       {#if items.length >= 2}
         <label class="switch">
           <input type="checkbox" bind:checked={onlyDiff} />
-          <span>Différences seulement</span>
+          <span>{i18n.t('compare.onlyDiff')}</span>
         </label>
       {/if}
       <button type="button" class="btn" onclick={copyTable} disabled={!items.length}>
-        {copied ? 'Copié ✓' : 'Copier le tableau'}
+        {copied ? i18n.t('compare.copied') : i18n.t('compare.copy')}
       </button>
-      <button type="button" class="btn ghost" onclick={() => compare.clear()}>Tout retirer</button>
+      <button type="button" class="btn ghost" onclick={() => compare.clear()}>{i18n.t('compare.clear')}</button>
     </div>
   {/if}
 </header>
 
 {#if items.length === 0}
   <div class="empty">
-    <p><strong>Aucun objet sélectionné.</strong></p>
-    <p class="muted">Dans l'explorateur, cliquez sur « Comparer » sur jusqu'à {compare.max} objets.</p>
-    <a class="btn" href="/">Aller à l'explorateur</a>
+    <p><strong>{i18n.t('compare.empty')}</strong></p>
+    <p class="muted">{i18n.t('compare.emptyHint', { max: compare.max })}</p>
+    <a class="btn" href="/">{i18n.t('compare.goExplore')}</a>
   </div>
 {:else}
   {#if items.length === 1}
-    <p class="hint">Ajoutez au moins un autre objet pour voir les différences. <a href="/">Retour à l'explorateur</a></p>
+    <p class="hint">{i18n.t('compare.oneHint')} <a href="/">{i18n.t('compare.back')}</a></p>
   {/if}
   <div class="scroller">
     <table style="--cols: {items.length}">
@@ -95,21 +96,21 @@
                 {item.title}
                 {#if item.score !== undefined}<ScoreRing score={item.score} size={30} />{/if}
               </div>
-              <button type="button" class="link" onclick={() => compare.remove(item.id)}>Retirer</button>
+              <button type="button" class="link" onclick={() => compare.remove(item.id)}>{i18n.t('compare.remove')}</button>
             </th>
           {/each}
         </tr>
       </thead>
       <tbody>
-        {#each visibleGroups as group (group.name)}
-          {#if group.name}
+        {#each visibleGroups as group (group.group?.id ?? '')}
+          {#if group.group}
             <tr class="group">
-              <th colspan={items.length + 1}>{group.name}</th>
+              <th colspan={items.length + 1}>{i18n.l(group.group.label)}</th>
             </tr>
           {/if}
           {#each group.fields as field (field.key)}
             <tr class:diff={differs(field.key)}>
-              <th class="label">{field.label}</th>
+              <th class="label">{fieldLabel(field)}</th>
               {#each items as item (item.id)}
                 <td><MetadataValue {field} value={item.metadata[field.key]} /></td>
               {/each}
@@ -117,7 +118,7 @@
           {/each}
         {/each}
         {#if onlyDiff && visibleGroups.length === 0}
-          <tr><td colspan={items.length + 1} class="none">Aucune différence entre ces objets.</td></tr>
+          <tr><td colspan={items.length + 1} class="none">{i18n.t('compare.noDiff')}</td></tr>
         {/if}
       </tbody>
     </table>

@@ -5,7 +5,8 @@
    */
   import type { FieldSchema } from '$lib/config/schema';
   import type { ActiveFilters, CollectionItem } from '$lib/api/types';
-  import { labelOf, formatValue } from '$lib/utils/labels';
+  import { labelOf, formatValue, fieldLabel } from '$lib/utils/labels';
+  import { i18n } from '$lib/i18n/index.svelte';
   import { flagEmoji } from '$lib/utils/flag';
 
   let {
@@ -40,7 +41,7 @@
       const empty = raw === null || raw === undefined || raw === '' || (Array.isArray(raw) && raw.length === 0);
       const checkable = !!onfilter && !!f.filterable && !empty && f.kind !== 'number';
       if (!checkable) {
-        out.push({ id: f.key, field: f, label: f.label, text: formatValue(f, raw), checkable: false, long: f.kind === 'longtext' });
+        out.push({ id: f.key, field: f, label: fieldLabel(f), text: formatValue(f, raw), checkable: false, long: f.kind === 'longtext' });
         continue;
       }
       const values = Array.isArray(raw) ? raw.map(String) : [String(raw)];
@@ -48,7 +49,7 @@
         out.push({
           id: `${f.key}:${v}`,
           field: f,
-          label: i === 0 ? f.label : '',
+          label: i === 0 ? fieldLabel(f) : '',
           text: labelOf(f, v),
           value: v,
           checkable: true,
@@ -73,8 +74,8 @@
     {@const on = isOn(row)}
     {#if row.checkable}
       <li class="row" class:on>
-        <label title={on ? 'Retirer ce filtre' : 'Ne garder que les objets avec cette valeur'}>
-          <input type="checkbox" checked={on} onchange={() => onfilter?.(row.field.key, row.value!)} aria-label="Filtrer sur {row.field.label} : {row.text}" />
+        <label title={on ? i18n.t('attr.remove') : i18n.t('attr.add')}>
+          <input type="checkbox" checked={on} onchange={() => onfilter?.(row.field.key, row.value!)} aria-label={i18n.t('attr.filterOn', { label: fieldLabel(row.field), value: row.text })} />
           <span class="k">{row.label}</span>
           <span class="v">
             {#if row.flag}<span class="flag" aria-hidden="true">{row.flag}</span>{/if}

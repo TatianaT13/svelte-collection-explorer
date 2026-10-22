@@ -21,6 +21,8 @@
   } from '$lib/api';
   import { schema } from '$lib/config/schema';
   import { readSearchState, writeSearchState } from '$lib/utils/urlState';
+  import { resizeImage, type ResizeResult } from '$lib/utils/resizeImage';
+  import { i18n } from '$lib/i18n/index.svelte';
   import ImageUpload from '$lib/components/ImageUpload.svelte';
   import FilterPanel from '$lib/components/FilterPanel.svelte';
   import FilterChips from '$lib/components/FilterChips.svelte';
@@ -34,7 +36,8 @@
   let text = $state(initial.text);
   let filters = $state<ActiveFilters>(initial.filters);
   let pageNo = $state(initial.page);
-  let image = $state<File | null>(null);
+  let image = $state<File | null>(null); // original : aperçu + métadonnées
+  let imageToSend = $state<ResizeResult | null>(null); // version réduite envoyée au backend
   let imageInfo = $state<ImageInfo | null>(null);
   let includeGps = $state(true);
 
@@ -61,19 +64,35 @@
     error = null;
     try {
       const info = imageInfo ? (includeGps ? imageInfo : withoutGps(imageInfo)) : undefined;
-      const res = await api.search({ text, image: image ?? undefined, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
+      const res = await api.search({ text, image: imageToSend?.file, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
       if (id === requestId) result = res;
     } catch (e) {
-      if (id === requestId) error = e instanceof Error ? e.message : 'Erreur inconnue';
+      if (id === requestId) error = e instanceof Error ? e.message : i18n.t('error.unknown');
     } finally {
       if (id === requestId) loading = false;
     }
   }
 
-  // Relance la recherche dès qu'un critère change.
+  // Relance la recherche dès qu'un critère change (ou la langue : libellés du mock).
   $effect(() => {
-    void text; void image; void imageInfo; void includeGps; void filters; void pageNo;
+    void text; void imageToSend; void imageInfo; void includeGps; void filters; void pageNo; void i18n.locale;
     runSearch();
+  });
+
+  // Réduit l'image avant envoi (photo de téléphone → ~200 Ko).
+  $effect(() => {
+    const f = image;
+    if (!f) {
+      imageToSend = null;
+      return;
+    }
+    let cancelled = false;
+    resizeImage(f, schema.upload).then((r) => {
+      if (!cancelled) imageToSend = r;
+    });
+    return () => {
+      cancelled = true;
+    };
   });
 
   // Reflète l'état dans l'URL sans recharger ni empiler l'historique.
@@ -167,7 +186,7 @@
     const f = item?.getAsFile();
     if (f) {
       e.preventDefault();
-      setImage(new File([f], f.name || 'presse-papiers.png', { type: f.type }));
+      setImage(new File([f], f.name || 'clipboard.png', { type: f.type }));
     }
   }
 </script>
@@ -192,7 +211,7 @@
   <div class="drop-overlay" transition:fade={{ duration: 120 }} aria-hidden="true">
     <div class="drop-box">
       <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-      <p>Déposer l'image pour lancer une recherche visuelle</p>
+      <p>{i18n.t('upload.overlay')}</p>
     </div>
   </div>
 {/if}
@@ -200,12 +219,12 @@
 <div class="layout">
   <aside class="sidebar" class:open={filtersOpen}>
     <div class="sidebar-head">
-      <span>Recherche</span>
-      <button type="button" class="close" aria-label="Fermer les filtres" onclick={() => (filtersOpen = false)}>×</button>
+      <span>{i18n.t('filters.panel')}</span>
+      <button type="button" class="close" aria-label={i18n.t('filters.close')} onclick={() => (filtersOpen = false)}>×</button>
     </div>
     <ImageUpload bind:file={image} onchange={resetPage} />
     {#if imageInfo}
-      <ImageInfoPanel info={imageInfo} bind:includeGps />
+      <ImageInfoPanel info={imageInfo} bind:includeGps sent={imageToSend ? { bytes: imageToSend.file.size, width: imageToSend.width, height: imageToSend.height, resized: imageToSend.resized } : undefined} />
     {/if}
     <FilterPanel {facets} bind:filters onchange={resetPage} />
   </aside>
@@ -220,19 +239,19 @@
         <input
           bind:this={searchEl}
           type="search"
-          placeholder="Rechercher un objet, une origine, un matériau…"
-          aria-label="Recherche"
+          placeholder={i18n.t('search.placeholder')}
+          aria-label={i18n.t('search.label')}
           bind:value={text}
           oninput={resetPage}
         />
         {#if text}
-          <button type="button" class="clear" aria-label="Effacer la recherche" onclick={() => { text = ''; resetPage(); searchEl?.focus(); }}>×</button>
+          <button type="button" class="clear" aria-label={i18n.t('search.clear')} onclick={() => { text = ''; resetPage(); searchEl?.focus(); }}>×</button>
         {:else}
-          <kbd title="Appuyer sur / pour rechercher">/</kbd>
+          <kbd title={i18n.t('search.hint')}>/</kbd>
         {/if}
       </div>
       <button type="button" class="filters-btn" onclick={() => (filtersOpen = true)}>
-        Filtres {#if activeFilterCount}<span class="badge">{activeFilterCount}</span>{/if}
+        {i18n.t('filters.title')} {#if activeFilterCount}<span class="badge">{activeFilterCount}</span>{/if}
       </button>
     </form>
 
@@ -243,8 +262,8 @@
     <div class="results-head">
       <span class="status" aria-live="polite">
         {#if result}
-          <strong>{result.total}</strong> objet{result.total > 1 ? 's' : ''}
-          {#if image}<span class="muted"> · triés par similarité</span>{/if}
+          <strong>{result.total}</strong> {i18n.t('results.count', { n: result.total }).replace(/^\d+\s*/, '')}
+          {#if image}<span class="muted"> · {i18n.t('results.bySimilarity')}</span>{/if}
         {:else}
           &nbsp;
         {/if}
@@ -259,10 +278,10 @@
       </div>
     {:else if result.items.length === 0}
       <div class="empty">
-        <p><strong>Aucun objet ne correspond.</strong></p>
-        <p class="muted">Essayez d'élargir la recherche ou de retirer un filtre.</p>
+        <p><strong>{i18n.t('results.empty')}</strong></p>
+        <p class="muted">{i18n.t('results.emptyHint')}</p>
         {#if text || activeFilterCount}
-          <button type="button" class="btn" onclick={clearAll}>Tout effacer</button>
+          <button type="button" class="btn" onclick={clearAll}>{i18n.t('chips.clearAll')}</button>
         {/if}
       </div>
     {:else}
@@ -273,10 +292,10 @@
       </div>
 
       {#if totalPages > 1}
-        <nav class="pager" aria-label="Pagination">
-          <button type="button" class="btn" disabled={pageNo <= 1} onclick={() => pageNo--}>← Précédent</button>
-          <span>Page {pageNo} / {totalPages}</span>
-          <button type="button" class="btn" disabled={pageNo >= totalPages} onclick={() => pageNo++}>Suivant →</button>
+        <nav class="pager" aria-label={i18n.t('pager.label')}>
+          <button type="button" class="btn" disabled={pageNo <= 1} onclick={() => pageNo--}>{i18n.t('pager.prev')}</button>
+          <span>{i18n.t('pager.page', { page: pageNo, total: totalPages })}</span>
+          <button type="button" class="btn" disabled={pageNo >= totalPages} onclick={() => pageNo++}>{i18n.t('pager.next')}</button>
         </nav>
       {/if}
     {/if}

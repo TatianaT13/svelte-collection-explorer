@@ -2,6 +2,7 @@
   /** Filtres actifs sous forme de puces supprimables, une puce par valeur. */
   import { filterFields } from '$lib/config/schema';
   import { labelOf } from '$lib/utils/labels';
+  import { i18n } from '$lib/i18n/index.svelte';
   import type { ActiveFilters } from '$lib/api/types';
 
   let {
@@ -21,15 +22,15 @@
 
   const chips = $derived.by(() => {
     const out: Chip[] = [];
-    if (text) out.push({ id: '__text', key: '__text', label: 'Recherche', display: `« ${text} »` });
+    if (text) out.push({ id: '__text', key: '__text', label: i18n.t('chips.search'), display: `« ${text} »` });
     for (const f of filterFields) {
       const v = filters[f.key];
       if (v === undefined || v === null || v === '') continue;
       if (Array.isArray(v)) {
-        for (const x of v) out.push({ id: `${f.key}:${x}`, key: f.key, value: x, label: f.label, display: labelOf(f, x) });
+        for (const x of v) out.push({ id: `${f.key}:${x}`, key: f.key, value: x, label: i18n.l(f.label), display: labelOf(f, x) });
       } else {
         const d = labelOf(f, v);
-        out.push({ id: f.key, key: f.key, label: f.label, display: f.kind === 'text' ? `« ${d} »` : d });
+        out.push({ id: f.key, key: f.key, label: i18n.l(f.label), display: f.kind === 'text' ? `« ${d} »` : d });
       }
     }
     return out;
@@ -37,16 +38,16 @@
 </script>
 
 {#if chips.length}
-  <div class="chips" role="list" aria-label="Filtres actifs">
+  <div class="chips" role="list" aria-label={i18n.t('chips.active')}>
     {#each chips as chip (chip.id)}
       <span class="chip" role="listitem">
         <span class="k">{chip.label}</span>
         <span class="v">{chip.display}</span>
-        <button type="button" aria-label="Retirer {chip.label} {chip.display}" onclick={() => onremove(chip.key, chip.value)}>×</button>
+        <button type="button" aria-label={i18n.t('chips.remove', { label: chip.label, value: chip.display })} onclick={() => onremove(chip.key, chip.value)}>×</button>
       </span>
     {/each}
     {#if chips.length > 1}
-      <button type="button" class="clear" onclick={onclear}>Tout effacer</button>
+      <button type="button" class="clear" onclick={onclear}>{i18n.t('chips.clearAll')}</button>
     {/if}
   </div>
 {/if}
