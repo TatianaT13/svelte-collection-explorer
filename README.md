@@ -52,9 +52,13 @@ src/
     api/
       types.ts                 # contrats de données
       adapter.ts               # interface CollectionAdapter
-      mockAdapter.ts           # backend simulé en mémoire
+      localAdapter.ts          # jeu de données statique + recherche par image dans le navigateur (défaut)
+      mockAdapter.ts           # données générées, sans modèle (VITE_ADAPTER=mock)
+      filtering.ts             # filtrage et recherche texte, purs et testés
       imageInfo.ts             # extraction EXIF/IPTC/XMP côté client
       index.ts                 # point d'entrée : quel adapter est actif
+    ml/embedder.ts             # CLIP dans le navigateur (transformers.js), chargé à la demande
+    ml/status.svelte.ts        # progression du chargement du modèle
     i18n/messages.ts           # textes d'interface par langue (fr, en)
     i18n/index.svelte.ts       # store de langue : i18n.locale, i18n.t(), i18n.l()
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
@@ -349,7 +353,37 @@ réponse plus récente.
 
 ---
 
-## 8. Métadonnées des images
+## 8. Données réelles et recherche par image dans le navigateur
+
+Le jeu de démonstration est constitué de **64 objets du Metropolitan Museum of Art** (Open Access,
+CC0) : vraies photos, vraies métadonnées, avec un accent sur l'Europe de l'Est, la Méditerranée
+et le Proche-Orient. `npm run data` lance `scripts/build-data.mjs`, qui :
+
+1. interroge l'API du Met sur une vingtaine de thèmes et garde les objets du domaine public avec image ;
+2. traduit les champs du Met vers les codes du schéma (type, pays ISO, matériaux, techniques,
+   période depuis la date, sujet depuis les tags) par règles de mots-clés ;
+3. enregistre des vignettes de 512 px dans `static/data/thumbs/` ;
+4. calcule pour chaque image un **embedding CLIP** (`Xenova/clip-vit-base-patch32`) et écrit
+   `static/data/items.json`.
+
+Côté navigateur, `localAdapter.ts` charge ce fichier. Quand une photo est déposée,
+`ml/embedder.ts` charge le **même modèle** avec transformers.js (ONNX Runtime Web, ~90 Mo
+quantifiés, téléchargés une fois puis en cache), calcule le vecteur de la photo et classe les objets
+par similarité cosinus. Les seuils « forte / moyenne / faible » sont dans `schema.similarity`.
+
+Ce que ça change :
+
+- **La recherche par image est réelle**, sans serveur : elle tourne sur GitHub Pages.
+- **La photo ne quitte jamais l'appareil.** Pour des agents qui photographient des pièces sous
+  contrôle, c'est un argument de confidentialité fort.
+- transformers.js est chargé par `import()` dynamique : le bundle principal ne grossit pas, le
+  modèle n'est demandé qu'au premier envoi d'image.
+- L'adapter HTTP d'un vrai backend remplacera cet adapter sans toucher aux composants ; le
+  backend calculera alors les embeddings sur ses propres images, avec le modèle de son choix.
+
+---
+
+## 9. Métadonnées des images
 
 `src/lib/api/imageInfo.ts` lit, côté client, EXIF/IPTC/XMP (librairie `exifr`), les dimensions
 réelles (via un `Image()` en mémoire) et un SHA-256 (`crypto.subtle`). Les trois s'exécutent en
@@ -364,7 +398,7 @@ et falsifiables. Le backend doit refaire l'extraction de référence et calculer
 
 ---
 
-## 9. Multilingue
+## 10. Multilingue
 
 Trois couches, toutes pilotées par un seul store `i18n` (`src/lib/i18n/index.svelte.ts`) :
 
@@ -385,7 +419,7 @@ Trois couches, toutes pilotées par un seul store `i18n` (`src/lib/i18n/index.sv
 
 ---
 
-## 10. Détails d'interface côté utilisateur
+## 11. Détails d'interface côté utilisateur
 
 Quelques mécanismes qui font la différence à l'usage, et comment ils sont faits en Svelte.
 
@@ -406,6 +440,7 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | Squelettes au premier chargement, barre de progression ensuite | `SkeletonCard.svelte`, `+page.svelte` | pas de clignotement : on ne vide jamais la grille pendant une recherche |
 | Thème clair / sombre | `stores/theme.svelte.ts`, `app.html` | attribut `data-theme`, appliqué avant le premier rendu pour éviter le flash |
 | Drapeau à côté de l'origine | `utils/flag.ts` | indicateurs régionaux Unicode calculés depuis le code ISO |
+| Comparaison visuelle synchronisée | `ImageCompare.svelte` | zoom à la molette et déplacement liés entre toutes les images, superposition avec curseur d'opacité pour deux objets |
 | « Différences seulement » et « Copier le tableau » | `compare/+page.svelte` | `$derived` sur les groupes, `navigator.clipboard` en TSV collable dans un tableur |
 | Filtres en tiroir sur mobile | `+page.svelte` | `position: fixed` + `transform` sous 820 px, bouton « Filtres » avec compteur |
 
@@ -426,7 +461,7 @@ Règles suivies : jamais d'information portée par la couleur seule, `:focus-vis
 
 ---
 
-## 11. SSR : ce qu'il faut savoir
+## 12. SSR : ce qu'il faut savoir
 
 SvelteKit rend chaque page une première fois côté serveur, puis l'« hydrate » dans le navigateur.
 Conséquences dans ce projet :
@@ -442,7 +477,7 @@ Conséquences dans ce projet :
 
 ---
 
-## 12. Déploiement
+## 13. Déploiement
 
 Le front est statique : `@sveltejs/adapter-static` pré-rend les deux pages en HTML, le mock tourne
 dans le navigateur. Le workflow `.github/workflows/deploy.yml` construit et publie sur **GitHub Pages**
@@ -458,7 +493,16 @@ plateforme : le code applicatif ne change pas.
 
 ---
 
-## 13. Pour aller plus loin
+## 14. Tests
+
+`npm test` lance Vitest sur les modules purs : sérialisation d'URL, libellés, filtrage et recherche
+texte, similarité. Le workflow les exécute avant chaque déploiement. Les parcours complets sont
+vérifiés en navigateur headless pendant le développement ; les transformer en tests Playwright
+est l'étape suivante.
+
+---
+
+## 15. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.

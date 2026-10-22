@@ -1,12 +1,15 @@
 import type { CollectionAdapter } from './adapter';
+import { localAdapter } from './localAdapter';
 import { mockAdapter } from './mockAdapter';
 
 /**
  * Point d'entrée unique vers le backend.
- * Pour brancher une vraie API : créer `httpAdapter.ts` qui implémente
- * `CollectionAdapter`, puis changer la ligne ci-dessous (ou lire une variable d'env).
+ * - par défaut : adapter local (jeu de données du Met + recherche par image dans le navigateur) ;
+ * - VITE_ADAPTER=mock : données générées, sans modèle ;
+ * - pour une vraie API : créer `httpAdapter.ts` et l'ajouter ici.
  */
-export const api: CollectionAdapter = mockAdapter;
+const which = import.meta.env.VITE_ADAPTER ?? 'local';
+export const api: CollectionAdapter = which === 'mock' ? mockAdapter : localAdapter;
 
 export type { CollectionAdapter, ArchiveReceipt } from './adapter';
 export * from './types';

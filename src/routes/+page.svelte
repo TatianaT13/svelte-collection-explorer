@@ -30,6 +30,7 @@
   import SkeletonCard from '$lib/components/SkeletonCard.svelte';
   import ImageInfoPanel from '$lib/components/ImageInfoPanel.svelte';
   import ItemDrawer from '$lib/components/ItemDrawer.svelte';
+  import ModelStatus from '$lib/components/ModelStatus.svelte';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
   // L'état part vide, puis est lu depuis l'URL au montage ; les effets attendent `ready`.
@@ -231,6 +232,9 @@
       <button type="button" class="close" aria-label={i18n.t('filters.close')} onclick={() => (filtersOpen = false)}>×</button>
     </div>
     <ImageUpload bind:file={image} onchange={resetPage} />
+    {#if image}
+      <ModelStatus />
+    {/if}
     {#if imageInfo}
       <ImageInfoPanel info={imageInfo} bind:includeGps sent={imageToSend ? { bytes: imageToSend.file.size, width: imageToSend.width, height: imageToSend.height, resized: imageToSend.resized } : undefined} />
     {/if}

@@ -1,11 +1,14 @@
 <script lang="ts">
   /** Score de similarité 0..1 : anneau + pourcentage + libellé (jamais la couleur seule). */
   import { i18n } from '$lib/i18n/index.svelte';
+  import { schema } from '$lib/config/schema';
 
   let { score, size = 44 }: { score: number; size?: number } = $props();
 
   const pct = $derived(Math.round(Math.max(0, Math.min(1, score)) * 100));
-  const label = $derived(i18n.t(pct >= 80 ? 'score.strong' : pct >= 50 ? 'score.medium' : 'score.weak'));
+  const label = $derived(
+    i18n.t(score >= schema.similarity.strong ? 'score.strong' : score >= schema.similarity.medium ? 'score.medium' : 'score.weak')
+  );
   const text = $derived(i18n.t('score.label', { label, pct }));
   const r = $derived((size - 4) / 2);
   const c = $derived(2 * Math.PI * r);

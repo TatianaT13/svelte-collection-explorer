@@ -52,10 +52,19 @@ export interface UploadPolicy {
   quality: number;
 }
 
+export interface SimilarityThresholds {
+  /** Score (cosinus) à partir duquel la similarité est dite forte. */
+  strong: number;
+  /** Score à partir duquel elle est dite moyenne ; en dessous, faible. */
+  medium: number;
+}
+
 export interface CollectionSchema {
   name: LocalizedLabel;
   /** Taille de page par défaut des résultats. */
   pageSize: number;
+  /** Lecture du score de similarité renvoyé par le backend (0..1). */
+  similarity: SimilarityThresholds;
   /**
    * Politique d'envoi des images. La version réduite sert à la recherche ;
    * l'original est conservé côté client et destiné à `adapter.archiveImage`.
@@ -75,6 +84,7 @@ const G = {
 export const schema: CollectionSchema = {
   name: { fr: 'Objets culturels', en: 'Cultural objects' },
   pageSize: 12,
+  similarity: { strong: 0.8, medium: 0.65 },
   upload: { maxPx: 1600, skipBelowBytes: 2 * 1024 * 1024, quality: 0.85 },
   fields: [
     { key: 'category', label: { fr: 'Type d’objet', en: 'Object type' }, kind: 'vocab', vocabulary: 'category', showOnCard: true, filterable: true, group: G.identification },
@@ -96,7 +106,8 @@ export const schema: CollectionSchema = {
     { key: 'distinguishing_features', label: { fr: 'Signes distinctifs', en: 'Distinguishing features' }, kind: 'longtext', group: G.description },
     { key: 'description', label: { fr: 'Description', en: 'Description' }, kind: 'longtext', group: G.description },
 
-    { key: 'inventory', label: { fr: 'N° inventaire', en: 'Inventory no.' }, kind: 'text', group: G.management }
+    { key: 'inventory', label: { fr: 'N° inventaire', en: 'Inventory no.' }, kind: 'text', group: G.management },
+    { key: 'source', label: { fr: 'Source', en: 'Source' }, kind: 'longtext', group: G.management }
   ]
 };
 

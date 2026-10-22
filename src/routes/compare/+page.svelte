@@ -11,6 +11,7 @@
   import { flagEmoji } from '$lib/utils/flag';
   import MetadataValue from '$lib/components/MetadataValue.svelte';
   import ScoreRing from '$lib/components/ScoreRing.svelte';
+  import ImageCompare from '$lib/components/ImageCompare.svelte';
 
   const items = $derived(compare.items);
   let onlyDiff = $state(false);
@@ -83,6 +84,9 @@
 {:else}
   {#if items.length === 1}
     <p class="hint">{i18n.t('compare.oneHint')} <a href="{base}/">{i18n.t('compare.back')}</a></p>
+  {/if}
+  {#if items.length >= 2}
+    <ImageCompare {items} />
   {/if}
   <div class="scroller">
     <table style="--cols: {items.length}">

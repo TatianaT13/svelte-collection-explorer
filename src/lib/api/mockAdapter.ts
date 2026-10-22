@@ -5,6 +5,7 @@ import { countryName } from '$lib/config/countries';
 import { schema } from '$lib/config/schema';
 import { termLabel, vocabCodes } from '$lib/config/vocabularies';
 import { i18n } from '$lib/i18n/index.svelte';
+import { matchesFilters, matchesText, paginate } from './filtering';
 
 /**
  * Backend simulé : données en mémoire, latence artificielle.
@@ -96,51 +97,10 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Un filtre correspond si la valeur de l'objet (scalaire ou tableau) contient la valeur demandée. */
-function matchesFilters(item: CollectionItem, filters: SearchQuery['filters']): boolean {
-  return Object.entries(filters).every(([key, wanted]) => {
-    if (wanted === null || wanted === undefined || wanted === '') return true;
-    if (Array.isArray(wanted) && wanted.length === 0) return true;
-    const field = schema.fields.find((f) => f.key === key);
-    const actual = item.metadata[key];
-    const actualList = Array.isArray(actual) ? actual.map(String) : [String(actual ?? '')];
-    const wantedList = Array.isArray(wanted) ? wanted.map(String) : [String(wanted)];
-
-    if (field?.kind === 'text' || field?.kind === 'longtext') {
-      return actualList.join(' ').toLowerCase().includes(wantedList[0].toLowerCase());
-    }
-    if (field?.kind === 'number') return Number(actual) >= Number(wanted);
-    return wantedList.some((w) => actualList.some((a) => a.toLowerCase() === w.toLowerCase()));
-  });
-}
-
-/** Recherche texte sur le titre, les libellés traduits et les valeurs brutes. */
-function searchableText(item: CollectionItem): string {
-  const L = i18n.locale;
-  const parts: string[] = [item.title];
-  for (const f of schema.fields) {
-    const v = item.metadata[f.key];
-    if (v === null || v === undefined) continue;
-    const list = Array.isArray(v) ? v : [v];
-    for (const x of list) {
-      const s = String(x);
-      parts.push(s);
-      if (f.kind === 'country') parts.push(countryName(s, L));
-      if (f.kind === 'vocab' && f.vocabulary) parts.push(termLabel(f.vocabulary, s, L));
-    }
-  }
-  return parts.join(' ').toLowerCase();
-}
-
-function matchesText(item: CollectionItem, text?: string): boolean {
-  if (!text) return true;
-  return searchableText(item).includes(text.toLowerCase());
-}
-
 export const mockAdapter: CollectionAdapter = {
   async search(query: SearchQuery): Promise<SearchResult> {
     await delay(300);
-    let results = RAW.map(present).filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text));
+    let results = RAW.map(present).filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, i18n.locale));
 
     if (query.image) {
       // Simule une recherche visuelle : score pseudo-aléatoire dérivé du fichier.
@@ -150,9 +110,8 @@ export const mockAdapter: CollectionAdapter = {
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
     }
 
-    const start = (query.page - 1) * query.pageSize;
     return {
-      items: results.slice(start, start + query.pageSize),
+      items: paginate(results, query.page, query.pageSize),
       total: results.length,
       page: query.page,
       pageSize: query.pageSize
