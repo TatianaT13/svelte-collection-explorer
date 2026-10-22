@@ -8,7 +8,7 @@
   import { schema } from '$lib/config/schema';
   import { countryName } from '$lib/config/countries';
   import { termLabel } from '$lib/config/vocabularies';
-  import { riskForCodes } from '$lib/config/risk';
+  import { readInsights } from '$lib/api/reading';
   import { flagEmoji } from '$lib/utils/flag';
   import { i18n } from '$lib/i18n/index.svelte';
   import { lastQuery, type Decision } from '$lib/stores/query.svelte';
@@ -23,12 +23,14 @@
   }: { insights: Insights; onopen?: (id: string) => void; onfilterOrigin?: (code: string) => void; stacked?: boolean } = $props();
 
   const L = $derived(i18n.locale);
-  const topCategory = $derived(insights.categories[0]);
-  const topPeriod = $derived(insights.periods[0]);
-  const best = $derived(insights.references[0]?.score ?? 0);
-  /** Fiable seulement si au moins un objet de référence est réellement proche. */
-  const reliable = $derived(best >= schema.similarity.reliable);
-  const origins = $derived(insights.origins.filter((o) => o.share >= 0.005));
+  const reading = $derived(readInsights(insights, schema.similarity));
+  const topCategory = $derived(reading.topCategory);
+  const topPeriod = $derived(reading.topPeriod);
+  const best = $derived(reading.best);
+  const reliable = $derived(reading.reliable);
+  const origins = $derived(reading.origins);
+  const confidence = $derived(reading.confidence);
+  const risks = $derived(reading.risks.map((r) => ({ label: i18n.l(r.label), advice: i18n.l(r.advice), url: r.url, emergency: r.emergency })));
   /** Lieux précis (hors pays entier) rattachés à chaque pays, pour détailler la provenance. */
   function placesIn(iso: string) {
     void places.version;
@@ -36,27 +38,9 @@
       .filter((p) => !places.isCountry(p.code) && places.chain(p.code).at(-1)?.countryIso === iso && p.share >= 0.02)
       .slice(0, 2);
   }
-  const confidence = $derived(
-    !reliable || !topCategory
-      ? 'weak'
-      : best >= schema.similarity.strong && topCategory.share >= 0.6
-        ? 'strong'
-        : topCategory.share >= 0.4
-          ? 'medium'
-          : 'weak'
-  );
-
-  /** Règles de risque : identification probable × origines probables, seulement si la lecture est fiable. */
-  const risks = $derived.by(() => {
-    const seen = new Map<string, { label: string; advice: string; url: string; emergency?: boolean; origin: string }>();
-    if (!reliable) return [];
-    for (const o of origins) {
-      for (const r of riskForCodes(o.code, topCategory?.code)) {
-        if (!seen.has(r.id)) seen.set(r.id, { label: i18n.l(r.label), advice: i18n.l(r.advice), url: r.url, emergency: r.emergency, origin: o.code });
-      }
-    }
-    return [...seen.values()];
-  });
+  function optionLabel(kind: 'category' | 'origin', code: string) {
+    return kind === 'category' ? termLabel('category', code, L) : countryName(code, L);
+  }
 
   const decision = $derived(lastQuery.record?.decision ?? null);
 
@@ -134,6 +118,13 @@
       </div>
     </div>
   </div>
+
+  {#each reading.ambiguities as a (a.kind)}
+    <div class="amb" role="note">
+      <p class="al"><strong>{i18n.t('insights.ambiguous')}</strong> · {i18n.t(`insights.ambiguous.${a.kind}`, { a: optionLabel(a.kind, a.options[0].code), pa: Math.round(a.options[0].share * 100), b: optionLabel(a.kind, a.options[1].code), pb: Math.round(a.options[1].share * 100) })}</p>
+      <p class="aa">{i18n.t('insights.ambiguousAdvice')}</p>
+    </div>
+  {/each}
 
   {#each risks as r (r.label)}
     <div class="risk" class:emergency={r.emergency} role="note">
@@ -331,6 +322,21 @@
     bottom: 3px;
     font-size: 0.8rem;
     font-style: normal;
+  }
+  .amb {
+    margin-top: 0.9rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px dashed var(--accent);
+    border-radius: 10px;
+    background: var(--accent-soft);
+    font-size: 0.85rem;
+  }
+  .amb p {
+    margin: 0;
+  }
+  .aa {
+    margin-top: 0.2rem !important;
+    color: var(--muted);
   }
   .risk {
     display: flex;

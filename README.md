@@ -70,6 +70,8 @@ src/
     stores/query.svelte.ts     # dernière photo de référence (pour l'export du dossier)
     utils/imgFallback.ts       # repli vignette si l'image grand format ne charge pas
     utils/caseFile.ts          # dossier de contrôle : construction et export JSON
+    utils/photoQuality.ts      # contrôle qualité de la photo : netteté, exposition, contraste, taille, reflets
+    api/reading.ts             # lecture d'un Insights : fiabilité, confiance, hésitations, risques (partagé)
     i18n/messages.ts           # textes d'interface par langue (fr, en)
     i18n/index.svelte.ts       # store de langue : i18n.locale, i18n.t(), i18n.l()
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
@@ -394,7 +396,9 @@ faible » sont dans `schema.similarity`.
 
 **Lecture des résultats.** Une liste d'objets similaires ne répond pas à la question de l'agent.
 `api/insights.ts` agrège les `topK` meilleurs résultats (12 par défaut, `schema.similarity.topK`),
-pondérés par la similarité, en trois lectures affichées par `InsightsPanel` :
+pondérés par la similarité relative au meilleur (exp((s − best)/0,05) : à dix points du meilleur, un
+objet pèse sept fois moins, donc une correspondance quasi exacte domine), en trois lectures affichées
+par `InsightsPanel` :
 
 - **ce que c'est probablement** : type, matériaux, période dominants, avec une confiance en mots ;
 - **provenance probable** : parts par pays, cliquables pour filtrer, avec les objets de référence ;
@@ -424,6 +428,21 @@ porte l'identifiant du lieu le plus précis connu, ou celui du pays. Côté fron
 La **position GPS de la photo** n'entre jamais dans la provenance : elle dit où la photo a été prise,
 pas d'où vient l'objet. Si l'agent a autorisé son envoi, elle apparaît comme un marqueur distinct,
 légendé « lieu de la photo ».
+
+**Contrôle qualité de la photo.** Avant l'analyse, `utils/photoQuality.ts` mesure sur une
+version réduite : variance du laplacien rapportée à la variance de luminance (netteté
+indépendante de l'exposition, pour ne pas dire « floue » une photo simplement sombre), luminance moyenne (sombre / surexposée),
+écart-type (contraste), part de pixels saturés (reflets), petit côté (taille utile, calculée sur la
+zone cadrée si elle existe). Chaque défaut vient avec un geste concret : « rapprochez-vous »,
+« changez d'angle ». Rien ne bloque, mais le bouton devient « Analyser quand même ». Les seuils
+sont dans `schema.photoQuality`. Sur le terrain, la plupart des mauvais résultats viennent de la
+prise de vue : autant le dire avant plutôt qu'afficher une certitude fausse après.
+
+**Hésitation.** `api/reading.ts` concentre la lecture des résultats, partagée par l'explorateur et
+la page Contrôle. Quand deux types ou deux origines sont trop proches (la première hypothèse sous
+55 %, la seconde au-dessus de 25 %, moins de 20 points d'écart), le panneau affiche les deux, plafonne
+la confiance à « moyenne », examine les listes rouges pour les deux types, et conseille une vue
+supplémentaire. L'agent préfère une hésitation honnête à une certitude fausse.
 
 **Recadrage.** Tracer un cadre sur l'aperçu limite la recherche à cette zone : l'objet est rarement
 seul sur une photo de terrain. L'original reste intact pour les métadonnées et l'archivage ; seule
@@ -509,6 +528,8 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | Détail | Fichier | Mécanisme |
 |---|---|---|
 | Badge « Liste rouge » sur les cartes et alerte dans le volet | `ResultCard.svelte`, `ItemDrawer.svelte` | `riskFor(item)` croise origine et catégorie avec les règles ICOM |
+| Contrôle qualité de la photo | `PhotoQuality.svelte` | verdict et conseils sous la zone de dépôt, recalculé si la zone cadrée change |
+| Hésitation entre deux hypothèses | `InsightsPanel.svelte`, `controle/+page.svelte` | bloc dédié issu de `readInsights`, même règle partout |
 | Recadrer la photo avant recherche | `ImageUpload.svelte` | cadre tracé au pointeur sur l'aperçu, découpe dans un canvas, l'original est conservé |
 | Position GPS exclue par défaut | `+page.svelte` | `includeGps = false` : la position ne part que si l'agent le demande |
 | Délai sur la saisie (250 ms) | `+page.svelte` | `$effect` avec `setTimeout` et nettoyage : `text` (saisie) alimente `query` (recherche) |

@@ -33,6 +33,8 @@
   import ModelStatus from '$lib/components/ModelStatus.svelte';
   import InsightsPanel from '$lib/components/InsightsPanel.svelte';
   import MapView from '$lib/components/MapView.svelte';
+  import PhotoQuality from '$lib/components/PhotoQuality.svelte';
+  import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
   import { lastQuery } from '$lib/stores/query.svelte';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
@@ -47,6 +49,27 @@
   let imageToSend = $state<ResizeResult | null>(null); // version réduite envoyée à la recherche
   let imageInfo = $state<ImageInfo | null>(null);
   let includeGps = $state(false); // vie privée par défaut : la position ne part que si on le demande
+  let photoMetrics = $state<PhotoMetrics | null>(null);
+  let photoIssues = $state<QualityIssue[]>([]);
+
+  // Contrôle qualité de ce qui part réellement à la recherche (zone cadrée ou image entière).
+  $effect(() => {
+    const f = crop ?? image;
+    if (!f) {
+      photoMetrics = null;
+      photoIssues = [];
+      return;
+    }
+    let cancelled = false;
+    measurePhoto(f).then((m) => {
+      if (cancelled) return;
+      photoMetrics = m;
+      photoIssues = m ? assessPhoto(m, schema.photoQuality) : [];
+    });
+    return () => {
+      cancelled = true;
+    };
+  });
 
   let facets = $state<FacetValues>({});
   let result = $state<SearchResult | null>(null);
@@ -275,6 +298,7 @@
     </div>
     <ImageUpload bind:file={image} onchange={() => { crop = null; resetPage(); }} oncrop={(f) => { crop = f; resetPage(); }} />
     {#if image}
+      <PhotoQuality metrics={photoMetrics} issues={photoIssues} />
       <ModelStatus />
     {/if}
     {#if imageInfo}

@@ -8,7 +8,9 @@
   import { schema } from '$lib/config/schema';
   import { countryName } from '$lib/config/countries';
   import { termLabel } from '$lib/config/vocabularies';
-  import { riskForCodes } from '$lib/config/risk';
+  import { readInsights } from '$lib/api/reading';
+  import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
+  import PhotoQuality from '$lib/components/PhotoQuality.svelte';
   import { resizeImage, type ResizeResult } from '$lib/utils/resizeImage';
   import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
   import { flagEmoji } from '$lib/utils/flag';
@@ -33,6 +35,26 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let analysedMs = $state<number | null>(null);
+  let photoMetrics = $state<PhotoMetrics | null>(null);
+  let photoIssues = $state<QualityIssue[]>([]);
+
+  $effect(() => {
+    const f = crop ?? image;
+    if (!f) {
+      photoMetrics = null;
+      photoIssues = [];
+      return;
+    }
+    let cancelled = false;
+    measurePhoto(f).then((m) => {
+      if (cancelled) return;
+      photoMetrics = m;
+      photoIssues = m ? assessPhoto(m, schema.photoQuality) : [];
+    });
+    return () => {
+      cancelled = true;
+    };
+  });
   let selected = $state<CollectionItem | null>(null);
   let requestId = 0;
 
@@ -140,21 +162,19 @@
     step = 1;
   }
 
-  // ---- lecture (mêmes règles que InsightsPanel)
-  const best = $derived(insights?.references[0]?.score ?? 0);
-  const reliable = $derived(best >= schema.similarity.reliable);
-  const topCategory = $derived(insights?.categories[0]);
-  const topPeriod = $derived(insights?.periods[0]);
-  const origins = $derived((insights?.origins ?? []).filter((o) => o.share >= 0.005));
-  const confidence = $derived(
-    !reliable || !topCategory ? 'weak' : best >= schema.similarity.strong && topCategory.share >= 0.6 ? 'strong' : topCategory.share >= 0.4 ? 'medium' : 'weak'
-  );
-  const risks = $derived.by(() => {
-    if (!reliable || !topCategory) return [];
-    const seen = new Map<string, ReturnType<typeof riskForCodes>[number]>();
-    for (const o of origins) for (const r of riskForCodes(o.code, topCategory.code)) seen.set(r.id, r);
-    return [...seen.values()];
-  });
+  // ---- lecture partagée avec InsightsPanel
+  const reading = $derived(insights ? readInsights(insights, schema.similarity) : null);
+  const best = $derived(reading?.best ?? 0);
+  const reliable = $derived(reading?.reliable ?? false);
+  const topCategory = $derived(reading?.topCategory);
+  const topPeriod = $derived(reading?.topPeriod);
+  const origins = $derived(reading?.origins ?? []);
+  const confidence = $derived(reading?.confidence ?? 'weak');
+  const risks = $derived(reading?.risks ?? []);
+  const ambiguities = $derived(reading?.ambiguities ?? []);
+  function optionLabel(kind: 'category' | 'origin', code: string) {
+    return kind === 'category' ? termLabel('category', code, L) : countryName(code, L);
+  }
   /** « Pourquoi » : attributs dominants parmi les références, en langage courant. */
   const sharedTags = $derived.by(() => {
     if (!insights) return [];
@@ -212,12 +232,13 @@
     <h2>{i18n.t('control.step1Title')}</h2>
     <ImageUpload bind:file={image} onchange={() => { crop = null; extra = []; }} oncrop={(f) => (crop = f)} />
     {#if image}
+      <PhotoQuality metrics={photoMetrics} issues={photoIssues} compact />
       <ModelStatus />
       <ExtraViews bind:views={extra} />
     {/if}
     <p class="hint">{i18n.t('control.photoHint')}</p>
-    <button type="button" class="primary" disabled={!canAnalyse} onclick={analyse}>
-      {loading ? i18n.t('model.computing') : i18n.t('control.analyse')}
+    <button type="button" class="primary" class:warn={photoIssues.length > 0} disabled={!canAnalyse} onclick={analyse}>
+      {loading ? i18n.t('model.computing') : photoIssues.length ? i18n.t('control.analyseAnyway') : i18n.t('control.analyse')}
     </button>
     {#if error}<p class="error">{error}</p>{/if}
     <p class="hint small">{i18n.t('control.privacy')}</p>
@@ -250,6 +271,12 @@
         </div>
         <p class="meta">{i18n.t('insights.basedOn', { n: insights.topK })}</p>
       </div>
+      {#each ambiguities as a (a.kind)}
+        <div class="block amb">
+          <p class="id">{i18n.t('insights.ambiguous')}</p>
+          <p class="meta">{i18n.t(`insights.ambiguous.${a.kind}`, { a: optionLabel(a.kind, a.options[0].code), pa: Math.round(a.options[0].share * 100), b: optionLabel(a.kind, a.options[1].code), pb: Math.round(a.options[1].share * 100) })} {i18n.t('insights.ambiguousAdvice')}</p>
+        </div>
+      {/each}
       {#each risks as r (r.id)}
         <div class="block alert" class:emergency={r.emergency}>
           <p class="id">⚠ {i18n.t('insights.risk', { label: i18n.l(r.label) })}</p>
@@ -577,6 +604,17 @@
     font-variant-numeric: tabular-nums;
     color: var(--muted);
     font-size: 12px;
+  }
+  .amb {
+    border: 1px dashed var(--accent);
+    background: var(--accent-soft);
+  }
+  .amb .id {
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .primary.warn {
+    background: #b45309;
   }
   .alert {
     border-color: #f3c48c;

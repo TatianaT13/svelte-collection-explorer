@@ -6,10 +6,15 @@ import type { CollectionItem, GeoBucket, Insights, Share } from './types';
  * Pur et testable ; un backend ferait le même calcul côté serveur.
  */
 
-/** Poids d'un score : nul sous le plancher, croissant au-dessus (accentue les très proches). */
-function weightOf(score: number, floor = 0.5): number {
-  const w = Math.max(0, score - floor);
-  return w * w;
+/**
+ * Poids d'un score, relatif au meilleur : exp((s − best) / T).
+ * Avec T = 0,05, un objet à 10 points du meilleur pèse 7 fois moins : une correspondance
+ * quasi exacte domine la lecture, alors que des scores groupés se partagent le poids.
+ * Nul sous le plancher.
+ */
+function weightOf(score: number, best: number, floor = 0.5, T = 0.05): number {
+  if (score < floor) return 0;
+  return Math.exp((score - best) / T);
 }
 
 function shares(items: CollectionItem[], key: string, weights: number[]): Share[] {
@@ -36,7 +41,8 @@ function shares(items: CollectionItem[], key: string, weights: number[]): Share[
 
 export function computeInsights(ranked: CollectionItem[], topK = 12): Insights {
   const top = ranked.filter((it) => typeof it.score === 'number').slice(0, topK);
-  let weights = top.map((it) => weightOf(it.score ?? 0));
+  const best = top[0]?.score ?? 0;
+  let weights = top.map((it) => weightOf(it.score ?? 0, best));
   if (weights.every((w) => w === 0)) weights = top.map(() => 1); // tout est loin : parts égales
   return {
     topK: top.length,

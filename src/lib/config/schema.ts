@@ -68,6 +68,21 @@ export interface SimilarityThresholds {
   topK: number;
 }
 
+export interface PhotoQualityPolicy {
+  /** Petit côté minimal (px) de l'image ou de la zone cadrée. */
+  minSide: number;
+  /** Netteté normalisée (variance du laplacien / variance de luminance, à 512 px) en dessous de laquelle la photo est floue. */
+  blur: number;
+  /** Luminance moyenne (0..255) en dessous de laquelle la photo est sombre. */
+  dark: number;
+  /** Luminance moyenne au-dessus de laquelle elle est surexposée. */
+  bright: number;
+  /** Écart-type de luminance en dessous duquel elle manque de contraste. */
+  lowContrast: number;
+  /** Part de pixels saturés au-delà de laquelle on suspecte des reflets. */
+  clipped: number;
+}
+
 export interface CollectionSchema {
   name: LocalizedLabel;
   /** Taille de page par défaut des résultats. */
@@ -79,6 +94,8 @@ export interface CollectionSchema {
    * l'original est conservé côté client et destiné à `adapter.archiveImage`.
    */
   upload: UploadPolicy;
+  /** Seuils du contrôle qualité de la photo avant analyse. */
+  photoQuality: PhotoQualityPolicy;
   fields: FieldSchema[];
 }
 
@@ -95,6 +112,8 @@ export const schema: CollectionSchema = {
   pageSize: 12,
   similarity: { strong: 0.8, medium: 0.65, reliable: 0.75, topK: 12 },
   upload: { maxPx: 1600, skipBelowBytes: 2 * 1024 * 1024, quality: 0.85 },
+  // Calibré sur des photos de test : nette 0,08–0,16, floutée 0,001 ; contraste d'un tableau aux tons doux ≈ 20.
+  photoQuality: { minSide: 300, blur: 0.02, dark: 55, bright: 205, lowContrast: 15, clipped: 0.25 },
   fields: [
     { key: 'category', label: { fr: 'Type d’objet', en: 'Object type' }, kind: 'vocab', vocabulary: 'category', showOnCard: true, filterable: true, group: G.identification },
     { key: 'origin', label: { fr: 'Origine', en: 'Origin' }, kind: 'country', showOnCard: true, filterable: true, group: G.identification },

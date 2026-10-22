@@ -28,6 +28,12 @@ describe('computeInsights', () => {
     const i = computeInsights([mk('a', 0.3, 'UA', 'icon', []), mk('b', 0.2, 'RU', 'coin', [])], 12);
     expect(i.origins.map((o) => o.share)).toEqual([0.5, 0.5]);
   });
+  it('une correspondance quasi exacte domine trois objets moyens', () => {
+    const ranked = [mk('x', 0.96, 'IL', 'icon', []), mk('b1', 0.86, 'IR', 'jewellery', []), mk('b2', 0.82, 'IR', 'jewellery', []), mk('b3', 0.8, 'IR', 'jewellery', [])];
+    const i = computeInsights(ranked, 12);
+    expect(i.categories[0].code).toBe('icon');
+    expect(i.categories[0].share).toBeGreaterThan(0.55);
+  });
   it('ignore les valeurs vides', () => {
     const i = computeInsights([mk('a', 0.9, '', 'icon', [])], 12);
     expect(i.origins).toEqual([]);
