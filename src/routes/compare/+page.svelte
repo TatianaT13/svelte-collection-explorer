@@ -1,36 +1,87 @@
 <script lang="ts">
   /**
-   * Page Comparer : les objets sélectionnés côte à côte, un champ par ligne.
-   * Les lignes viennent du schéma, les valeurs différentes sont mises en évidence.
+   * Page Comparer : objets sélectionnés côte à côte, champs groupés,
+   * différences surlignées, option "différences seulement", copie du tableau.
    */
   import { compare } from '$lib/stores/compare.svelte';
-  import { fieldGroups } from '$lib/config/schema';
+  import { fieldGroups, type FieldSchema } from '$lib/config/schema';
+  import { formatValue } from '$lib/utils/labels';
+  import { flagEmoji } from '$lib/utils/flag';
   import MetadataValue from '$lib/components/MetadataValue.svelte';
+  import ScoreRing from '$lib/components/ScoreRing.svelte';
 
   const items = $derived(compare.items);
+  let onlyDiff = $state(false);
+  let copied = $state(false);
 
   function differs(key: string): boolean {
     if (items.length < 2) return false;
     const first = JSON.stringify(items[0].metadata[key] ?? null);
     return items.some((it) => JSON.stringify(it.metadata[key] ?? null) !== first);
   }
+
+  const visibleGroups = $derived(
+    fieldGroups
+      .map((g) => ({ name: g.name, fields: onlyDiff ? g.fields.filter((f) => differs(f.key)) : g.fields }))
+      .filter((g) => g.fields.length > 0)
+  );
+
+  const diffCount = $derived(fieldGroups.flatMap((g) => g.fields).filter((f) => differs(f.key)).length);
+
+  async function copyTable() {
+    const rows: string[][] = [['Champ', ...items.map((it) => it.title)]];
+    for (const g of visibleGroups) {
+      for (const f of g.fields) rows.push([f.label, ...items.map((it) => formatValue(f, it.metadata[f.key]))]);
+    }
+    const tsv = rows.map((r) => r.join('\t')).join('\n');
+    try {
+      await navigator.clipboard.writeText(tsv);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch {
+      /* presse-papiers indisponible */
+    }
+  }
 </script>
 
+<svelte:head>
+  <title>Comparaison · {items.length} objet{items.length > 1 ? 's' : ''}</title>
+</svelte:head>
+
 <header class="head">
-  <h1>Comparaison</h1>
-  <div class="actions">
-    <span class="muted">{items.length} / {compare.max} objets</span>
-    {#if items.length}
-      <button type="button" class="link" onclick={() => compare.clear()}>Tout retirer</button>
-    {/if}
+  <div>
+    <h1>Comparaison</h1>
+    <p class="muted">
+      {items.length} / {compare.max} objets
+      {#if items.length >= 2} · {diffCount} champ{diffCount > 1 ? 's' : ''} différent{diffCount > 1 ? 's' : ''}{/if}
+    </p>
   </div>
+  {#if items.length}
+    <div class="actions">
+      {#if items.length >= 2}
+        <label class="switch">
+          <input type="checkbox" bind:checked={onlyDiff} />
+          <span>Différences seulement</span>
+        </label>
+      {/if}
+      <button type="button" class="btn" onclick={copyTable} disabled={!items.length}>
+        {copied ? 'Copié ✓' : 'Copier le tableau'}
+      </button>
+      <button type="button" class="btn ghost" onclick={() => compare.clear()}>Tout retirer</button>
+    </div>
+  {/if}
 </header>
 
 {#if items.length === 0}
-  <p class="empty">
-    Aucun objet sélectionné. <a href="/">Retourner à l'explorateur</a> et cliquer sur « Comparer » sur une carte.
-  </p>
+  <div class="empty">
+    <p><strong>Aucun objet sélectionné.</strong></p>
+    <p class="muted">Dans l'explorateur, cliquez sur « Comparer » sur jusqu'à {compare.max} objets.</p>
+    <a class="btn" href="/">Aller à l'explorateur</a>
+  </div>
 {:else}
+  {#if items.length === 1}
+    <p class="hint">Ajoutez au moins un autre objet pour voir les différences. <a href="/">Retour à l'explorateur</a></p>
+  {/if}
   <div class="scroller">
     <table style="--cols: {items.length}">
       <thead>
@@ -39,22 +90,18 @@
           {#each items as item (item.id)}
             <th>
               <img src={item.imageUrl} alt={item.title} />
-              <div class="title">{item.title}</div>
+              <div class="title">
+                {#if item.metadata.origin}<span aria-hidden="true">{flagEmoji(String(item.metadata.origin))}</span>{/if}
+                {item.title}
+                {#if item.score !== undefined}<ScoreRing score={item.score} size={30} />{/if}
+              </div>
               <button type="button" class="link" onclick={() => compare.remove(item.id)}>Retirer</button>
             </th>
           {/each}
         </tr>
       </thead>
       <tbody>
-        {#if items.some((it) => it.score !== undefined)}
-          <tr>
-            <th class="label">Similarité</th>
-            {#each items as item (item.id)}
-              <td>{item.score !== undefined ? `${Math.round(item.score * 100)} %` : '—'}</td>
-            {/each}
-          </tr>
-        {/if}
-        {#each fieldGroups as group (group.name)}
+        {#each visibleGroups as group (group.name)}
           {#if group.name}
             <tr class="group">
               <th colspan={items.length + 1}>{group.name}</th>
@@ -69,6 +116,9 @@
             </tr>
           {/each}
         {/each}
+        {#if onlyDiff && visibleGroups.length === 0}
+          <tr><td colspan={items.length + 1} class="none">Aucune différence entre ces objets.</td></tr>
+        {/if}
       </tbody>
     </table>
   </div>
@@ -78,29 +128,80 @@
   .head {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
   }
   h1 {
-    font-size: 1.4rem;
+    font-size: 1.45rem;
+    letter-spacing: -0.01em;
     margin: 0;
-  }
-  .actions {
-    display: flex;
-    gap: 1rem;
-    align-items: baseline;
   }
   .muted {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    margin: 0.2rem 0 0;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .switch input {
+    accent-color: var(--accent);
+  }
+  .btn {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.88rem;
+    text-decoration: none;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn.ghost {
+    border-color: transparent;
+    color: var(--muted);
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
   .empty {
-    color: var(--muted);
     text-align: center;
-    padding: 3rem 0;
+    padding: 4rem 1rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+  .empty p {
+    margin: 0 0 0.5rem;
+  }
+  .hint {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin: 0 0 1rem;
   }
   .scroller {
     overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
   }
   table {
     width: 100%;
@@ -110,21 +211,24 @@
   }
   th,
   td {
-    padding: 0.6rem 0.75rem;
+    padding: 0.6rem 0.85rem;
     border-bottom: 1px solid var(--border);
     vertical-align: top;
     text-align: left;
+    font-size: 0.9rem;
   }
   thead th {
     background: var(--surface);
     position: sticky;
-    top: 3.2rem;
+    top: 3.4rem;
+    z-index: 1;
+    padding-top: 0.85rem;
   }
   th.label {
     width: 180px;
     color: var(--muted);
     font-weight: 500;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
   }
   thead img {
     display: block;
@@ -132,32 +236,50 @@
     max-width: 260px;
     height: 150px;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--surface-2);
   }
   .title {
-    margin: 0.5rem 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.55rem 0 0.2rem;
     font-weight: 600;
   }
   tr.group th {
     padding-top: 1rem;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
-    border-bottom: 2px solid var(--border);
+    background: var(--bg);
   }
   tr.diff td {
-    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    background: var(--accent-soft);
+  }
+  tr.diff th.label::before {
+    content: '●';
+    margin-right: 0.4rem;
+    font-size: 0.5rem;
+    vertical-align: middle;
+    color: var(--accent);
+  }
+  td.none {
+    text-align: center;
+    color: var(--muted);
+    padding: 2rem;
   }
   .link {
     background: none;
     border: none;
-    color: var(--accent);
+    color: var(--muted);
     cursor: pointer;
     font: inherit;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     padding: 0;
+  }
+  .link:hover {
+    color: var(--accent);
   }
 </style>

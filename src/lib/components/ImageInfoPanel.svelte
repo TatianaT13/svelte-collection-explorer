@@ -61,8 +61,8 @@
 <style>
   .panel {
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.75rem;
+    border-radius: 12px;
+    padding: 0.85rem;
     background: var(--surface);
     font-size: 0.82rem;
   }

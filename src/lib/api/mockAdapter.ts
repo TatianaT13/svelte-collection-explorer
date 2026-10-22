@@ -86,6 +86,7 @@ function delay(ms: number) {
 function matchesFilters(item: CollectionItem, filters: SearchQuery['filters']): boolean {
   return Object.entries(filters).every(([key, wanted]) => {
     if (wanted === null || wanted === undefined || wanted === '') return true;
+    if (Array.isArray(wanted) && wanted.length === 0) return true;
     const field = schema.fields.find((f) => f.key === key);
     const actual = item.metadata[key];
     const actualList = Array.isArray(actual) ? actual.map(String) : [String(actual ?? '')];

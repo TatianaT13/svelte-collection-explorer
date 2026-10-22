@@ -23,6 +23,7 @@
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
+    e.stopPropagation();
     dragging = false;
     setFile(e.dataTransfer?.files?.[0] ?? null);
   }
@@ -58,7 +59,7 @@
   {:else}
     <p class="hint">
       <strong>Déposer une image</strong> ou cliquer pour choisir<br />
-      <small>Recherche visuelle dans la collection</small>
+      <small>ou coller depuis le presse-papiers (⌘/Ctrl + V)</small>
     </p>
   {/if}
 </div>
@@ -66,8 +67,8 @@
 <style>
   .dropzone {
     border: 2px dashed var(--border);
-    border-radius: 10px;
-    padding: 1rem;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
     text-align: center;
     cursor: pointer;
     background: var(--surface);

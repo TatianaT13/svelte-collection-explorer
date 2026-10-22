@@ -1,29 +1,58 @@
 <script lang="ts">
   /**
    * Page Explorer : recherche texte + image + filtres, résultats paginés.
-   * Toute la logique de données passe par `api` (couche adapter).
+   * - état sérialisé dans l'URL (liens partageables)
+   * - image par dépôt n'importe où sur la page ou collage (Ctrl/Cmd+V)
+   * - "/" pour aller à la recherche, Échap pour effacer / fermer
    */
   import { onMount } from 'svelte';
-  import { api, extractImageInfo, withoutGps, type ActiveFilters, type FacetValues, type ImageInfo, type SearchResult } from '$lib/api';
+  import { page } from '$app/state';
+  import { replaceState } from '$app/navigation';
+  import { fade } from 'svelte/transition';
+  import {
+    api,
+    extractImageInfo,
+    withoutGps,
+    type ActiveFilters,
+    type CollectionItem,
+    type FacetValues,
+    type ImageInfo,
+    type SearchResult
+  } from '$lib/api';
   import { schema } from '$lib/config/schema';
+  import { readSearchState, writeSearchState } from '$lib/utils/urlState';
   import ImageUpload from '$lib/components/ImageUpload.svelte';
   import FilterPanel from '$lib/components/FilterPanel.svelte';
+  import FilterChips from '$lib/components/FilterChips.svelte';
   import ResultCard from '$lib/components/ResultCard.svelte';
+  import SkeletonCard from '$lib/components/SkeletonCard.svelte';
   import ImageInfoPanel from '$lib/components/ImageInfoPanel.svelte';
+  import ItemDrawer from '$lib/components/ItemDrawer.svelte';
 
-  let text = $state('');
+  const initial = readSearchState(page.url.searchParams);
+
+  let text = $state(initial.text);
+  let filters = $state<ActiveFilters>(initial.filters);
+  let pageNo = $state(initial.page);
   let image = $state<File | null>(null);
   let imageInfo = $state<ImageInfo | null>(null);
   let includeGps = $state(true);
-  let filters = $state<ActiveFilters>({});
-  let page = $state(1);
 
   let facets = $state<FacetValues>({});
   let result = $state<SearchResult | null>(null);
   let loading = $state(false);
   let error = $state<string | null>(null);
 
+  let selected = $state<CollectionItem | null>(null);
+  let filtersOpen = $state(false);
+  let dragging = $state(false);
+  let dragDepth = 0;
+  let searchEl = $state<HTMLInputElement | null>(null);
+
   const totalPages = $derived(result ? Math.max(1, Math.ceil(result.total / result.pageSize)) : 1);
+  const activeFilterCount = $derived(
+    Object.values(filters).filter((v) => (Array.isArray(v) ? v.length > 0 : v !== '' && v !== null && v !== undefined)).length
+  );
 
   let requestId = 0;
   async function runSearch() {
@@ -32,7 +61,7 @@
     error = null;
     try {
       const info = imageInfo ? (includeGps ? imageInfo : withoutGps(imageInfo)) : undefined;
-      const res = await api.search({ text, image: image ?? undefined, imageInfo: info, filters, page, pageSize: schema.pageSize });
+      const res = await api.search({ text, image: image ?? undefined, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
       if (id === requestId) result = res;
     } catch (e) {
       if (id === requestId) error = e instanceof Error ? e.message : 'Erreur inconnue';
@@ -41,11 +70,16 @@
     }
   }
 
-  // Relance la recherche dès qu'un critère change (page remise à 1 par les handlers).
+  // Relance la recherche dès qu'un critère change.
   $effect(() => {
-    // Lecture explicite des dépendances suivies.
-    void text; void image; void imageInfo; void includeGps; void filters; void page;
+    void text; void image; void imageInfo; void includeGps; void filters; void pageNo;
     runSearch();
+  });
+
+  // Reflète l'état dans l'URL sans recharger ni empiler l'historique.
+  $effect(() => {
+    const url = writeSearchState(new URL(location.href), { text, filters, page: pageNo });
+    if (url.href !== location.href) replaceState(url, {});
   });
 
   // Lit les métadonnées dès qu'une image est choisie.
@@ -69,105 +103,336 @@
   });
 
   function resetPage() {
-    page = 1;
+    pageNo = 1;
+  }
+
+  function setImage(f: File | null) {
+    image = f;
+    resetPage();
+  }
+
+  function removeFilter(key: string, value?: string) {
+    if (key === '__text') text = '';
+    else if (value !== undefined && Array.isArray(filters[key])) {
+      filters = { ...filters, [key]: (filters[key] as string[]).filter((v) => v !== value) };
+    } else filters = { ...filters, [key]: '' };
+    resetPage();
+  }
+
+  /** Coche / décoche une valeur d'attribut comme filtre (depuis une carte ou le volet). */
+  function toggleFilterValue(key: string, value: string) {
+    const field = schema.fields.find((f) => f.key === key);
+    const current = filters[key];
+    if (field && (field.kind === 'country' || field.kind === 'vocab' || field.kind === 'select')) {
+      const list = Array.isArray(current) ? current : current ? [String(current)] : [];
+      filters = { ...filters, [key]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] };
+    } else {
+      filters = { ...filters, [key]: String(current ?? '').toLowerCase() === value.toLowerCase() ? '' : value };
+    }
+    resetPage();
+  }
+
+  function clearAll() {
+    text = '';
+    filters = {};
+    resetPage();
+  }
+
+  function hasFiles(e: DragEvent) {
+    return e.dataTransfer?.types.includes('Files') ?? false;
+  }
+
+  function isTyping(target: EventTarget | null) {
+    const el = target as HTMLElement | null;
+    return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  }
+
+  function onKey(e: KeyboardEvent) {
+    if (e.key === '/' && !isTyping(e.target)) {
+      e.preventDefault();
+      searchEl?.focus();
+      searchEl?.select();
+    } else if (e.key === 'Escape') {
+      if (selected) selected = null;
+      else if (filtersOpen) filtersOpen = false;
+      else if (document.activeElement === searchEl && text) {
+        text = '';
+        resetPage();
+      }
+    }
+  }
+
+  function onPaste(e: ClipboardEvent) {
+    const item = [...(e.clipboardData?.items ?? [])].find((i) => i.type.startsWith('image/'));
+    const f = item?.getAsFile();
+    if (f) {
+      e.preventDefault();
+      setImage(new File([f], f.name || 'presse-papiers.png', { type: f.type }));
+    }
   }
 </script>
 
+<svelte:window
+  onkeydown={onKey}
+  onpaste={onPaste}
+  ondragenter={(e) => { if (hasFiles(e)) { dragDepth++; dragging = true; } }}
+  ondragleave={() => { dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) dragging = false; }}
+  ondragover={(e) => { if (hasFiles(e)) e.preventDefault(); }}
+  ondrop={(e) => {
+    dragDepth = 0;
+    dragging = false;
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    const f = e.dataTransfer?.files?.[0];
+    if (f?.type.startsWith('image/')) setImage(f);
+  }}
+/>
+
+{#if dragging}
+  <div class="drop-overlay" transition:fade={{ duration: 120 }} aria-hidden="true">
+    <div class="drop-box">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+      <p>Déposer l'image pour lancer une recherche visuelle</p>
+    </div>
+  </div>
+{/if}
+
 <div class="layout">
-  <aside class="sidebar">
+  <aside class="sidebar" class:open={filtersOpen}>
+    <div class="sidebar-head">
+      <span>Recherche</span>
+      <button type="button" class="close" aria-label="Fermer les filtres" onclick={() => (filtersOpen = false)}>×</button>
+    </div>
     <ImageUpload bind:file={image} onchange={resetPage} />
     {#if imageInfo}
       <ImageInfoPanel info={imageInfo} bind:includeGps />
     {/if}
     <FilterPanel {facets} bind:filters onchange={resetPage} />
   </aside>
+  {#if filtersOpen}
+    <div class="scrim" onclick={() => (filtersOpen = false)} aria-hidden="true"></div>
+  {/if}
 
   <section class="content">
-    <form class="searchbar" onsubmit={(e) => e.preventDefault()}>
-      <input
-        type="search"
-        placeholder="Rechercher dans {schema.name.toLowerCase()}…"
-        bind:value={text}
-        oninput={resetPage}
-      />
-      <span class="status">
-        {#if loading}
-          Chargement…
-        {:else if result}
-          {result.total} résultat{result.total > 1 ? 's' : ''}
+    <form class="searchbar" onsubmit={(e) => e.preventDefault()} role="search">
+      <div class="field">
+        <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input
+          bind:this={searchEl}
+          type="search"
+          placeholder="Rechercher un objet, une origine, un matériau…"
+          aria-label="Recherche"
+          bind:value={text}
+          oninput={resetPage}
+        />
+        {#if text}
+          <button type="button" class="clear" aria-label="Effacer la recherche" onclick={() => { text = ''; resetPage(); searchEl?.focus(); }}>×</button>
+        {:else}
+          <kbd title="Appuyer sur / pour rechercher">/</kbd>
+        {/if}
+      </div>
+      <button type="button" class="filters-btn" onclick={() => (filtersOpen = true)}>
+        Filtres {#if activeFilterCount}<span class="badge">{activeFilterCount}</span>{/if}
+      </button>
+    </form>
+
+    <div class="progress" class:on={loading} aria-hidden="true"></div>
+
+    <FilterChips {filters} {text} onremove={removeFilter} onclear={clearAll} />
+
+    <div class="results-head">
+      <span class="status" aria-live="polite">
+        {#if result}
+          <strong>{result.total}</strong> objet{result.total > 1 ? 's' : ''}
+          {#if image}<span class="muted"> · triés par similarité</span>{/if}
+        {:else}
+          &nbsp;
         {/if}
       </span>
-    </form>
+    </div>
 
     {#if error}
       <p class="error">{error}</p>
-    {:else if result && result.items.length === 0}
-      <p class="empty">Aucun objet ne correspond à ces critères.</p>
-    {:else if result}
+    {:else if !result}
+      <div class="grid">
+        {#each Array(6) as _, i (i)}<SkeletonCard />{/each}
+      </div>
+    {:else if result.items.length === 0}
+      <div class="empty">
+        <p><strong>Aucun objet ne correspond.</strong></p>
+        <p class="muted">Essayez d'élargir la recherche ou de retirer un filtre.</p>
+        {#if text || activeFilterCount}
+          <button type="button" class="btn" onclick={clearAll}>Tout effacer</button>
+        {/if}
+      </div>
+    {:else}
       <div class="grid" class:dim={loading}>
         {#each result.items as item (item.id)}
-          <ResultCard {item} />
+          <ResultCard {item} onopen={(it) => (selected = it)} {filters} onfilter={toggleFilterValue} />
         {/each}
       </div>
 
       {#if totalPages > 1}
-        <nav class="pager">
-          <button type="button" disabled={page <= 1} onclick={() => page--}>← Précédent</button>
-          <span>Page {page} / {totalPages}</span>
-          <button type="button" disabled={page >= totalPages} onclick={() => page++}>Suivant →</button>
+        <nav class="pager" aria-label="Pagination">
+          <button type="button" class="btn" disabled={pageNo <= 1} onclick={() => pageNo--}>← Précédent</button>
+          <span>Page {pageNo} / {totalPages}</span>
+          <button type="button" class="btn" disabled={pageNo >= totalPages} onclick={() => pageNo++}>Suivant →</button>
         </nav>
       {/if}
     {/if}
   </section>
 </div>
 
+<ItemDrawer item={selected} onclose={() => (selected = null)} {filters} onfilter={toggleFilterValue} />
+
 <style>
   .layout {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 1.5rem;
-  }
-  @media (max-width: 760px) {
-    .layout {
-      grid-template-columns: 1fr;
-    }
+    grid-template-columns: 280px 1fr;
+    gap: 1.75rem;
+    align-items: start;
   }
   .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1.1rem;
+    position: sticky;
+    top: 4.2rem;
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+  .sidebar-head {
+    display: none;
   }
   .content {
     min-width: 0;
   }
   .searchbar {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
   }
-  .searchbar input {
+  .field {
+    position: relative;
     flex: 1;
-    padding: 0.6rem 0.8rem;
+    display: flex;
+    align-items: center;
+  }
+  .field .icon {
+    position: absolute;
+    left: 0.8rem;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .field input {
+    width: 100%;
+    padding: 0.7rem 2.6rem 0.7rem 2.5rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--surface);
     color: var(--fg);
     font: inherit;
+    box-shadow: var(--shadow);
+    transition: border-color 0.12s, box-shadow 0.12s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .field input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .field kbd {
+    position: absolute;
+    right: 0.7rem;
+    padding: 0.1rem 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font: 0.72rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    pointer-events: none;
+  }
+  .field .clear {
+    position: absolute;
+    right: 0.5rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  .field .clear:hover {
+    background: var(--surface-2);
+    color: var(--fg);
+  }
+  .filters-btn {
+    display: none;
+  }
+  .badge {
+    display: inline-block;
+    min-width: 1.4em;
+    padding: 0 0.4em;
+    margin-left: 0.2em;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+  .progress {
+    height: 2px;
+    margin-bottom: 0.6rem;
+    border-radius: 2px;
+    background: transparent;
+    overflow: hidden;
+  }
+  .progress.on {
+    background: var(--accent-soft);
+  }
+  .progress.on::after {
+    content: '';
+    display: block;
+    width: 35%;
+    height: 100%;
+    background: var(--accent);
+    animation: slide 1s ease-in-out infinite;
+  }
+  @keyframes slide {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
+  }
+  .results-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.7rem;
+    min-height: 1.2em;
   }
   .status {
-    color: var(--muted);
     font-size: 0.85rem;
-    white-space: nowrap;
+    color: var(--muted);
+  }
+  .status strong {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  .muted {
+    color: var(--muted);
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     gap: 1rem;
     transition: opacity 0.15s;
   }
   .grid.dim {
-    opacity: 0.5;
+    opacity: 0.6;
   }
   .pager {
     display: flex;
@@ -175,17 +440,24 @@
     align-items: center;
     gap: 1rem;
     margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--muted);
   }
-  .pager button {
-    padding: 0.45rem 0.8rem;
+  .btn {
+    padding: 0.5rem 0.9rem;
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--surface);
     color: var(--fg);
     cursor: pointer;
     font: inherit;
+    font-size: 0.88rem;
   }
-  .pager button:disabled {
+  .btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
   }
@@ -193,8 +465,102 @@
     color: #dc2626;
   }
   .empty {
-    color: var(--muted);
     text-align: center;
-    padding: 3rem 0;
+    padding: 4rem 1rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+  .empty p {
+    margin: 0 0 0.5rem;
+  }
+  .drop-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--accent) 12%, rgb(0 0 0 / 0.35));
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+  }
+  .drop-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 2rem 2.5rem;
+    border: 2px dashed #fff;
+    border-radius: 16px;
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  }
+  .drop-box p {
+    margin: 0;
+  }
+  .scrim {
+    display: none;
+  }
+
+  @media (max-width: 820px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 45;
+      width: min(340px, 90vw);
+      max-height: none;
+      padding: 1rem;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      box-shadow: 12px 0 40px rgb(0 0 0 / 0.2);
+      transform: translateX(-105%);
+      transition: transform 0.2s ease;
+    }
+    .sidebar.open {
+      transform: none;
+    }
+    .sidebar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+    }
+    .sidebar-head .close {
+      width: 2rem;
+      height: 2rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--fg);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .scrim {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 44;
+      background: rgb(0 0 0 / 0.35);
+    }
+    .filters-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--fg);
+      font: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .field kbd {
+      display: none;
+    }
   }
 </style>

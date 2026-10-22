@@ -59,7 +59,11 @@ src/
     config/countries.ts        # codes ISO 3166 + noms localisés via Intl.DisplayNames
     config/vocabularies.ts     # vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets)
     components/*.svelte        # composants réutilisables
-    stores/compare.svelte.ts   # état partagé réactif
+    stores/compare.svelte.ts   # sélection pour comparaison (persistée en session)
+    stores/theme.svelte.ts     # thème clair / sombre / système (localStorage)
+    utils/urlState.ts          # état de recherche <-> paramètres d'URL
+    utils/labels.ts            # formatage des valeurs selon le schéma
+    utils/flag.ts              # emoji drapeau depuis un code ISO
 ```
 
 **Routage** : chaque dossier sous `src/routes` est une URL. `+page.svelte` est la page,
@@ -270,14 +274,16 @@ Chaque champ déclare son `kind`, et les composants s'adaptent :
 
 | `kind`     | Valeur stockée                | Options du filtre                | Libellé affiché                     |
 |------------|-------------------------------|----------------------------------|-------------------------------------|
-| `vocab`    | code d'un vocabulaire (`gold`)| liste complète du vocabulaire    | `termLabel()` dans la locale        |
-| `country`  | code ISO 3166-1 (`UA`)        | les 249 pays                     | `Intl.DisplayNames` dans la locale  |
-| `select`   | chaîne libre                  | facettes renvoyées par le backend| la valeur telle quelle              |
+| `vocab`    | code d'un vocabulaire (`gold`)| multi-sélection, liste complète  | `termLabel()` dans la locale        |
+| `country`  | code ISO 3166-1 (`UA`)        | multi-sélection, les 249 pays    | `Intl.DisplayNames` dans la locale  |
+| `select`   | chaîne libre                  | multi-sélection, facettes backend| la valeur telle quelle              |
 | `text`     | chaîne libre                  | champ « contient »               | la valeur telle quelle              |
 | `number`   | nombre                        | champ numérique (minimum)        | valeur + `unit`                     |
 | `longtext` | texte long                    | —                                | texte multiligne                    |
 
-- `FilterPanel` itère sur `filterFields` et génère le bon contrôle.
+- `FilterPanel` itère sur `filterFields` et génère le bon contrôle. Les listes sont des
+  `MultiSelect` : plusieurs valeurs dans un même filtre se combinent en **OU**, les filtres entre
+  eux en **ET**. Un filtre vide (`[]`) est ignoré.
 - `ResultCard` affiche `cardFields`.
 - La page Comparer affiche les champs **regroupés par `group`** et surligne les lignes différentes.
 - `MetadataValue` traduit codes et tableaux de codes (`multiple: true`) en libellés.
@@ -349,20 +355,49 @@ et falsifiables. Le backend doit refaire l'extraction de référence et calculer
 
 ---
 
-## 9. SSR : ce qu'il faut savoir
+## 9. Détails d'interface côté utilisateur
+
+Quelques mécanismes qui font la différence à l'usage, et comment ils sont faits en Svelte.
+
+| Détail | Fichier | Mécanisme |
+|---|---|---|
+| Déposer une image **n'importe où** sur la page | `+page.svelte` | `<svelte:window ondragenter ondrop …>` + compteur de profondeur pour l'overlay |
+| Coller une image (⌘/Ctrl + V) | `+page.svelte` | `onpaste` sur `window`, lecture de `clipboardData.items` |
+| `/` pour aller à la recherche, Échap pour effacer / fermer | `+page.svelte` | `onkeydown` global, ignoré quand on tape déjà dans un champ |
+| URL partageable (`?q=…&origin=UA,RU&p=2`) | `utils/urlState.ts` | lecture de `page.url` à l'init, `replaceState` dans un `$effect` |
+| Filtres à sélection multiple avec recherche interne | `MultiSelect.svelte` | accordéon, cases à cocher natives, puces des valeurs cochées, Échap referme |
+| Case à cocher à côté de chaque attribut d'une carte ou du volet : « objets semblables » | `AttributeList.svelte` | liste [case] attribut valeur, une ligne par valeur ; le composant reçoit `filters` et un callback ; cocher ajoute la valeur au filtre, décocher la retire |
+| Puces de filtres actifs, une par valeur, supprimables | `FilterChips.svelte` | `$derived` sur `filters`, libellés via le schéma |
+| Volet de détail sans quitter la page | `ItemDrawer.svelte` | `role="dialog"`, focus sur le bouton Fermer, scroll du body bloqué dans un `$effect` avec nettoyage |
+| Barre flottante de comparaison | `CompareTray.svelte` | lit le store `compare`, `transition:fly` |
+| Score de similarité | `ScoreRing.svelte` | anneau SVG (`stroke-dasharray`), chiffre + libellé, jamais la couleur seule |
+| Squelettes au premier chargement, barre de progression ensuite | `SkeletonCard.svelte`, `+page.svelte` | pas de clignotement : on ne vide jamais la grille pendant une recherche |
+| Thème clair / sombre | `stores/theme.svelte.ts`, `app.html` | attribut `data-theme`, appliqué avant le premier rendu pour éviter le flash |
+| Drapeau à côté de l'origine | `utils/flag.ts` | indicateurs régionaux Unicode calculés depuis le code ISO |
+| « Différences seulement » et « Copier le tableau » | `compare/+page.svelte` | `$derived` sur les groupes, `navigator.clipboard` en TSV collable dans un tableur |
+| Filtres en tiroir sur mobile | `+page.svelte` | `position: fixed` + `transform` sous 820 px, bouton « Filtres » avec compteur |
+
+Règles suivies : jamais d'information portée par la couleur seule, `:focus-visible` partout,
+`prefers-reduced-motion` respecté pour les animations, cibles tactiles ≥ 32 px.
+
+---
+
+## 10. SSR : ce qu'il faut savoir
 
 SvelteKit rend chaque page une première fois côté serveur, puis l'« hydrate » dans le navigateur.
 Conséquences dans ce projet :
 
 - `onMount` ne s'exécute que dans le navigateur : on y charge les facettes.
 - `$effect` ne s'exécute jamais côté serveur.
+- `theme.svelte.ts` lit `localStorage` à l'import, gardé par `browser` ; `ThemeToggle` calcule son
+  icône dans `onMount` pour que le HTML serveur et le premier rendu client soient identiques.
 - Tout accès à `window`, `sessionStorage`, `URL.createObjectURL` doit être gardé par `browser`
   ou placé dans un effet/`onMount`.
 - `page` de `$app/state` donne l'URL courante de façon réactive (utilisé pour `aria-current` dans la nav).
 
 ---
 
-## 10. Pour aller plus loin
+## 11. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.
