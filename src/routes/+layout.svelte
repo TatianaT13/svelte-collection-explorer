@@ -26,7 +26,7 @@
     <a href="/" aria-current={page.url.pathname === '/' ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
     <a href="/compare" aria-current={onCompare ? 'page' : undefined}>
       {i18n.t('nav.compare')}
-      {#if compare.count}<span class="badge">{compare.count}</span>{/if}
+      {#if compare.count}<span class="badge cmp">{compare.count}</span>{/if}
     </a>
     <LanguageSwitch />
     <ThemeToggle />
@@ -52,6 +52,10 @@
     --accent: #3457d5;
     --accent-hover: #2a48b8;
     --accent-soft: #e8edfb;
+    --compare: #0f7b70;
+    --compare-hover: #0b625a;
+    --compare-soft: #d7f1ec;
+    --compare-ink: #ffffff;
     --skeleton: #e8e6e1;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.04);
     color-scheme: light;
@@ -67,6 +71,10 @@
       --accent: #7c96ff;
       --accent-hover: #93a9ff;
       --accent-soft: #232a45;
+      --compare: #3fd1bd;
+      --compare-hover: #63dcc9;
+      --compare-soft: #10342f;
+      --compare-ink: #06201c;
       --skeleton: #262a31;
       color-scheme: dark;
     }
@@ -81,6 +89,10 @@
     --accent: #7c96ff;
     --accent-hover: #93a9ff;
     --accent-soft: #232a45;
+    --compare: #3fd1bd;
+    --compare-hover: #63dcc9;
+    --compare-soft: #10342f;
+    --compare-ink: #06201c;
     --skeleton: #262a31;
     color-scheme: dark;
   }
@@ -170,6 +182,10 @@
     font-size: 0.72rem;
     font-weight: 600;
     text-align: center;
+  }
+  .badge.cmp {
+    background: var(--compare);
+    color: var(--compare-ink);
   }
   main {
     max-width: 1240px;

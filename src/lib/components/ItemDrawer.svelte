@@ -72,7 +72,14 @@
     </div>
 
     <footer>
-      <button type="button" class="primary" class:active={selected} disabled={!selected && compare.isFull} onclick={() => item && compare.toggle(item)}>
+      <button type="button" class="cmp" class:active={selected} aria-pressed={selected} disabled={!selected && compare.isFull} onclick={() => item && compare.toggle(item)}>
+        <span class="ico" aria-hidden="true">
+          {#if selected}
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          {:else}
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M4 7h16"/><path d="M7 7 4 14a3 3 0 0 0 6 0L7 7zM17 7l-3 7a3 3 0 0 0 6 0l-3-7z"/></svg>
+          {/if}
+        </span>
         {selected ? i18n.t('drawer.removeCompare') : i18n.t('drawer.addCompare')}
       </button>
     </footer>
@@ -179,22 +186,51 @@
     padding: 0.8rem 1.1rem;
     border-top: 1px solid var(--border);
   }
-  .primary {
+  .cmp {
     width: 100%;
-    padding: 0.65rem;
-    border: 1px solid var(--accent);
-    border-radius: 9px;
-    background: var(--accent);
-    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.55rem 1rem 0.55rem 0.7rem;
+    border: 1.5px dashed color-mix(in srgb, var(--fg) 30%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--fg);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   }
-  .primary.active {
-    background: transparent;
-    color: var(--accent);
+  .cmp .ico {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--surface-2);
+    transition: background 0.18s ease, color 0.18s ease;
   }
-  .primary:disabled {
+  .cmp:hover:not(:disabled) {
+    border-style: solid;
+    border-color: var(--compare);
+    color: var(--compare);
+  }
+  .cmp:hover:not(:disabled) .ico {
+    background: var(--compare-soft);
+    color: var(--compare);
+  }
+  .cmp.active {
+    border-style: solid;
+    border-color: var(--compare);
+    background: var(--compare-soft);
+    color: var(--compare);
+  }
+  .cmp.active .ico {
+    background: var(--compare);
+    color: var(--compare-ink);
+  }
+  .cmp:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }

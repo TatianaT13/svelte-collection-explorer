@@ -117,16 +117,16 @@
     color: var(--fg);
   }
   .primary {
-    padding: 0.5rem 0.9rem;
-    border-radius: 9px;
-    background: var(--accent);
-    color: #fff;
+    padding: 0.5rem 0.95rem;
+    border-radius: 999px;
+    background: var(--compare);
+    color: var(--compare-ink);
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: none;
   }
   .primary:hover {
-    background: var(--accent-hover);
+    background: var(--compare-hover);
   }
   .primary.disabled {
     opacity: 0.45;

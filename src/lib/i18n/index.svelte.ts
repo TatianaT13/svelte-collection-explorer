@@ -30,9 +30,12 @@ function detect(): Locale {
 }
 
 function createI18n() {
-  let locale = $state<Locale>(detect());
+  // Valeur initiale lue une fois, hors de l'état réactif : la balise <html lang>
+  // est posée au chargement, puis mise à jour par set().
+  const initial = detect();
+  let locale = $state<Locale>(initial);
 
-  if (browser) document.documentElement.lang = locale;
+  if (browser) document.documentElement.lang = initial;
 
   return {
     locales,

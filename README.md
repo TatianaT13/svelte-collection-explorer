@@ -408,6 +408,11 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | « Différences seulement » et « Copier le tableau » | `compare/+page.svelte` | `$derived` sur les groupes, `navigator.clipboard` en TSV collable dans un tableur |
 | Filtres en tiroir sur mobile | `+page.svelte` | `position: fixed` + `transform` sous 820 px, bouton « Filtres » avec compteur |
 
+Deux couleurs d'accent, volontairement distinctes : le bleu pour la **recherche et les filtres**
+(puces, cases d'attributs, compteur de filtres), le vert-bleu `--compare` pour la **sélection**
+(bouton pilule à icône balance, contour de carte, barre flottante, compteur du menu). L'utilisateur
+sait d'un coup d'œil s'il agit sur la liste ou sur sa sélection.
+
 Règles suivies : jamais d'information portée par la couleur seule, `:focus-visible` partout,
 `prefers-reduced-motion` respecté pour les animations, cibles tactiles ≥ 32 px.
 
