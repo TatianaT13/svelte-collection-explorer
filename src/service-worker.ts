@@ -52,17 +52,17 @@ sw.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Scripts et styles de l'application : en ligne, on laisse le navigateur faire (il les garde en
+  // cache HTTP et peut réutiliser ses préchargements, ce qu'il refuse via un service worker) ;
+  // hors ligne seulement, on sert la copie du cache.
+  if (build.includes(url.pathname)) {
+    if (sw.navigator.onLine) return;
+    event.respondWith(caches.open(CACHE).then(async (cache) => (await cache.match(request)) ?? Response.error()));
+    return;
+  }
+
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      // Scripts et styles de l'application : réseau d'abord (le navigateur les garde déjà en cache
-      // et Chrome ignore les préchargements servis par un service worker), repli sur le cache.
-      if (build.includes(url.pathname)) {
-        try {
-          return await fetch(request);
-        } catch {
-          return (await cache.match(request)) ?? Response.error();
-        }
-      }
       // Données, vignettes, icônes : cache d'abord, puis réseau avec mise en cache.
       const hit = await cache.match(request);
       if (hit) return hit;

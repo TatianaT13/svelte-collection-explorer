@@ -11,6 +11,7 @@
 
   let { children } = $props();
   const onCompare = $derived(page.url.pathname.startsWith(`${base}/compare`));
+  const onControl = $derived(page.url.pathname.startsWith(`${base}/controle`));
   const onExplore = $derived(page.url.pathname === `${base}/` || page.url.pathname === base);
 </script>
 
@@ -25,6 +26,7 @@
     <Logo size={28} wordmark={i18n.l(schema.name)} />
   </a>
   <div class="links">
+    <a href="{base}/controle/" aria-current={onControl ? 'page' : undefined}>{i18n.t('nav.control')}</a>
     <a href="{base}/" aria-current={onExplore ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
     <a href="{base}/compare/" aria-current={onCompare ? 'page' : undefined}>
       {i18n.t('nav.compare')}

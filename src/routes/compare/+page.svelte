@@ -15,7 +15,7 @@
   import ImageCompare from '$lib/components/ImageCompare.svelte';
   import { lastQuery } from '$lib/stores/query.svelte';
   import { schema } from '$lib/config/schema';
-  import { riskFor } from '$lib/config/risk';
+  import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
 
   const items = $derived(compare.items);
   let onlyDiff = $state(false);
@@ -35,29 +35,8 @@
 
   const diffCount = $derived(fieldGroups.flatMap((g) => g.fields).filter((f) => differs(f.key)).length);
 
-  /** Dossier : photo de référence (sans l'image), candidats, métadonnées et scores. */
   function exportCase() {
-    const data = {
-      exportedAt: new Date().toISOString(),
-      collection: i18n.l(schema.name),
-      locale: i18n.locale,
-      referencePhoto: lastQuery.record,
-      candidates: items.map((it) => ({
-        id: it.id,
-        title: it.title,
-        score: it.score,
-        imageUrl: it.imageUrl,
-        metadata: it.metadata,
-        redLists: riskFor(it).map((r) => i18n.l(r.label))
-      }))
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `dossier-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadJson(caseFileName(), buildCaseFile(items));
   }
 
   async function copyTable() {

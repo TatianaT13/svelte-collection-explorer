@@ -65,12 +65,24 @@ test.describe('Explorer', () => {
 
   test('bascule de langue persistante', async ({ page }) => {
     await page.goto('./');
+    const explore = page.locator('nav .links a[aria-current="page"]');
     await page.locator('nav .lang select').selectOption('en');
-    await expect(page.locator('nav .links a').first()).toHaveText('Explore');
+    await expect(explore).toHaveText('Explore');
     await expect(page).toHaveTitle(/Cultural objects/);
     await page.reload();
-    await expect(page.locator('nav .links a').first()).toHaveText('Explore');
+    await expect(explore).toHaveText('Explore');
     await page.locator('nav .lang select').selectOption('fr');
-    await expect(page.locator('nav .links a').first()).toHaveText('Explorer');
+    await expect(explore).toHaveText('Explorer');
+  });
+});
+
+test.describe('Contrôle', () => {
+  test('la page de contrôle démarre à l’étape photo et navigue', async ({ page }) => {
+    await page.goto('./controle/');
+    await expect(page.locator('.stepper li.active')).toHaveText(/Photo/);
+    await expect(page.locator('button.primary')).toBeDisabled();
+    await expect(page.locator('.dropzone')).toBeVisible();
+    await page.locator('nav .links a', { hasText: 'Explorer' }).click();
+    await expect(page.locator('article.card').first()).toBeVisible();
   });
 });

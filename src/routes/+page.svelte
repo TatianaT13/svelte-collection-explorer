@@ -95,9 +95,17 @@
   });
 
   // Mémorise la recherche par image pour l'export du dossier.
+  // Le dossier n'est effacé que si une photo a été retirée ici : arriver sur la page
+  // sans image ne doit pas détruire un dossier en cours (il vit en session).
+  let hadImage = false;
   $effect(() => {
-    if (imageInfo) lastQuery.set(imageInfo, !!crop);
-    else lastQuery.clear();
+    if (imageInfo) {
+      hadImage = true;
+      lastQuery.set(imageInfo, !!crop);
+    } else if (hadImage) {
+      hadImage = false;
+      lastQuery.clear();
+    }
   });
 
   // Réduit l'image (ou la zone cadrée) avant envoi.

@@ -17,8 +17,9 @@
   let {
     insights,
     onopen,
-    onfilterOrigin
-  }: { insights: Insights; onopen?: (id: string) => void; onfilterOrigin?: (code: string) => void } = $props();
+    onfilterOrigin,
+    stacked = false
+  }: { insights: Insights; onopen?: (id: string) => void; onfilterOrigin?: (code: string) => void; stacked?: boolean } = $props();
 
   const L = $derived(i18n.locale);
   const topCategory = $derived(insights.categories[0]);
@@ -63,7 +64,7 @@
   const pct = (x: number) => `${Math.round(x * 100)} %`;
 </script>
 
-<section class="insights" class:unreliable={!reliable} aria-label={i18n.t('insights.title')}>
+<section class="insights" class:unreliable={!reliable} class:stacked aria-label={i18n.t('insights.title')}>
   {#if !reliable}
     <p class="notice" role="status">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
@@ -95,7 +96,7 @@
       <ul class="bars origins">
         {#each origins as o (o.code)}
           <li>
-            <button type="button" class="origin" onclick={() => onfilterOrigin?.(o.code)} title={countryName(o.code, L)}>
+            <button type="button" class="origin" disabled={!onfilterOrigin} onclick={() => onfilterOrigin?.(o.code)} title={countryName(o.code, L)}>
               <span class="flag" aria-hidden="true">{flagEmoji(o.code)}</span>
               <span>{countryName(o.code, L)}</span>
             </button>
@@ -417,9 +418,37 @@
     text-decoration: underline;
     cursor: pointer;
   }
+  .origin:disabled {
+    cursor: default;
+  }
+  .origin:disabled:hover {
+    background: none;
+    color: var(--fg);
+  }
+  .stacked .grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .stacked .main {
+    font-size: 1.15rem;
+  }
+  .stacked .thumbs {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .stacked .decide {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .stacked .d {
+    padding: 0.75rem;
+    text-align: center;
+  }
   @media (max-width: 820px) {
     .grid {
       grid-template-columns: 1fr;
+    }
+    .stacked .thumbs {
+      grid-template-columns: repeat(3, 1fr);
     }
   }
 </style>

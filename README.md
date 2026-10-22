@@ -51,7 +51,8 @@ src/
   routes/
     +layout.ts                 # prerender = true, trailingSlash = 'always' (build statique)
     +layout.svelte             # enveloppe toutes les pages (nav, thème)
-    +page.svelte               # route "/"
+    +page.svelte               # route "/" : explorateur (recherche, filtres, comparaison)
+    controle/+page.svelte      # route "/controle" : parcours de contrôle en trois étapes
     compare/+page.svelte       # route "/compare"
   lib/                         # importable via l'alias $lib
     api/
@@ -68,6 +69,7 @@ src/
     ml/status.svelte.ts        # progression du chargement du modèle
     stores/query.svelte.ts     # dernière photo de référence (pour l'export du dossier)
     utils/imgFallback.ts       # repli vignette si l'image grand format ne charge pas
+    utils/caseFile.ts          # dossier de contrôle : construction et export JSON
     i18n/messages.ts           # textes d'interface par langue (fr, en)
     i18n/index.svelte.ts       # store de langue : i18n.locale, i18n.t(), i18n.l()
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
@@ -421,7 +423,26 @@ Ce que ça change :
 
 ---
 
-## 9. Métadonnées des images
+## 9. Le parcours de contrôle
+
+`/controle/` est la page pensée pour l'agent sur le terrain, telle que la maquette
+`docs/vision-cible.html` la décrit : trois étapes dans une colonne étroite, lisible sur téléphone.
+
+1. **Photo** : dépôt, appareil photo ou collage, recadrage, chargement du modèle en arrière-plan.
+   Le bouton Analyser ne s'active que lorsque l'image réduite est prête.
+2. **Résultat et décision** : le même `InsightsPanel` que l'explorateur, en mode `stacked`
+   (une colonne, boutons pleine largeur), la liste repliée des objets les plus proches, et la
+   décision qui mène au dossier.
+3. **Dossier** : décision, motif (listes rouges), photo, empreinte, horodatage, provenance
+   retenue ; les blocs Expertise et Recherches associées disent explicitement ce qui attend un
+   backend. Export JSON et impression via `utils/caseFile.ts`, partagé avec la page Comparer.
+
+Le dossier vit en session (`stores/query.svelte.ts`) : un rechargement après décision rouvre
+directement l'étape 3. L'explorateur reste la vue experte, avec filtres et comparaison.
+
+---
+
+## 10. Métadonnées des images
 
 `src/lib/api/imageInfo.ts` lit, côté client, EXIF/IPTC/XMP (librairie `exifr`), les dimensions
 réelles (via un `Image()` en mémoire) et un SHA-256 (`crypto.subtle`). Les trois s'exécutent en
@@ -436,7 +457,7 @@ et falsifiables. Le backend doit refaire l'extraction de référence et calculer
 
 ---
 
-## 10. Multilingue
+## 11. Multilingue
 
 Trois couches, toutes pilotées par un seul store `i18n` (`src/lib/i18n/index.svelte.ts`) :
 
@@ -457,7 +478,7 @@ Trois couches, toutes pilotées par un seul store `i18n` (`src/lib/i18n/index.sv
 
 ---
 
-## 11. Détails d'interface côté utilisateur
+## 12. Détails d'interface côté utilisateur
 
 Quelques mécanismes qui font la différence à l'usage, et comment ils sont faits en Svelte.
 
@@ -506,7 +527,7 @@ Règles suivies : jamais d'information portée par la couleur seule, `:focus-vis
 
 ---
 
-## 12. SSR : ce qu'il faut savoir
+## 13. SSR : ce qu'il faut savoir
 
 SvelteKit rend chaque page une première fois côté serveur, puis l'« hydrate » dans le navigateur.
 Conséquences dans ce projet :
@@ -522,7 +543,7 @@ Conséquences dans ce projet :
 
 ---
 
-## 13. Déploiement
+## 14. Déploiement
 
 Le front est statique : `@sveltejs/adapter-static` pré-rend les deux pages en HTML, le mock tourne
 dans le navigateur. Le workflow `.github/workflows/deploy.yml` construit et publie sur **GitHub Pages**
@@ -538,20 +559,20 @@ plateforme : le code applicatif ne change pas.
 
 ---
 
-## 14. Tests
+## 15. Tests
 
 Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
 
 - `npm test` : Vitest sur les modules purs (sérialisation d'URL, libellés, filtrage et recherche
   texte, similarité).
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
-  (`e2e/`). Cinq parcours : filtres et URL partageable, recherche texte avec délai, attributs
-  cochables, volet puis comparaison, bascule de langue. La recherche par image n'est pas testée en
+  (`e2e/`). Six parcours : filtres et URL partageable, recherche texte avec délai, attributs
+  cochables, volet puis comparaison, bascule de langue, page de contrôle. La recherche par image n'est pas testée en
   CI pour éviter de télécharger le modèle à chaque exécution.
 
 ---
 
-## 15. Pour aller plus loin
+## 16. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.
