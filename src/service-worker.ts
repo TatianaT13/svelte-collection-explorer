@@ -9,12 +9,13 @@
  * Le modèle de reconnaissance est mis en cache par transformers.js lui-même.
  * Les images grand format du musée restent en réseau seul (repli sur la vignette).
  */
-import { build, files, version, base } from '$service-worker';
+import { build, files, prerendered, version, base } from '$service-worker';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 const CACHE = `app-${version}`;
+// Scripts et styles, pages pré-rendues (HTML), fichiers statiques.
 // Pas de fichiers cachés (.nojekyll…) : un seul 404 ferait échouer l'installation du cache.
-const ASSETS = [...build, ...files.filter((f) => !f.split('/').some((seg) => seg.startsWith('.')))];
+const ASSETS = [...build, ...prerendered, ...files.filter((f) => !f.split('/').some((seg) => seg.startsWith('.')))];
 
 sw.addEventListener('install', (event) => {
   event.waitUntil(
@@ -51,9 +52,18 @@ sw.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Ressources : cache d'abord, puis réseau avec mise en cache opportuniste.
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
+      // Scripts et styles de l'application : réseau d'abord (le navigateur les garde déjà en cache
+      // et Chrome ignore les préchargements servis par un service worker), repli sur le cache.
+      if (build.includes(url.pathname)) {
+        try {
+          return await fetch(request);
+        } catch {
+          return (await cache.match(request)) ?? Response.error();
+        }
+      }
+      // Données, vignettes, icônes : cache d'abord, puis réseau avec mise en cache.
       const hit = await cache.match(request);
       if (hit) return hit;
       const res = await fetch(request);
