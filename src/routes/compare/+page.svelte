@@ -7,6 +7,7 @@
   import { fieldGroups } from '$lib/config/schema';
   import { formatValue, fieldLabel } from '$lib/utils/labels';
   import { i18n } from '$lib/i18n/index.svelte';
+  import { base } from '$app/paths';
   import { flagEmoji } from '$lib/utils/flag';
   import MetadataValue from '$lib/components/MetadataValue.svelte';
   import ScoreRing from '$lib/components/ScoreRing.svelte';
@@ -77,11 +78,11 @@
   <div class="empty">
     <p><strong>{i18n.t('compare.empty')}</strong></p>
     <p class="muted">{i18n.t('compare.emptyHint', { max: compare.max })}</p>
-    <a class="btn" href="/">{i18n.t('compare.goExplore')}</a>
+    <a class="btn" href="{base}/">{i18n.t('compare.goExplore')}</a>
   </div>
 {:else}
   {#if items.length === 1}
-    <p class="hint">{i18n.t('compare.oneHint')} <a href="/">{i18n.t('compare.back')}</a></p>
+    <p class="hint">{i18n.t('compare.oneHint')} <a href="{base}/">{i18n.t('compare.back')}</a></p>
   {/if}
   <div class="scroller">
     <table style="--cols: {items.length}">

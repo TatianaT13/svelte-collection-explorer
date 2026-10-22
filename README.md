@@ -60,6 +60,7 @@ src/
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
     config/countries.ts        # codes ISO 3166 + noms localisés via Intl.DisplayNames
     config/vocabularies.ts     # vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets)
+    components/Logo.svelte     # marque : écrin hexagonal en trois chevrons, cœur turquoise
     components/*.svelte        # composants réutilisables
     stores/compare.svelte.ts   # sélection pour comparaison (persistée en session)
     stores/theme.svelte.ts     # thème clair / sombre / système (localStorage)
@@ -413,6 +414,13 @@ Deux couleurs d'accent, volontairement distinctes : le bleu pour la **recherche 
 (bouton pilule à icône balance, contour de carte, barre flottante, compteur du menu). L'utilisateur
 sait d'un coup d'œil s'il agit sur la liste ou sur sa sélection.
 
+**Marque.** Un écrin hexagonal ouvert, trois chevrons autour d'un cœur turquoise : l'objet protégé
+au centre, les ouvertures pour l'explorer. `static/favicon.svg` (tuile encre, chevrons clairs, cœur vert-bleu, lisible
+à 16 px), déclinaisons PNG en 16 et 32 px pour Safari et les anciens navigateurs,
+`apple-touch-icon.png` (180 px) et `manifest.webmanifest` avec icônes 192 et 512 px pour l'ajout à
+l'écran d'accueil, le tout rendu depuis le SVG, et `Logo.svelte` dans la barre,
+dont les chevrons prennent la couleur du texte et le cœur la couleur de sélection du thème courant.
+
 Règles suivies : jamais d'information portée par la couleur seule, `:focus-visible` partout,
 `prefers-reduced-motion` respecté pour les animations, cibles tactiles ≥ 32 px.
 
@@ -434,10 +442,26 @@ Conséquences dans ce projet :
 
 ---
 
-## 12. Pour aller plus loin
+## 12. Déploiement
+
+Le front est statique : `@sveltejs/adapter-static` pré-rend les deux pages en HTML, le mock tourne
+dans le navigateur. Le workflow `.github/workflows/deploy.yml` construit et publie sur **GitHub Pages**
+à chaque push sur `main`, après `npm run check`.
+
+- `BASE_PATH` (`/svelte-collection-explorer`) est injecté au build ; en local il est vide.
+- Les liens internes passent par `base` de `$app/paths`, jamais par `/` en dur.
+- `trailingSlash: 'always'` produit `compare/index.html`, ce que Pages sert sans configuration.
+- `static/.nojekyll` empêche Pages d'ignorer les dossiers commençant par `_`.
+
+Pour un hébergement avec serveur (SSR, API), remplacer l'adapter par `adapter-node` ou celui de la
+plateforme : le code applicatif ne change pas.
+
+---
+
+## 13. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.
 - **Page de détail** : `src/routes/item/[id]/+page.svelte` avec `params.id`.
 - **Tests** : Vitest + `@testing-library/svelte` pour les composants, Playwright pour le parcours complet.
-- **Déploiement** : remplacer `adapter-auto` par `adapter-node`, `adapter-static` ou celui de la plateforme cible.
+- **Hébergement avec serveur** : `adapter-node` ou l'adapter de la plateforme, si un jour le front doit faire du SSR avec données.

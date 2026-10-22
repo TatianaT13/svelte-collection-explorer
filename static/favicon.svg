@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#1f2937"/><circle cx="13" cy="13" r="6" fill="none" stroke="#f3f4f6" stroke-width="3"/><path d="M18 18l7 7" stroke="#f3f4f6" stroke-width="3" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="15" fill="#1b1c1f"/>
+  <!-- Écrin hexagonal en trois chevrons, cœur vert-bleu (couleur de sélection du site) -->
+  <g fill="none" stroke="#f6f5f2" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18.6 15.2 32 7.5l13.4 7.7"/>
+    <path d="M11.5 29.6v14.9l12.9 7.4"/>
+    <path d="M52.5 29.6v14.9l-12.9 7.4"/>
+  </g>
+  <rect x="24" y="26.5" width="16" height="13" rx="3" fill="#3fd1bd"/>
+</svg>

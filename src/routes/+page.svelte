@@ -31,11 +31,12 @@
   import ImageInfoPanel from '$lib/components/ImageInfoPanel.svelte';
   import ItemDrawer from '$lib/components/ItemDrawer.svelte';
 
-  const initial = readSearchState(page.url.searchParams);
-
-  let text = $state(initial.text);
-  let filters = $state<ActiveFilters>(initial.filters);
-  let pageNo = $state(initial.page);
+  // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
+  // L'état part vide, puis est lu depuis l'URL au montage ; les effets attendent `ready`.
+  let ready = $state(false);
+  let text = $state('');
+  let filters = $state<ActiveFilters>({});
+  let pageNo = $state(1);
   let image = $state<File | null>(null); // original : aperçu + métadonnées
   let imageToSend = $state<ResizeResult | null>(null); // version réduite envoyée au backend
   let imageInfo = $state<ImageInfo | null>(null);
@@ -76,6 +77,7 @@
   // Relance la recherche dès qu'un critère change (ou la langue : libellés du mock).
   $effect(() => {
     void text; void imageToSend; void imageInfo; void includeGps; void filters; void pageNo; void i18n.locale;
+    if (!ready) return;
     runSearch();
   });
 
@@ -97,6 +99,7 @@
 
   // Reflète l'état dans l'URL sans recharger ni empiler l'historique.
   $effect(() => {
+    if (!ready) return;
     const url = writeSearchState(new URL(location.href), { text, filters, page: pageNo });
     if (url.href !== location.href) replaceState(url, {});
   });
@@ -118,6 +121,11 @@
   });
 
   onMount(async () => {
+    const initial = readSearchState(page.url.searchParams);
+    text = initial.text;
+    filters = initial.filters;
+    pageNo = initial.page;
+    ready = true;
     facets = await api.getFacets();
   });
 

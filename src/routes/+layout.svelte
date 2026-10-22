@@ -1,14 +1,17 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { base } from '$app/paths';
   import { compare } from '$lib/stores/compare.svelte';
   import { schema } from '$lib/config/schema';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import CompareTray from '$lib/components/CompareTray.svelte';
   import LanguageSwitch from '$lib/components/LanguageSwitch.svelte';
+  import Logo from '$lib/components/Logo.svelte';
   import { i18n } from '$lib/i18n/index.svelte';
 
   let { children } = $props();
-  const onCompare = $derived(page.url.pathname === '/compare');
+  const onCompare = $derived(page.url.pathname.startsWith(`${base}/compare`));
+  const onExplore = $derived(page.url.pathname === `${base}/` || page.url.pathname === base);
 </script>
 
 <svelte:head>
@@ -18,13 +21,12 @@
 <a class="skip" href="#main">{i18n.t('nav.skip')}</a>
 
 <nav>
-  <a href="/" class="brand">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
-    <span>{i18n.l(schema.name)}</span>
+  <a href="{base}/" class="brand" aria-label={i18n.l(schema.name)}>
+    <Logo size={28} wordmark={i18n.l(schema.name)} />
   </a>
   <div class="links">
-    <a href="/" aria-current={page.url.pathname === '/' ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
-    <a href="/compare" aria-current={onCompare ? 'page' : undefined}>
+    <a href="{base}/" aria-current={onExplore ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
+    <a href="{base}/compare/" aria-current={onCompare ? 'page' : undefined}>
       {i18n.t('nav.compare')}
       {#if compare.count}<span class="badge cmp">{compare.count}</span>{/if}
     </a>
@@ -143,14 +145,8 @@
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
     text-decoration: none;
     color: var(--fg);
-  }
-  .brand svg {
-    color: var(--accent);
   }
   .links {
     display: flex;
@@ -193,6 +189,6 @@
     padding: 1.25rem 1.25rem 6rem;
   }
   @media (max-width: 520px) {
-    .brand span { display: none; }
+    .brand :global(.word) { display: none; }
   }
 </style>
