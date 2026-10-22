@@ -43,6 +43,8 @@ export function computeInsights(ranked: CollectionItem[], topK = 12): Insights {
     origins: shares(top, 'origin', weights).slice(0, 3),
     categories: shares(top, 'category', weights).slice(0, 3),
     materials: shares(top, 'material', weights).slice(0, 3),
+    techniques: shares(top, 'technique', weights).slice(0, 3),
+    subjects: shares(top, 'subject', weights).slice(0, 2),
     periods: shares(top, 'period', weights).slice(0, 3),
     references: top.map((it) => ({
       id: it.id,

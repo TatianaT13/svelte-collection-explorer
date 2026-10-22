@@ -27,6 +27,8 @@ export interface SearchQuery {
   filters: ActiveFilters;
   /** Image envoyée pour une recherche visuelle. */
   image?: File;
+  /** Vues supplémentaires du même objet (dos, détail) : leurs vecteurs sont moyennés avec l'image principale. */
+  extraImages?: File[];
   /** Métadonnées lues côté client (indicatives), envoyées avec l'image. */
   imageInfo?: ImageInfo;
   page: number;
@@ -60,6 +62,8 @@ export interface Insights {
   origins: Share[];
   categories: Share[];
   materials: Share[];
+  techniques: Share[];
+  subjects: Share[];
   periods: Share[];
   references: Reference[];
 }

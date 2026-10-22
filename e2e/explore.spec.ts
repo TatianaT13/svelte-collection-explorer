@@ -79,9 +79,11 @@ test.describe('Explorer', () => {
 test.describe('Contrôle', () => {
   test('la page de contrôle démarre à l’étape photo et navigue', async ({ page }) => {
     await page.goto('./controle/');
-    await expect(page.locator('.stepper li.active')).toHaveText(/Photo/);
+    await expect(page.locator('.phone')).toHaveCount(3);
+    await expect(page.locator('.phone.active .pill')).toHaveText(/PHOTO/);
     await expect(page.locator('button.primary')).toBeDisabled();
     await expect(page.locator('.dropzone')).toBeVisible();
+    await expect(page.locator('.phone').nth(1).locator('.placeholder')).toBeVisible();
     await page.locator('nav .links a', { hasText: 'Explorer' }).click();
     await expect(page.locator('article.card').first()).toBeVisible();
   });

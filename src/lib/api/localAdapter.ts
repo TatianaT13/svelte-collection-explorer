@@ -52,6 +52,19 @@ async function queryEmbedding(file: File): Promise<Float32Array> {
   return p;
 }
 
+/** Moyenne de vecteurs normalisés, renormalisée : une seule requête pour plusieurs vues. */
+function averageNormalized(vectors: Float32Array[]): Float32Array {
+  if (vectors.length === 1) return vectors[0];
+  const n = vectors[0].length;
+  const out = new Float32Array(n);
+  for (const v of vectors) for (let i = 0; i < n; i++) out[i] += v[i];
+  let norm = 0;
+  for (let i = 0; i < n; i++) norm += out[i] * out[i];
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < n; i++) out[i] /= norm;
+  return out;
+}
+
 function strip({ embedding: _e, ...item }: DataItem): CollectionItem {
   return item;
 }
@@ -66,8 +79,10 @@ export const localAdapter: CollectionAdapter = {
 
     let insights;
     if (query.image) {
-      const q = await queryEmbedding(query.image);
       const { cosine } = await import('$lib/ml/embedder');
+      const views = [query.image, ...(query.extraImages ?? [])];
+      const vectors = await Promise.all(views.map(queryEmbedding));
+      const q = averageNormalized(vectors);
       const byId = new Map(items.map((it) => [it.id, it.embedding]));
       results = results
         .map((it) => ({ ...it, score: Math.round(cosine(q, byId.get(it.id) ?? []) * 1000) / 1000 }))

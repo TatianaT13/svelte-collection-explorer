@@ -79,6 +79,7 @@ src/
     components/Logo.svelte     # marque : écrin hexagonal en trois chevrons, cœur turquoise
     components/ModelStatus.svelte # progression du modèle de reconnaissance
     components/InsightsPanel.svelte # identification et provenance probables, alerte, décision
+    components/ExtraViews.svelte    # vues supplémentaires d'un même objet, fusionnées dans la requête
     components/*.svelte        # composants réutilisables
     stores/compare.svelte.ts   # sélection pour comparaison (persistée en session)
     stores/theme.svelte.ts     # thème clair / sombre / système (localStorage)
@@ -425,20 +426,26 @@ Ce que ça change :
 
 ## 9. Le parcours de contrôle
 
-`/controle/` est la page pensée pour l'agent sur le terrain, telle que la maquette
-`docs/vision-cible.html` la décrit : trois étapes dans une colonne étroite, lisible sur téléphone.
+`/controle/` reprend la maquette `docs/vision-cible.html` à l'écran près : sur grand écran, les
+**trois écrans sont côte à côte** dans des cadres de téléphone, l'étape active est mise en avant,
+les deux autres montrent ce qu'elles attendent ; sur téléphone, un seul écran à la fois avec des
+onglets. Chaque cadre a sa barre d'état (heure, en ligne / hors ligne, durée d'analyse, numéro de
+dossier).
 
-1. **Photo** : dépôt, appareil photo ou collage, recadrage, chargement du modèle en arrière-plan.
-   Le bouton Analyser ne s'active que lorsque l'image réduite est prête.
-2. **Résultat et décision** : le même `InsightsPanel` que l'explorateur, en mode `stacked`
-   (une colonne, boutons pleine largeur), la liste repliée des objets les plus proches, et la
-   décision qui mène au dossier.
-3. **Dossier** : décision, motif (listes rouges), photo, empreinte, horodatage, provenance
-   retenue ; les blocs Expertise et Recherches associées disent explicitement ce qui attend un
-   backend. Export JSON et impression via `utils/caseFile.ts`, partagé avec la page Comparer.
+1. **Photo** : dépôt, appareil photo ou collage, recadrage, puis **autres vues** (dos, marque,
+   détail) : chaque vue est vectorisée et les vecteurs sont moyennés en une seule requête
+   (`localAdapter.averageNormalized`). Le bouton Analyser ne s'active que lorsque l'image réduite
+   est prête.
+2. **Résultat et décision** : ce que c'est probablement avec la confiance en mots, provenance
+   probable, alerte Liste rouge, « Pourquoi » avec trois objets de référence et les attributs
+   dominants en langage courant, puis Retenir / Laisser passer, ou avis d'expert.
+3. **Dossier** : décision, motif, nombre de photos, empreinte, horodatage ; Expertise et
+   Recherches associées affichent « à connecter » et « non connecté » plutôt que des valeurs
+   inventées. Export JSON et impression via `utils/caseFile.ts`, partagé avec la page Comparer.
 
 Le dossier vit en session (`stores/query.svelte.ts`) : un rechargement après décision rouvre
-directement l'étape 3. L'explorateur reste la vue experte, avec filtres et comparaison.
+directement l'étape 3, et passer par l'explorateur ne le perd pas. L'explorateur reste la vue
+experte, avec filtres et comparaison.
 
 ---
 
