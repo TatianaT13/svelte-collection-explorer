@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vision cible · outil de contrôle des biens culturels</title>
+<style>
+  :root{--bg:#f6f5f2;--surface:#fff;--surface-2:#eeede9;--fg:#1b1c1f;--muted:#6a6e75;--border:#e1dfd9;--accent:#3457d5;--accent-soft:#e8edfb;--compare:#0f7b70;--compare-soft:#d7f1ec;--warn:#b45309;--warn-soft:#fff1dc;--danger:#b42318;--danger-soft:#fde8e6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:28px;letter-spacing:-.02em;margin:0 0 6px}
+  .lead{color:var(--muted);margin:0 0 36px;max-width:760px}
+  h2{font-size:18px;margin:48px 0 6px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 18px;max-width:760px}
+  .screens{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .phone{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:14px;box-shadow:0 10px 30px rgb(0 0 0/.06);display:flex;flex-direction:column;gap:10px;min-height:560px;position:relative}
+  .phone .bar{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:0 4px}
+  .step{position:absolute;top:-12px;left:14px;background:var(--fg);color:#fff;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;letter-spacing:.04em}
+  .title{font-weight:600;font-size:14px}
+  .photo{border-radius:12px;background:linear-gradient(135deg,#6b4a2b,#3b2a1a);aspect-ratio:4/3;position:relative;overflow:hidden}
+  .photo .obj{position:absolute;left:22%;top:14%;width:56%;height:72%;border-radius:8px;background:linear-gradient(180deg,#c89b4f,#8a5a2b);box-shadow:inset 0 0 0 6px #e9d7a8,0 6px 16px rgb(0 0 0/.35)}
+  .photo .obj::after{content:"";position:absolute;left:30%;top:18%;width:40%;height:58%;border-radius:50% 50% 40% 40%;background:#d9c7b0}
+  .photo .frame{position:absolute;left:18%;top:10%;width:64%;height:80%;border:2px solid #fff;box-shadow:0 0 0 2000px rgb(0 0 0/.35)}
+  .photo .lbl{position:absolute;right:8px;bottom:8px;background:rgb(0 0 0/.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:12px;font-weight:600;font-size:14px;background:var(--accent);color:#fff}
+  .btn.ghost{background:var(--surface-2);color:var(--fg);font-weight:500}
+  .btn.ok{background:var(--compare)}
+  .btn.hold{background:var(--danger)}
+  .hint{font-size:12px;color:var(--muted);text-align:center}
+  .card{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--surface)}
+  .card h4{margin:0 0 4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .id{font-size:15px;font-weight:600}
+  .conf{display:inline-block;margin-left:6px;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--compare-soft);color:var(--compare);font-weight:600}
+  .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .prov{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+  .prov div{display:grid;grid-template-columns:22px 1fr 36px;align-items:center;gap:8px;font-size:13px}
+  .prov .b{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+  .prov .b i{display:block;height:100%;background:var(--accent)}
+  .prov .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+  .alert{border-color:#f3c48c;background:var(--warn-soft)}
+  .alert .id{color:var(--warn);font-size:13px}
+  .alert .meta{color:var(--fg)}
+  .why{display:flex;gap:6px}
+  .why .t{flex:1;border-radius:8px;aspect-ratio:1;background:linear-gradient(135deg,#8a5a2b,#c89b4f);position:relative}
+  .why .t::after{content:attr(data-s);position:absolute;right:4px;top:4px;font-size:10px;background:rgb(255 255 255/.9);border-radius:999px;padding:1px 5px;font-weight:600}
+  .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .tags span{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--accent-soft)}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+  .actions .btn{padding:10px 6px;font-size:13px}
+  .row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
+  .row:last-child{border:0}
+  .row b{font-weight:600}
+  .status{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-weight:600}
+  .status.done{background:var(--compare-soft);color:var(--compare)}
+  .tl{font-size:12px;color:var(--muted);display:grid;gap:4px;margin-top:4px}
+  .tl div::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:middle}
+  .arch{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px}
+  .arch svg{width:100%;height:auto;display:block}
+  .principles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+  .principles .card{padding:14px 16px}
+  .principles h4{font-size:13px;letter-spacing:0;text-transform:none;color:var(--fg);margin-bottom:4px}
+  .principles p{margin:0;font-size:13px;color:var(--muted)}
+  footer{margin-top:40px;font-size:12px;color:var(--muted)}
+  @media (max-width:900px){.screens,.principles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>À quoi ressemblerait l'outil complet</h1>
+  <p class="lead">Le prototype doit aider un agent des douanes, non spécialiste, à reconnaître un objet et à estimer sa provenance. Trois écrans suffisent : prendre la photo, lire une décision expliquée, constituer le dossier. Tout le reste est derrière.</p>
+
+  <h2>Le parcours de l'agent</h2>
+  <p class="sub">Deux minutes, sur un téléphone, parfois sans réseau. L'agent ne voit jamais le vocabulaire des conservateurs sans une explication à côté.</p>
+
+  <div class="screens">
+    <div class="phone">
+      <span class="step">1 · PHOTO</span>
+      <div class="bar"><span>09:41</span><span>Hors ligne ✓</span></div>
+      <div class="title">Photographier l'objet</div>
+      <div class="photo"><div class="obj"></div><div class="frame"></div><span class="lbl">cadre ajusté</span></div>
+      <div class="hint">Cadrez l'objet seul. Ajoutez une vue du dos ou d'un détail si possible.</div>
+      <div class="btn ghost">＋ Autre vue (dos, marque, détail)</div>
+      <div class="btn">Analyser</div>
+      <div class="hint">La photo reste sur l'appareil. L'original est conservé pour l'expertise.</div>
+    </div>
+
+    <div class="phone">
+      <span class="step">2 · RÉSULTAT ET DÉCISION</span>
+      <div class="bar"><span>09:42</span><span>Analysé en 3 s</span></div>
+      <div class="card">
+        <h4>Ce que c'est probablement</h4>
+        <div class="id">Icône orthodoxe peinte sur bois <span class="conf">confiance élevée</span></div>
+        <div class="meta">Tempera et dorure · XIXe siècle · environ 30 × 25 cm</div>
+      </div>
+      <div class="card">
+        <h4>Provenance probable</h4>
+        <div class="prov">
+          <div>🇺🇦<div class="b"><i style="width:58%"></i></div><span class="n">58 %</span></div>
+          <div>🇷🇺<div class="b"><i style="width:27%"></i></div><span class="n">27 %</span></div>
+          <div>🇷🇴<div class="b"><i style="width:15%"></i></div><span class="n">15 %</span></div>
+        </div>
+        <div class="meta">Calculé sur les 12 objets de référence les plus proches.</div>
+      </div>
+      <div class="card alert">
+        <div class="id">⚠ Catégorie figurant sur la Liste rouge d'urgence ICOM · Ukraine</div>
+        <div class="meta">Icônes religieuses, XVIe–XXe. Exportation soumise à certificat. Retenir pour vérification.</div>
+      </div>
+      <div class="card">
+        <h4>Pourquoi · objets de référence</h4>
+        <div class="why"><div class="t" data-s="94"></div><div class="t" data-s="91"></div><div class="t" data-s="88"></div></div>
+        <div class="tags"><span>fond doré</span><span>bordure peinte</span><span>bois de tilleul</span><span>auréole gravée</span></div>
+      </div>
+      <div class="actions">
+        <div class="btn hold">Retenir</div>
+        <div class="btn ok">Laisser passer</div>
+      </div>
+      <div class="hint">Ou demander un avis d'expert à distance</div>
+    </div>
+
+    <div class="phone">
+      <span class="step">3 · DOSSIER</span>
+      <div class="bar"><span>09:44</span><span>Dossier #2026-1022-07</span></div>
+      <div class="title">Dossier de contrôle</div>
+      <div class="card">
+        <div class="row"><span>Décision</span><b>Retenu pour expertise</b></div>
+        <div class="row"><span>Motif</span><b>Liste rouge ICOM Ukraine</b></div>
+        <div class="row"><span>Photos</span><b>3 (originaux archivés)</b></div>
+        <div class="row"><span>Empreinte</span><b style="font-family:ui-monospace,monospace;font-size:11px">6813a5d0…</b></div>
+        <div class="row"><span>Agent</span><b>Poste 4 · JFK</b></div>
+      </div>
+      <div class="card">
+        <h4>Expertise</h4>
+        <div class="row"><span>Statut</span><span class="status">En attente</span></div>
+        <div class="tl">
+          <div>09:44 Dossier créé, transmis au référent</div>
+          <div>— Avis de l'expert (identification, provenance)</div>
+          <div>— Retour intégré au corpus de référence</div>
+        </div>
+      </div>
+      <div class="card">
+        <h4>Recherches associées</h4>
+        <div class="row"><span>Base Interpol objets volés</span><span class="status done">Aucune correspondance</span></div>
+        <div class="row"><span>Objets similaires déjà contrôlés</span><b>2</b></div>
+      </div>
+      <div class="btn ghost" style="margin-top:auto">Exporter le dossier (PDF, JSON)</div>
+    </div>
+  </div>
+
+  <h2>Ce qu'il y a derrière</h2>
+  <p class="sub">Le terminal de l'agent est léger. L'intelligence est dans les données de référence et dans la boucle de retour des experts, pas dans un modèle isolé.</p>
+
+  <div class="arch">
+    <svg viewBox="0 0 1120 420" font-family="Inter,system-ui,sans-serif" font-size="13">
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#6a6e75"/></marker>
+        <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#0f7b70"/></marker>
+      </defs>
+      <!-- Terminal -->
+      <rect x="20" y="130" width="200" height="150" rx="14" fill="#e8edfb" stroke="#3457d5"/>
+      <text x="120" y="158" text-anchor="middle" font-weight="700" fill="#1b1c1f">Terminal agent</text>
+      <text x="120" y="180" text-anchor="middle" fill="#3457d5" font-size="11">application web installable</text>
+      <text x="36" y="206" fill="#1b1c1f">• photo, recadrage, hors ligne</text>
+      <text x="36" y="226" fill="#1b1c1f">• pré-analyse locale (embedding)</text>
+      <text x="36" y="246" fill="#1b1c1f">• décision expliquée, dossier</text>
+      <text x="36" y="266" fill="#6a6e75" font-size="11">ce dépôt</text>
+      <!-- API -->
+      <rect x="300" y="130" width="190" height="150" rx="14" fill="#fff" stroke="#e1dfd9"/>
+      <text x="395" y="158" text-anchor="middle" font-weight="700">API de recherche</text>
+      <text x="395" y="180" text-anchor="middle" fill="#6a6e75" font-size="11">FastAPI</text>
+      <text x="316" y="206">• visuel + attributs, reclassement</text>
+      <text x="316" y="226">• agrégation de provenance</text>
+      <text x="316" y="246">• règles listes rouges, Interpol</text>
+      <text x="316" y="266">• journal, droits d'accès</text>
+      <!-- Stores -->
+      <rect x="570" y="40" width="230" height="64" rx="12" fill="#fff" stroke="#e1dfd9"/>
+      <text x="685" y="66" text-anchor="middle" font-weight="600">Index vectoriel</text>
+      <text x="685" y="86" text-anchor="middle" fill="#6a6e75" font-size="11">embeddings des images de référence</text>
+      <rect x="570" y="120" width="230" height="64" rx="12" fill="#fff" stroke="#e1dfd9"/>
+      <text x="685" y="146" text-anchor="middle" font-weight="600">Base des objets de référence</text>
+      <text x="685" y="166" text-anchor="middle" fill="#6a6e75" font-size="11">codes stables, géographie hiérarchique</text>
+      <rect x="570" y="200" width="230" height="64" rx="12" fill="#fff" stroke="#e1dfd9"/>
+      <text x="685" y="226" text-anchor="middle" font-weight="600">Référentiels de risque</text>
+      <text x="685" y="246" text-anchor="middle" fill="#6a6e75" font-size="11">listes rouges ICOM, objets volés</text>
+      <rect x="570" y="280" width="230" height="64" rx="12" fill="#fff" stroke="#e1dfd9"/>
+      <text x="685" y="306" text-anchor="middle" font-weight="600">Archive des dossiers</text>
+      <text x="685" y="326" text-anchor="middle" fill="#6a6e75" font-size="11">originaux, empreintes, décisions</text>
+      <!-- Ingestion -->
+      <rect x="880" y="40" width="220" height="150" rx="14" fill="#fff" stroke="#e1dfd9"/>
+      <text x="990" y="66" text-anchor="middle" font-weight="700">Pipeline d'ingestion</text>
+      <text x="896" y="92">• musées en accès libre, Europeana,</text>
+      <text x="896" y="110">  Wikimedia, musées ukrainiens</text>
+      <text x="896" y="134">• normalisation vers les codes</text>
+      <text x="896" y="152">• dédoublonnage, embeddings</text>
+      <text x="896" y="176" fill="#6a6e75" font-size="11">scripts/build-data.mjs en est l'embryon</text>
+      <!-- Experts -->
+      <rect x="880" y="240" width="220" height="104" rx="14" fill="#d7f1ec" stroke="#0f7b70"/>
+      <text x="990" y="266" text-anchor="middle" font-weight="700">Experts</text>
+      <text x="896" y="292">• valident ou corrigent les dossiers</text>
+      <text x="896" y="312">• leurs retours ré-étiquettent</text>
+      <text x="896" y="330">  le corpus et le classement</text>
+      <!-- Arrows -->
+      <line x1="220" y1="205" x2="300" y2="205" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+      <line x1="490" y1="190" x2="570" y2="72" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="490" y1="200" x2="570" y2="152" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="490" y1="215" x2="570" y2="232" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="490" y1="230" x2="570" y2="312" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="880" y1="100" x2="800" y2="72" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="880" y1="120" x2="800" y2="152" stroke="#6a6e75" stroke-width="1.5" marker-end="url(#a)"/>
+      <path d="M800 312 H880" stroke="#0f7b70" stroke-width="1.5" marker-end="url(#g)" marker-start="url(#g)"/>
+      <path d="M990 240 V210 H840 V152" stroke="#0f7b70" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#g)" fill="none"/>
+      <text x="1012" y="226" fill="#0f7b70" font-size="11">boucle de retour</text>
+      <text x="120" y="395" text-anchor="middle" fill="#6a6e75" font-size="12">Ce qui existe</text>
+      <text x="685" y="395" text-anchor="middle" fill="#6a6e75" font-size="12">À construire dans les 3 mois de développement</text>
+    </svg>
+  </div>
+
+  <div class="principles">
+    <div class="card"><h4>Deux signaux valent mieux qu'un</h4><p>La similarité visuelle trouve les ressemblances, les attributs structurés les confirment ou les contredisent. Un faux moderne ressemble à l'original en photo ; ses matériaux et sa facture, non.</p></div>
+    <div class="card"><h4>Expliquer, toujours</h4><p>Chaque suggestion montre les objets de référence et les attributs partagés, en langage simple. Un agent qui ne comprend pas pourquoi n'agit pas, ou agit mal.</p></div>
+    <div class="card"><h4>L'outil oriente, il n'authentifie pas</h4><p>La décision lourde revient à un expert. Les retours des experts améliorent le corpus à chaque dossier : c'est la boucle qui fait progresser le prototype au-delà du neuvième mois.</p></div>
+  </div>
+
+  <footer>Vision cible pour un prototype à neuf mois, trois de développement. Le dépôt actuel couvre le terminal agent ; le pipeline d'ingestion existe sous forme de script.</footer>
+</div>
+</body>
+</html>

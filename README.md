@@ -43,6 +43,7 @@ chargement de données, build Vite. Ce projet n'utilise que le routage et le SSR
 
 ```
 scripts/build-data.mjs         # constitution du jeu de données (API du Met, vignettes, embeddings)
+docs/vision-cible.html         # maquette de l'outil complet : parcours de l'agent et architecture
 e2e/explore.spec.ts            # parcours Playwright sur le build statique
 src/
   app.html                     # squelette HTML, SvelteKit injecte %sveltekit.head% et %sveltekit.body%
@@ -59,6 +60,7 @@ src/
       localAdapter.ts          # jeu de données statique + recherche par image dans le navigateur (défaut)
       mockAdapter.ts           # données générées, sans modèle (VITE_ADAPTER=mock)
       filtering.ts             # filtrage et recherche texte, purs et testés
+      insights.ts              # lecture agrégée des meilleurs résultats (identification, provenance)
       imageInfo.ts             # extraction EXIF/IPTC/XMP côté client
       index.ts                 # point d'entrée : quel adapter est actif
     ml/embedder.ts             # client : envoie les images au worker, repli sur le fil principal
@@ -70,9 +72,11 @@ src/
     i18n/index.svelte.ts       # store de langue : i18n.locale, i18n.t(), i18n.l()
     config/schema.ts           # schéma des métadonnées (pilote l'UI), libellés multilingues
     config/countries.ts        # codes ISO 3166 + noms localisés via Intl.DisplayNames
+    config/risk.ts             # Listes rouges ICOM : origine × catégorie → signal de risque
     config/vocabularies.ts     # vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets)
     components/Logo.svelte     # marque : écrin hexagonal en trois chevrons, cœur turquoise
     components/ModelStatus.svelte # progression du modèle de reconnaissance
+    components/InsightsPanel.svelte # identification et provenance probables, alerte, décision
     components/*.svelte        # composants réutilisables
     stores/compare.svelte.ts   # sélection pour comparaison (persistée en session)
     stores/theme.svelte.ts     # thème clair / sombre / système (localStorage)
@@ -382,6 +386,20 @@ pendant le chargement. Le modèle est préchargé dès qu'une image est choisie,
 recherche parte. Les objets sont classés par similarité cosinus ; les seuils « forte / moyenne /
 faible » sont dans `schema.similarity`.
 
+**Lecture des résultats.** Une liste d'objets similaires ne répond pas à la question de l'agent.
+`api/insights.ts` agrège les `topK` meilleurs résultats (12 par défaut, `schema.similarity.topK`),
+pondérés par la similarité, en trois lectures affichées par `InsightsPanel` :
+
+- **ce que c'est probablement** : type, matériaux, période dominants, avec une confiance en mots ;
+- **provenance probable** : parts par pays, cliquables pour filtrer, avec les objets de référence ;
+- **signal de risque** : si l'identification probable et une origine probable correspondent à une
+  catégorie recensée dans une **Liste rouge ICOM** (`config/risk.ts`), une alerte explique quoi
+  vérifier et renvoie à la source. C'est un signal, jamais une preuve.
+
+L'agent enregistre ensuite une **décision** (retenir, laisser passer, demander un avis), reprise
+dans l'export du dossier avec le résumé de la lecture. Le calcul est dans l'adapter : un backend
+le ferait côté serveur avec le même contrat.
+
 **Recadrage.** Tracer un cadre sur l'aperçu limite la recherche à cette zone : l'objet est rarement
 seul sur une photo de terrain. L'original reste intact pour les métadonnées et l'archivage ; seule
 la zone découpée (puis réduite) part à la recherche. Le classement change immédiatement.
@@ -440,6 +458,7 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 
 | Détail | Fichier | Mécanisme |
 |---|---|---|
+| Badge « Liste rouge » sur les cartes et alerte dans le volet | `ResultCard.svelte`, `ItemDrawer.svelte` | `riskFor(item)` croise origine et catégorie avec les règles ICOM |
 | Recadrer la photo avant recherche | `ImageUpload.svelte` | cadre tracé au pointeur sur l'aperçu, découpe dans un canvas, l'original est conservé |
 | Position GPS exclue par défaut | `+page.svelte` | `includeGps = false` : la position ne part que si l'agent le demande |
 | Délai sur la saisie (250 ms) | `+page.svelte` | `$effect` avec `setTimeout` et nettoyage : `text` (saisie) alimente `query` (recherche) |

@@ -6,6 +6,7 @@ import { schema } from '$lib/config/schema';
 import { termLabel, vocabCodes } from '$lib/config/vocabularies';
 import { i18n } from '$lib/i18n/index.svelte';
 import { matchesFilters, matchesText, paginate } from './filtering';
+import { computeInsights } from './insights';
 
 /**
  * Backend simulé : données en mémoire, latence artificielle.
@@ -102,19 +103,22 @@ export const mockAdapter: CollectionAdapter = {
     await delay(300);
     let results = RAW.map(present).filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, i18n.locale));
 
+    let insights;
     if (query.image) {
       // Simule une recherche visuelle : score pseudo-aléatoire dérivé du fichier.
       const seed = query.image.name.length + query.image.size + (query.imageInfo?.width ?? 0);
       results = results
         .map((it, i) => ({ ...it, score: Number((((seed * (i + 7)) % 97) / 100).toFixed(2)) }))
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+      insights = computeInsights(results, schema.similarity.topK);
     }
 
     return {
       items: paginate(results, query.page, query.pageSize),
       total: results.length,
       page: query.page,
-      pageSize: query.pageSize
+      pageSize: query.pageSize,
+      insights
     };
   },
 

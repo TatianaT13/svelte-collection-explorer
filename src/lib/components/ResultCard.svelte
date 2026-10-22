@@ -4,6 +4,7 @@
   import { compare } from '$lib/stores/compare.svelte';
   import AttributeList from './AttributeList.svelte';
   import { i18n } from '$lib/i18n/index.svelte';
+  import { riskFor } from '$lib/config/risk';
   import ScoreRing from './ScoreRing.svelte';
 
   let {
@@ -20,6 +21,7 @@
 
   const selected = $derived(compare.has(item.id));
   const disabled = $derived(!selected && compare.isFull);
+  const risks = $derived(riskFor(item));
 </script>
 
 <article class="card" class:selected>
@@ -27,6 +29,9 @@
     <img src={item.thumbnailUrl ?? item.imageUrl} alt="" loading="lazy" />
     {#if item.score !== undefined}
       <span class="score"><ScoreRing score={item.score} size={40} /></span>
+    {/if}
+    {#if risks.length}
+      <span class="risk" class:emergency={risks.some((r) => r.emergency)} title={risks.map((r) => i18n.l(r.label)).join(' · ')}>{i18n.t('risk.badge')}</span>
     {/if}
   </button>
 
@@ -94,6 +99,22 @@
     border-radius: 50%;
     background: color-mix(in srgb, var(--surface) 85%, transparent);
     backdrop-filter: blur(4px);
+  }
+  .risk {
+    position: absolute;
+    left: 0.5rem;
+    top: 0.5rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: #b45309;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .risk.emergency {
+    background: #b42318;
   }
   .body {
     padding: 0.8rem 0.85rem 0.85rem;

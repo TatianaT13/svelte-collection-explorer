@@ -3,6 +3,8 @@ import type { ArchiveReceipt, CollectionAdapter } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { matchesFilters, matchesText, paginate } from './filtering';
+import { computeInsights } from './insights';
+import { schema } from '$lib/config/schema';
 import { i18n } from '$lib/i18n/index.svelte';
 
 /**
@@ -62,6 +64,7 @@ export const localAdapter: CollectionAdapter = {
       .filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, locale))
       .map(strip);
 
+    let insights;
     if (query.image) {
       const q = await queryEmbedding(query.image);
       const { cosine } = await import('$lib/ml/embedder');
@@ -69,9 +72,10 @@ export const localAdapter: CollectionAdapter = {
       results = results
         .map((it) => ({ ...it, score: Math.round(cosine(q, byId.get(it.id) ?? []) * 1000) / 1000 }))
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+      insights = computeInsights(results, schema.similarity.topK);
     }
 
-    return { items: paginate(results, query.page, query.pageSize), total: results.length, page: query.page, pageSize: query.pageSize };
+    return { items: paginate(results, query.page, query.pageSize), total: results.length, page: query.page, pageSize: query.pageSize, insights };
   },
 
   async getItem(id: string): Promise<CollectionItem | null> {

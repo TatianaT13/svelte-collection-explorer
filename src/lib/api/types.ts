@@ -33,11 +33,44 @@ export interface SearchQuery {
   pageSize: number;
 }
 
+/** Part d'une valeur parmi les meilleurs résultats d'une recherche par image. */
+export interface Share {
+  code: string;
+  /** Part pondérée par la similarité, 0..1. */
+  share: number;
+  /** Nombre d'objets de référence portant cette valeur. */
+  count: number;
+}
+
+/** Objet de référence ayant servi au calcul. */
+export interface Reference {
+  id: string;
+  title: string;
+  thumbnailUrl?: string;
+  score: number;
+  origin?: string;
+}
+
+/**
+ * Lecture agrégée des meilleurs résultats d'une recherche par image :
+ * ce que l'objet est probablement, d'où il vient probablement, et sur quoi on s'appuie.
+ */
+export interface Insights {
+  topK: number;
+  origins: Share[];
+  categories: Share[];
+  materials: Share[];
+  periods: Share[];
+  references: Reference[];
+}
+
 export interface SearchResult {
   items: CollectionItem[];
   total: number;
   page: number;
   pageSize: number;
+  /** Présent seulement pour une recherche par image. */
+  insights?: Insights;
 }
 
 /** Valeurs possibles d'un champ à facettes (pour alimenter les listes déroulantes). */

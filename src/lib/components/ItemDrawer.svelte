@@ -8,6 +8,7 @@
   import AttributeList from './AttributeList.svelte';
   import { i18n } from '$lib/i18n/index.svelte';
   import { fallbackToThumb } from '$lib/utils/imgFallback';
+  import { riskFor } from '$lib/config/risk';
   import ScoreRing from './ScoreRing.svelte';
 
   let {
@@ -60,6 +61,7 @@
 
   const selected = $derived(item ? compare.has(item.id) : false);
   const origin = $derived(item ? String(item.metadata.origin ?? '') : '');
+  const risks = $derived(item ? riskFor(item) : []);
 </script>
 
 {#if item}
@@ -83,6 +85,14 @@
           <figcaption><ScoreRing score={item.score} size={40} /> <span>{i18n.t('drawer.similarity')}</span></figcaption>
         {/if}
       </figure>
+
+      {#each risks as r (r.id)}
+        <div class="risk" class:emergency={r.emergency} role="note">
+          <p class="rl">{i18n.t('insights.risk', { label: i18n.l(r.label) })}</p>
+          <p class="ra">{i18n.l(r.advice)}</p>
+          <p class="rn">{i18n.t('insights.riskNote')} <a href={r.url} target="_blank" rel="noopener">{i18n.t('insights.riskLink')}</a></p>
+        </div>
+      {/each}
 
       {#if onfilter}
         <p class="tip">{i18n.t('drawer.tip')}</p>
@@ -190,6 +200,35 @@
   }
   section + section {
     margin-top: 1rem;
+  }
+  .risk {
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, #f59e0b 14%, var(--surface));
+    font-size: 0.84rem;
+  }
+  .risk.emergency {
+    border-color: color-mix(in srgb, #ef4444 45%, transparent);
+    background: color-mix(in srgb, #ef4444 12%, var(--surface));
+  }
+  .risk p {
+    margin: 0;
+  }
+  .rl {
+    font-weight: 600;
+  }
+  .ra {
+    margin-top: 0.15rem !important;
+  }
+  .rn {
+    margin-top: 0.3rem !important;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .rn a {
+    color: inherit;
   }
   .tip {
     margin: 0 0 0.9rem;

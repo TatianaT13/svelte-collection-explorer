@@ -31,6 +31,7 @@
   import ImageInfoPanel from '$lib/components/ImageInfoPanel.svelte';
   import ItemDrawer from '$lib/components/ItemDrawer.svelte';
   import ModelStatus from '$lib/components/ModelStatus.svelte';
+  import InsightsPanel from '$lib/components/InsightsPanel.svelte';
   import { lastQuery } from '$lib/stores/query.svelte';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
@@ -183,6 +184,11 @@
     resetPage();
   }
 
+  async function openById(id: string) {
+    const inPage = result?.items.find((it) => it.id === id);
+    selected = inPage ?? (await api.getItem(id));
+  }
+
   function clearAll() {
     text = '';
     query = '';
@@ -322,6 +328,9 @@
         {/if}
       </div>
     {:else}
+      {#if result.insights && result.insights.topK > 0}
+        <InsightsPanel insights={result.insights} onopen={openById} onfilterOrigin={(code) => toggleFilterValue('origin', code)} />
+      {/if}
       <div class="grid" class:dim={loading}>
         {#each result.items as item (item.id)}
           <ResultCard {item} onopen={(it) => (selected = it)} {filters} onfilter={toggleFilterValue} />

@@ -15,6 +15,7 @@
   import ImageCompare from '$lib/components/ImageCompare.svelte';
   import { lastQuery } from '$lib/stores/query.svelte';
   import { schema } from '$lib/config/schema';
+  import { riskFor } from '$lib/config/risk';
 
   const items = $derived(compare.items);
   let onlyDiff = $state(false);
@@ -46,7 +47,8 @@
         title: it.title,
         score: it.score,
         imageUrl: it.imageUrl,
-        metadata: it.metadata
+        metadata: it.metadata,
+        redLists: riskFor(it).map((r) => i18n.l(r.label))
       }))
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -119,6 +121,7 @@
       <strong>{i18n.t('compare.query')}</strong> : {lastQuery.record.fileName}
       {#if lastQuery.record.cropped}({i18n.t('compare.queryCropped')}){/if}
       {#if lastQuery.record.sha256}<code>SHA-256 {lastQuery.record.sha256.slice(0, 16)}…</code>{/if}
+      {#if lastQuery.record.decision}<span class="decision">{i18n.t(`decision.${lastQuery.record.decision}`)}</span>{/if}
     </p>
   {/if}
   {#if items.length >= 2}
@@ -247,6 +250,15 @@
   .query code {
     margin-left: 0.5rem;
     font-size: 0.75rem;
+  }
+  .decision {
+    margin-left: 0.6rem;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: var(--compare-soft);
+    color: var(--compare);
+    font-weight: 600;
+    font-size: 0.78rem;
   }
   @media print {
     .actions,
