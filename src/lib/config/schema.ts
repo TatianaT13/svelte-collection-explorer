@@ -57,6 +57,12 @@ export interface SimilarityThresholds {
   strong: number;
   /** Score à partir duquel elle est dite moyenne ; en dessous, faible. */
   medium: number;
+  /**
+   * Meilleure similarité en dessous de laquelle la lecture agrégée est jugée non fiable :
+   * confiance faible, aucun signal de risque. Mesuré : images sans rapport 0,63–0,72, vraies
+   * correspondances 0,93–0,97 avec CLIP ViT-B/32.
+   */
+  reliable: number;
   /** Nombre de meilleurs résultats utilisés pour la lecture agrégée (identification, provenance). */
   topK: number;
 }
@@ -86,7 +92,7 @@ const G = {
 export const schema: CollectionSchema = {
   name: { fr: 'Objets culturels', en: 'Cultural objects' },
   pageSize: 12,
-  similarity: { strong: 0.8, medium: 0.65, topK: 12 },
+  similarity: { strong: 0.8, medium: 0.65, reliable: 0.75, topK: 12 },
   upload: { maxPx: 1600, skipBelowBytes: 2 * 1024 * 1024, quality: 0.85 },
   fields: [
     { key: 'category', label: { fr: 'Type d’objet', en: 'Object type' }, kind: 'vocab', vocabulary: 'category', showOnCard: true, filterable: true, group: G.identification },

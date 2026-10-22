@@ -396,6 +396,11 @@ pondérés par la similarité, en trois lectures affichées par `InsightsPanel` 
   catégorie recensée dans une **Liste rouge ICOM** (`config/risk.ts`), une alerte explique quoi
   vérifier et renvoie à la source. C'est un signal, jamais une preuve.
 
+Si le meilleur objet de référence reste sous le seuil `similarity.reliable` (0,75, calibré : les
+images sans rapport plafonnent à 0,72, les vraies correspondances dépassent 0,9), la lecture est
+marquée **non fiable** : confiance « faible », aucun signal de risque, et un bandeau le dit en clair. Une photo
+sans rapport avec la collection ne doit jamais produire une alerte.
+
 L'agent enregistre ensuite une **décision** (retenir, laisser passer, demander un avis), reprise
 dans l'export du dossier avec le résumé de la lecture. Le calcul est dans l'adapter : un backend
 le ferait côté serveur avec le même contrat.

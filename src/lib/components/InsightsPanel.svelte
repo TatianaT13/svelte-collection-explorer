@@ -23,15 +23,25 @@
   const L = $derived(i18n.locale);
   const topCategory = $derived(insights.categories[0]);
   const topPeriod = $derived(insights.periods[0]);
-  const topOrigin = $derived(insights.origins[0]);
+  const best = $derived(insights.references[0]?.score ?? 0);
+  /** Fiable seulement si au moins un objet de référence est réellement proche. */
+  const reliable = $derived(best >= schema.similarity.reliable);
+  const origins = $derived(insights.origins.filter((o) => o.share >= 0.005));
   const confidence = $derived(
-    topCategory && topCategory.share >= 0.6 ? 'strong' : topCategory && topCategory.share >= 0.4 ? 'medium' : 'weak'
+    !reliable || !topCategory
+      ? 'weak'
+      : best >= schema.similarity.strong && topCategory.share >= 0.6
+        ? 'strong'
+        : topCategory.share >= 0.4
+          ? 'medium'
+          : 'weak'
   );
 
-  /** Règles de risque : identification probable × chacune des origines probables. */
+  /** Règles de risque : identification probable × origines probables, seulement si la lecture est fiable. */
   const risks = $derived.by(() => {
     const seen = new Map<string, { label: string; advice: string; url: string; emergency?: boolean; origin: string }>();
-    for (const o of insights.origins) {
+    if (!reliable) return [];
+    for (const o of origins) {
       for (const r of riskForCodes(o.code, topCategory?.code)) {
         if (!seen.has(r.id)) seen.set(r.id, { label: i18n.l(r.label), advice: i18n.l(r.advice), url: r.url, emergency: r.emergency, origin: o.code });
       }
@@ -43,7 +53,7 @@
 
   function decide(d: Decision | null) {
     lastQuery.decide(d, {
-      origins: insights.origins.map((o) => ({ code: o.code, share: Math.round(o.share * 100) / 100 })),
+      origins: origins.map((o) => ({ code: o.code, share: Math.round(o.share * 100) / 100 })),
       category: topCategory?.code,
       period: topPeriod?.code,
       risk: risks.map((r) => r.label)
@@ -53,7 +63,13 @@
   const pct = (x: number) => `${Math.round(x * 100)} %`;
 </script>
 
-<section class="insights" aria-label={i18n.t('insights.title')}>
+<section class="insights" class:unreliable={!reliable} aria-label={i18n.t('insights.title')}>
+  {#if !reliable}
+    <p class="notice" role="status">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      {i18n.t('insights.unreliable', { pct: Math.round(best * 100) })}
+    </p>
+  {/if}
   <div class="grid">
     <div class="block">
       <h3>{i18n.t('insights.identification')}</h3>
@@ -77,7 +93,7 @@
     <div class="block">
       <h3>{i18n.t('insights.provenance')}</h3>
       <ul class="bars origins">
-        {#each insights.origins as o (o.code)}
+        {#each origins as o (o.code)}
           <li>
             <button type="button" class="origin" onclick={() => onfilterOrigin?.(o.code)} title={countryName(o.code, L)}>
               <span class="flag" aria-hidden="true">{flagEmoji(o.code)}</span>
@@ -141,6 +157,25 @@
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface);
+  }
+  .notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0 0 0.9rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--fg);
+    font-size: 0.85rem;
+  }
+  .notice svg {
+    flex: none;
+    margin-top: 0.15rem;
+    color: var(--muted);
+  }
+  .unreliable .grid {
+    opacity: 0.75;
   }
   .grid {
     display: grid;
