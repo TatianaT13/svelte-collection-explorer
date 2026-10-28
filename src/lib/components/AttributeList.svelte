@@ -4,10 +4,11 @@
    * Si le champ est filtrable, la case ajoute / retire cette valeur du filtre.
    */
   import type { FieldSchema } from '$lib/config/schema';
-  import type { ActiveFilters, CollectionItem } from '$lib/api/types';
+  import type { ActiveFilters, CollectionItem, MetadataValue as MetadataValueType } from '$lib/api/types';
   import { labelOf, formatValue, fieldLabel } from '$lib/utils/labels';
   import { i18n } from '$lib/i18n/index.svelte';
   import { flagEmoji } from '$lib/utils/flag';
+  import MetadataValue from './MetadataValue.svelte';
 
   let {
     fields,
@@ -28,6 +29,7 @@
     field: FieldSchema;
     label: string;
     text: string;
+    raw?: MetadataValueType;
     value?: string;
     checkable: boolean;
     flag?: string;
@@ -41,7 +43,7 @@
       const empty = raw === null || raw === undefined || raw === '' || (Array.isArray(raw) && raw.length === 0);
       const checkable = !!onfilter && !!f.filterable && !empty && f.kind !== 'number';
       if (!checkable) {
-        out.push({ id: f.key, field: f, label: fieldLabel(f), text: formatValue(f, raw), checkable: false, long: f.kind === 'longtext' });
+        out.push({ id: f.key, field: f, label: fieldLabel(f), text: formatValue(f, raw), raw, checkable: false, long: f.kind === 'longtext' });
         continue;
       }
       const values = Array.isArray(raw) ? raw.map(String) : [String(raw)];
@@ -87,7 +89,9 @@
       <li class="row static">
         <span class="spacer" aria-hidden="true"></span>
         <span class="k">{row.label}</span>
-        <span class="v" class:long={row.long} class:empty={row.text === '—'}>{row.text}</span>
+        <span class="v" class:long={row.long} class:empty={row.text === '—'}>
+          {#if row.long}<MetadataValue field={row.field} value={row.raw} />{:else}{row.text}{/if}
+        </span>
       </li>
     {/if}
   {/each}
@@ -162,6 +166,7 @@
     color: var(--fg);
     min-width: 0;
     overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .row.on .v {
     color: var(--accent);

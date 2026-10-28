@@ -293,6 +293,8 @@
     vertical-align: top;
     text-align: left;
     font-size: 0.9rem;
+    overflow-wrap: anywhere;
+    min-width: 0;
   }
   thead th {
     background: var(--surface);
