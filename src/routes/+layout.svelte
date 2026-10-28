@@ -7,7 +7,6 @@
   import CompareTray from '$lib/components/CompareTray.svelte';
   import LanguageSwitch from '$lib/components/LanguageSwitch.svelte';
   import Logo from '$lib/components/Logo.svelte';
-  import Analytics from '$lib/components/Analytics.svelte';
   import { i18n } from '$lib/i18n/index.svelte';
 
   let { children } = $props();
@@ -45,7 +44,6 @@
 {#if !onCompare}
   <CompareTray />
 {/if}
-<Analytics />
 
 <style>
   :global(:root) {

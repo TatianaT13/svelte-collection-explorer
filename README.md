@@ -599,18 +599,7 @@ Conséquences dans ce projet :
 
 ---
 
-## 14. Mesure d'audience (optionnelle)
-
-`Analytics.svelte` charge le compteur **GoatCounter** uniquement si la variable `VITE_GOATCOUNTER`
-est définie au build (`mon-site.goatcounter.com`). Sans cookie ni identifiant personnel : pages
-vues, pays, navigateur, site d'origine. Le signal « Do Not Track » est respecté. Sur GitHub Pages,
-la variable vient de **Settings → Secrets and variables → Actions → Variables → `GOATCOUNTER_HOST`**.
-GitHub ne fournit aucune statistique pour les sites Pages ; les vues du dépôt lui-même sont dans
-**Insights → Traffic**.
-
----
-
-## 15. Déploiement
+## 14. Déploiement
 
 Le front est statique : `@sveltejs/adapter-static` pré-rend les deux pages en HTML, le mock tourne
 dans le navigateur. Le workflow `.github/workflows/deploy.yml` construit et publie sur **GitHub Pages**
@@ -626,7 +615,7 @@ plateforme : le code applicatif ne change pas.
 
 ---
 
-## 16. Tests
+## 15. Tests
 
 Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
 
@@ -639,7 +628,7 @@ Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
 
 ---
 
-## 17. Pour aller plus loin
+## 16. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.

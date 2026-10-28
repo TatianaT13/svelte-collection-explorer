@@ -4,6 +4,5 @@ declare global {
 
 interface ImportMetaEnv {
   readonly VITE_ADAPTER?: string;
-  readonly VITE_GOATCOUNTER?: string;
 }
 export {};
