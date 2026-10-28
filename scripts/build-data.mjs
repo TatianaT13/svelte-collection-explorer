@@ -116,8 +116,23 @@ function pickAll(rules, text, max = 3) {
   return out.slice(0, max);
 }
 
+/**
+ * Année de l'objet : première année lue dans la date affichée par le musée (« 1892 »,
+ * « ca. 1000–1200 », « 1906, cast before 1939 »), sinon la borne basse de recherche.
+ * `objectBeginDate` seul est trompeur : c'est souvent la période d'activité de l'artiste.
+ */
+function toYear(o) {
+  const m = String(o.objectDate ?? '').match(/(-?\d{3,4})/);
+  if (m) {
+    const y = Number(m[1]);
+    const bc = /\bB\.?C\.?\b/i.test(o.objectDate ?? '');
+    return bc ? -Math.abs(y) : y;
+  }
+  return Number.isFinite(o.objectBeginDate) ? o.objectBeginDate : null;
+}
+
 function toPeriod(o) {
-  const y = Number.isFinite(o.objectBeginDate) ? o.objectBeginDate : NaN;
+  const y = toYear(o) ?? NaN;
   const culture = (o.culture || '').toLowerCase();
   if (!Number.isFinite(y)) return 'unknown';
   if (culture.includes('byzantine') && y >= 300 && y < 1453) return 'byzantine';
@@ -426,7 +441,8 @@ async function main() {
         origin: toOrigin(o),
         place: placeById.get(o.objectID) ?? '',
         period: toPeriod(o),
-        year: Number.isFinite(o.objectBeginDate) ? o.objectBeginDate : null,
+        year: toYear(o),
+        date_text: o.objectDate || '',
         maker: o.artistDisplayName || '',
         material: pickAll(MATERIAL_RULES, medium),
         technique: pickAll(TECHNIQUE_RULES, medium, 2),

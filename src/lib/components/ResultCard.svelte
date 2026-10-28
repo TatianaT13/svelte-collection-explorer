@@ -31,7 +31,10 @@
       <span class="score"><ScoreRing score={item.score} size={40} /></span>
     {/if}
     {#if risks.length}
-      <span class="risk" class:emergency={risks.some((r) => r.emergency)} title={risks.map((r) => i18n.l(r.label)).join(' · ')}>{i18n.t('risk.badge')}</span>
+      <span class="risk" class:emergency={risks.some((r) => r.emergency)} title="{i18n.t('risk.badgeTitle')} {risks.map((r) => i18n.l(r.label)).join(' · ')}">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        {i18n.t('risk.badge')}
+      </span>
     {/if}
   </button>
 
@@ -100,21 +103,26 @@
     background: color-mix(in srgb, var(--surface) 85%, transparent);
     backdrop-filter: blur(4px);
   }
+  /* Badge volontairement sobre : un signal de catégorie, pas une alerte sur l'objet. */
   .risk {
     position: absolute;
     left: 0.5rem;
     top: 0.5rem;
-    padding: 0.15rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    border: 1.5px solid #b45309;
     border-radius: 999px;
-    background: #b45309;
-    color: #fff;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    color: #b45309;
     font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
   }
   .risk.emergency {
-    background: #b42318;
+    border-color: #b42318;
+    color: #b42318;
   }
   .body {
     padding: 0.8rem 0.85rem 0.85rem;

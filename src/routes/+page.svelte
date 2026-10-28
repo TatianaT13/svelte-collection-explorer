@@ -34,7 +34,9 @@
   import InsightsPanel from '$lib/components/InsightsPanel.svelte';
   import MapView from '$lib/components/MapView.svelte';
   import PhotoQuality from '$lib/components/PhotoQuality.svelte';
+  import SampleImages from '$lib/components/SampleImages.svelte';
   import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
+  import { riskFor, riskRules } from '$lib/config/risk';
   import { lastQuery } from '$lib/stores/query.svelte';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
@@ -85,6 +87,7 @@
   let searchEl = $state<HTMLInputElement | null>(null);
 
   const totalPages = $derived(result ? Math.max(1, Math.ceil(result.total / result.pageSize)) : 1);
+  const anyRiskBadge = $derived(!!result?.items.some((it) => riskFor(it).length > 0));
   const activeFilterCount = $derived(
     Object.values(filters).filter((v) => (Array.isArray(v) ? v.length > 0 : v !== '' && v !== null && v !== undefined)).length
   );
@@ -297,6 +300,9 @@
       <button type="button" class="close" aria-label={i18n.t('filters.close')} onclick={() => (filtersOpen = false)}>×</button>
     </div>
     <ImageUpload bind:file={image} onchange={() => { crop = null; resetPage(); }} oncrop={(f) => { crop = f; resetPage(); }} />
+    {#if !image}
+      <SampleImages onpick={setImage} />
+    {/if}
     {#if image}
       <PhotoQuality metrics={photoMetrics} issues={photoIssues} />
       <ModelStatus />
@@ -382,6 +388,16 @@
           <ResultCard {item} onopen={(it) => (selected = it)} {filters} onfilter={toggleFilterValue} />
         {/each}
       </div>
+
+      {#if anyRiskBadge}
+        <details class="risk-help">
+          <summary>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            {i18n.t('risk.explainTitle')}
+          </summary>
+          <p>{i18n.t('risk.explain')} <a href={riskRules[0].url} target="_blank" rel="noopener">{i18n.t('risk.explainMore')}</a></p>
+        </details>
+      {/if}
 
       {#if totalPages > 1}
         <nav class="pager" aria-label={i18n.t('pager.label')}>
@@ -560,6 +576,27 @@
   }
   .grid.dim {
     opacity: 0.6;
+  }
+  .risk-help {
+    margin-top: 1rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .risk-help summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    color: #b45309;
+    font-weight: 500;
+  }
+  .risk-help p {
+    margin: 0.4rem 0 0;
+    max-width: 70ch;
+    line-height: 1.5;
+  }
+  .risk-help a {
+    color: inherit;
   }
   .pager {
     display: flex;

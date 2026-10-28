@@ -89,7 +89,7 @@
       {#each risks as r (r.id)}
         <div class="risk" class:emergency={r.emergency} role="note">
           <p class="rl">{i18n.t('insights.risk', { label: i18n.l(r.label) })}</p>
-          <p class="ra">{i18n.l(r.advice)}</p>
+          <p class="ra"><strong>{i18n.t('insights.riskNotStolen')}</strong> {i18n.l(r.advice)}</p>
           <p class="rn">{i18n.t('insights.riskNote')} <a href={r.url} target="_blank" rel="noopener">{i18n.t('insights.riskLink')}</a></p>
         </div>
       {/each}

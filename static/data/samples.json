@@ -1,0 +1,53 @@
+{
+  "note": "Vues alternatives d’objets du jeu de données (Met, CC0)",
+  "samples": [
+    {
+      "file": "data/samples/26485-alt.jpg",
+      "objectId": "26485",
+      "title": "Icon Fragment",
+      "category": "icon",
+      "origin": "IL",
+      "source": "https://images.metmuseum.org/CRDImages/aa/original/DP77637.jpg"
+    },
+    {
+      "file": "data/samples/466046-alt.jpg",
+      "objectId": "466046",
+      "title": "Icon with Christ Pantokrator",
+      "category": "other",
+      "origin": "TR",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/sf1979-217s2.jpg"
+    },
+    {
+      "file": "data/samples/464554-alt.jpg",
+      "objectId": "464554",
+      "title": "Temple Pendant with Two Sirens Flanking a Tree of Life (front) and Confronted Birds (back)",
+      "category": "jewellery",
+      "origin": "UA",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DT11968.jpg"
+    },
+    {
+      "file": "data/samples/464555-alt.jpg",
+      "objectId": "464555",
+      "title": "Chain with Birds and Geometric Motifs",
+      "category": "costume",
+      "origin": "UA",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/sf17-190-681s2.jpg"
+    },
+    {
+      "file": "data/samples/477499-alt.jpg",
+      "objectId": "477499",
+      "title": "Jaharis Byzantine Lectionary",
+      "category": "manuscript",
+      "origin": "TR",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DP211530.jpg"
+    },
+    {
+      "file": "data/samples/1029-alt.jpg",
+      "objectId": "1029",
+      "title": "The Bryant Vase",
+      "category": "vessel",
+      "origin": "US",
+      "source": "https://images.metmuseum.org/CRDImages/ad/original/DP161660.jpg"
+    }
+  ]
+}

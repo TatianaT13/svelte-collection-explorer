@@ -131,7 +131,7 @@
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
       <div>
         <p class="rl">{i18n.t('insights.risk', { label: r.label })}</p>
-        <p class="ra">{r.advice}</p>
+        <p class="ra"><strong>{i18n.t('insights.riskNotStolen')}</strong> {r.advice}</p>
         <p class="rn">{i18n.t('insights.riskNote')} <a href={r.url} target="_blank" rel="noopener">{i18n.t('insights.riskLink')}</a></p>
       </div>
     </div>

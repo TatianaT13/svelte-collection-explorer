@@ -119,7 +119,8 @@ export const schema: CollectionSchema = {
     { key: 'origin', label: { fr: 'Origine', en: 'Origin' }, kind: 'country', showOnCard: true, filterable: true, group: G.identification },
     { key: 'place', label: { fr: 'Lieu', en: 'Place' }, kind: 'place', filterable: true, group: G.identification },
     { key: 'period', label: { fr: 'Période', en: 'Period' }, kind: 'vocab', vocabulary: 'period', showOnCard: true, filterable: true, group: G.identification },
-    { key: 'year', label: { fr: 'Date estimée', en: 'Estimated date' }, kind: 'number', group: G.identification },
+    { key: 'date_text', label: { fr: 'Date', en: 'Date' }, kind: 'text', group: G.identification },
+    { key: 'year', label: { fr: 'Année (début)', en: 'Year (start)' }, kind: 'number', group: G.identification },
     { key: 'maker', label: { fr: 'Auteur / atelier', en: 'Maker / workshop' }, kind: 'text', filterable: true, group: G.identification },
 
     { key: 'material', label: { fr: 'Matériaux', en: 'Materials' }, kind: 'vocab', vocabulary: 'material', multiple: true, filterable: true, group: G.materials },

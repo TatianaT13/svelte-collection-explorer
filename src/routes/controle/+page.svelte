@@ -11,6 +11,7 @@
   import { readInsights } from '$lib/api/reading';
   import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
   import PhotoQuality from '$lib/components/PhotoQuality.svelte';
+  import SampleImages from '$lib/components/SampleImages.svelte';
   import { resizeImage, type ResizeResult } from '$lib/utils/resizeImage';
   import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
   import { flagEmoji } from '$lib/utils/flag';
@@ -231,6 +232,9 @@
     <div class="bar"><span>{clock}</span><span>{online ? i18n.t('control.online') : i18n.t('control.offline')}</span></div>
     <h2>{i18n.t('control.step1Title')}</h2>
     <ImageUpload bind:file={image} onchange={() => { crop = null; extra = []; }} oncrop={(f) => (crop = f)} />
+    {#if !image}
+      <SampleImages onpick={(f) => { image = f; crop = null; extra = []; }} />
+    {/if}
     {#if image}
       <PhotoQuality metrics={photoMetrics} issues={photoIssues} compact />
       <ModelStatus />
@@ -280,7 +284,7 @@
       {#each risks as r (r.id)}
         <div class="block alert" class:emergency={r.emergency}>
           <p class="id">⚠ {i18n.t('insights.risk', { label: i18n.l(r.label) })}</p>
-          <p class="meta">{i18n.l(r.advice)} <a href={r.url} target="_blank" rel="noopener">{i18n.t('insights.riskLink')}</a></p>
+          <p class="meta"><strong>{i18n.t('insights.riskNotStolen')}</strong> {i18n.l(r.advice)} <a href={r.url} target="_blank" rel="noopener">{i18n.t('insights.riskLink')}</a></p>
         </div>
       {/each}
       <div class="block">

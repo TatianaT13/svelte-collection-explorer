@@ -43,6 +43,7 @@ chargement de données, build Vite. Ce projet n'utilise que le routage et le SSR
 
 ```
 scripts/build-data.mjs         # constitution du jeu de données (API du Met, vignettes, embeddings)
+scripts/build-samples.mjs      # images d'exemple : vues alternatives d'objets du jeu de données
 docs/vision-cible.html         # maquette de l'outil complet : parcours de l'agent et architecture
 e2e/explore.spec.ts            # parcours Playwright sur le build statique
 src/
@@ -381,7 +382,10 @@ et le Proche-Orient. `npm run data` lance `scripts/build-data.mjs`, qui :
 
 1. interroge l'API du Met sur une vingtaine de thèmes et garde les objets du domaine public avec image ;
 2. traduit les champs du Met vers les codes du schéma (type, pays ISO, matériaux, techniques,
-   période depuis la date, sujet depuis les tags) par règles de mots-clés ;
+   période depuis la date, sujet depuis les tags) par règles de mots-clés. L'année est lue dans la
+   **date affichée** par le musée (`objectDate`, « 1892 », « ca. 1570–80 »), pas dans la borne de
+   recherche `objectBeginDate`, qui reflète souvent la période d'activité de l'artiste : un testeur
+   avait relevé « 1837 » pour un tableau de 1892. La date textuelle est conservée telle quelle ;
 3. enregistre des vignettes de 512 px dans `static/data/thumbs/` ;
 4. calcule pour chaque image un **embedding CLIP** (`Xenova/clip-vit-base-patch32`) et écrit
    `static/data/items.json`.
@@ -402,9 +406,13 @@ par `InsightsPanel` :
 
 - **ce que c'est probablement** : type, matériaux, période dominants, avec une confiance en mots ;
 - **provenance probable** : parts par pays, cliquables pour filtrer, avec les objets de référence ;
-- **signal de risque** : si l'identification probable et une origine probable correspondent à une
-  catégorie recensée dans une **Liste rouge ICOM** (`config/risk.ts`), une alerte explique quoi
-  vérifier et renvoie à la source. C'est un signal, jamais une preuve.
+- **catégorie surveillée** : si l'identification probable et une origine probable correspondent à
+  une catégorie recensée dans une **Liste rouge ICOM** (`config/risk.ts`), une alerte explique quoi
+  vérifier et renvoie à la source. Le vocabulaire est choisi pour ne pas être mal lu : le badge
+  s'appelle « Catégorie surveillée », pas « Liste rouge », son contour est sobre, et chaque alerte
+  commence par « ce n'est pas un signalement de cet objet ». Un bloc dépliable sous les résultats
+  explique ce que le badge veut dire et ce qu'il ne veut pas dire. Un testeur extérieur avait lu le
+  premier badge comme « cet objet est recherché » : c'est exactement l'erreur à éviter.
 
 Si le meilleur objet de référence reste sous le seuil `similarity.reliable` (0,75, calibré : les
 images sans rapport plafonnent à 0,72, les vraies correspondances dépassent 0,9), la lecture est
@@ -528,6 +536,7 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | Détail | Fichier | Mécanisme |
 |---|---|---|
 | Badge « Liste rouge » sur les cartes et alerte dans le volet | `ResultCard.svelte`, `ItemDrawer.svelte` | `riskFor(item)` croise origine et catégorie avec les règles ICOM |
+| « Essayer avec une image d'exemple » | `SampleImages.svelte`, `scripts/build-samples.mjs` | vues alternatives (dos, détail) d'objets de la collection, fournies par le Met : proches mais pas identiques, donc une vraie démonstration sans préparer de photo |
 | Contrôle qualité de la photo | `PhotoQuality.svelte` | verdict et conseils sous la zone de dépôt, recalculé si la zone cadrée change |
 | Hésitation entre deux hypothèses | `InsightsPanel.svelte`, `controle/+page.svelte` | bloc dédié issu de `readInsights`, même règle partout |
 | Recadrer la photo avant recherche | `ImageUpload.svelte` | cadre tracé au pointeur sur l'aperçu, découpe dans un canvas, l'original est conservé |
