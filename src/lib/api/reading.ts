@@ -31,6 +31,9 @@ export function isAmbiguous(shares: Share[]): boolean {
   return a.share < 0.55 && b.share >= 0.25 && a.share - b.share < 0.2;
 }
 
+/** Part minimale d'une origine pour qu'elle compte dans les signaux de risque. */
+export const RISK_ORIGIN_MIN_SHARE = 0.15;
+
 export function readInsights(insights: Insights, t: SimilarityThresholds): Reading {
   const best = insights.references[0]?.score ?? 0;
   const reliable = best >= t.reliable;
@@ -53,8 +56,10 @@ export function readInsights(insights: Insights, t: SimilarityThresholds): Readi
     // En cas d'hésitation sur le type, on examine les deux hypothèses.
     const categories = ambiguities.some((a) => a.kind === 'category') ? insights.categories.slice(0, 2) : topCategory ? [topCategory] : [];
     const seen = new Set<string>();
+    // Une origine marginale (2 % d'Ukraine derrière 85 % d'Israël) ne déclenche pas de liste.
+    const significant = origins.filter((o) => o.share >= RISK_ORIGIN_MIN_SHARE);
     for (const c of categories) {
-      for (const o of origins) {
+      for (const o of significant) {
         for (const r of riskForCodes(o.code, c.code)) {
           if (!seen.has(r.id)) {
             seen.add(r.id);

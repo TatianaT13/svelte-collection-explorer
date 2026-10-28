@@ -411,7 +411,9 @@ par `InsightsPanel` :
   vérifier et renvoie à la source. Le vocabulaire est choisi pour ne pas être mal lu : le badge
   s'appelle « Catégorie surveillée », pas « Liste rouge », son contour est sobre, et chaque alerte
   commence par « ce n'est pas un signalement de cet objet ». Un bloc dépliable sous les résultats
-  explique ce que le badge veut dire et ce qu'il ne veut pas dire. Un testeur extérieur avait lu le
+  explique ce que le badge veut dire et ce qu'il ne veut pas dire. Seules les origines qui pèsent au
+  moins 15 % de la provenance probable sont confrontées aux listes : 2 % d'Ukraine derrière 85 %
+  d'Israël ne déclenchent rien. Un testeur extérieur avait lu le
   premier badge comme « cet objet est recherché » : c'est exactement l'erreur à éviter.
 
 Si le meilleur objet de référence reste sous le seuil `similarity.reliable` (0,75, calibré : les

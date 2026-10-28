@@ -33,6 +33,12 @@ describe('readInsights', () => {
     expect(r.risks).toEqual([]);
     expect(r.confidence).toBe('weak');
   });
+  it('une origine marginale ne déclenche pas de liste rouge', () => {
+    const r = readInsights(base({ categories: [{ code: 'icon', share: 0.82, count: 10 }], origins: [{ code: 'IL', share: 0.85, count: 9 }, { code: 'UA', share: 0.02, count: 1 }] }), schema.similarity);
+    expect(r.risks).toEqual([]);
+    const r2 = readInsights(base({ categories: [{ code: 'icon', share: 0.82, count: 10 }], origins: [{ code: 'IL', share: 0.6, count: 6 }, { code: 'UA', share: 0.3, count: 3 }] }), schema.similarity);
+    expect(r2.risks.some((x) => x.id === 'icom-ua-2022')).toBe(true);
+  });
   it('cas net : confiance forte', () => {
     const r = readInsights(base({ categories: [{ code: 'painting', share: 0.84, count: 10 }], origins: [{ code: 'FR', share: 1, count: 10 }] }), schema.similarity);
     expect(r.confidence).toBe('strong');
