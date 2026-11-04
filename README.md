@@ -53,6 +53,7 @@ eval/                          # jeu de requêtes, résultats, têtes apprises, 
 service/main.py                # service d'index (FastAPI + hnswlib) pour l'adapter distant ; archive avec SHA-256 vérifié
 service/bench.py               # passage à l'échelle : force brute contre HNSW, 1 000 → 100 000 vecteurs
 docs/vision-cible.html         # maquette de l'outil complet : parcours de l'agent et architecture
+static/architecture.html       # schéma interactif des briques : survol → liens animés, parcours rejoués pas à pas
 e2e/explore.spec.ts            # parcours Playwright sur le build statique
 src/
   app.html                     # squelette HTML, SvelteKit injecte %sveltekit.head% et %sveltekit.body%
@@ -102,6 +103,131 @@ src/
     utils/flag.ts              # emoji drapeau depuis un code ISO
     utils/resizeImage.ts       # réduction de l'image côté client avant envoi
 ```
+
+### Schéma des briques et de leurs liens
+
+Toutes les briques, groupées par couche, avec les liens directs (appels ou flux de données). Une seule
+interface sépare la droite de la gauche : `CollectionAdapter` — l'interface ne connaît que ses quatre
+méthodes, et tout ce qui est derrière se remplace sans la toucher.
+
+```mermaid
+flowchart LR
+  subgraph UI["Interface · SvelteKit"]
+    direction TB
+    layout["+layout.svelte<br/>nav, thème, langue"]
+    explorer["routes/+page.svelte<br/>explorateur"]
+    controle["routes/controle<br/>photo → lecture → décision"]
+    compare["routes/compare<br/>côte à côte"]
+    cUpload["ImageUpload · SampleImages · ExtraViews"]
+    cQuality["PhotoQuality · ImageInfoPanel · ModelStatus"]
+    cResults["ResultCard · FilterPanel · FilterChips"]
+    cInsights["InsightsPanel<br/>identification, provenance, risque, ensemble conforme"]
+    cMap["MapView (Leaflet)"]
+    cDetail["ItemDrawer · CompareTray · ImageCompare"]
+  end
+  subgraph CFG["Configuration, état, utilitaires"]
+    direction TB
+    schema["config/schema.ts<br/>champs, seuils, calibration τ"]
+    vocab["vocabularies.ts · countries.ts"]
+    risk["config/risk.ts<br/>Listes rouges ICOM"]
+    i18n["i18n fr / en"]
+    stores["stores: query · compare · places · theme"]
+    urlstate["utils/urlState.ts"]
+    photoq["photoQuality.ts · resizeImage.ts"]
+    casefile["utils/caseFile.ts<br/>dossier JSON"]
+  end
+  subgraph API["Couche API"]
+    direction TB
+    apiIndex["api/index.ts<br/>VITE_ADAPTER"]
+    adapter["CollectionAdapter<br/>search · getItem · getFacets · archiveImage"]
+    local["localAdapter.ts<br/>cosinus dans le navigateur"]
+    remote["remoteAdapter.ts<br/>vecteur ici, index distant"]
+    mock["mockAdapter.ts"]
+    filtering["filtering.ts"]
+    insights["insights.ts<br/>parts pondérées, geoBuckets"]
+    reading["reading.ts<br/>fiabilité, risques, ensemble conforme"]
+    imageinfo["imageInfo.ts<br/>EXIF, SHA-256"]
+  end
+  subgraph ML["Modèle dans le navigateur"]
+    direction TB
+    embedder["ml/embedder.ts"]
+    worker["embed.worker.ts<br/>CLIP ViT-B/32 int8, ONNX Runtime Web"]
+    mlstatus["ml/status.svelte.ts"]
+  end
+  subgraph DATA["Données et scripts"]
+    direction TB
+    items["items.json<br/>64 objets, embeddings 512-d, model"]
+    places["places.json<br/>gazetier Wikidata"]
+    thumbs["thumbs · samples"]
+    buildData["scripts/build-data.mjs<br/>API du Met + Wikidata"]
+  end
+  subgraph SVC["Service d'index (optionnel)"]
+    direction TB
+    svc["service/main.py<br/>/meta /search /items /facets /archive"]
+    hnsw["index HNSW (hnswlib)<br/>recherche filtrée"]
+    archive["archive/<br/>SHA-256 vérifié"]
+  end
+  subgraph EVAL["Évaluation et calibration"]
+    direction TB
+    evaluate["evaluate.mjs<br/>recall@k, MaxSim"]
+    pairs["build-pairs.mjs"]
+    train["train-head.mjs"]
+    calibrate["calibrate.mjs<br/>τ, ensembles garantis"]
+  end
+  subgraph PLAT["Hors ligne, tests, déploiement"]
+    direction TB
+    sw["service-worker.ts"]
+    tests["vitest · Playwright"]
+    ci["GitHub Pages"]
+  end
+
+  layout --> i18n & stores
+  explorer --> cUpload & cResults & cInsights & cMap & cDetail
+  explorer -->|état ↔ URL| urlstate
+  explorer -->|api.search| apiIndex
+  controle --> cUpload & cQuality
+  controle -->|readInsights| reading
+  controle -->|export| casefile
+  controle -->|search · archiveImage| apiIndex
+  compare --> cDetail
+  cUpload -->|réduction| photoq
+  cQuality --> photoq & imageinfo & mlstatus
+  cInsights --> reading
+  cResults --> schema & vocab
+  cMap -->|places| stores
+  cDetail -->|compare| stores
+  apiIndex --> adapter
+  adapter --> local & remote & mock
+  local --> filtering & insights
+  local -->|embedImage| embedder
+  local -->|fetch| items & places
+  remote -->|embedImage| embedder
+  remote -->|POST /search, vecteur| svc
+  remote -->|candidats| insights
+  filtering --> schema & vocab & stores
+  reading -->|τ, seuils| schema
+  reading --> risk
+  embedder -->|postMessage| worker
+  embedder --> mlstatus
+  buildData --> items & places & thumbs
+  svc -->|charge au démarrage| items
+  svc --> hnsw & archive
+  evaluate --> thumbs & items
+  pairs --> train & calibrate
+  train -->|--head| evaluate
+  calibrate -->|τ recopié| schema
+  stores & risk --> casefile
+  sw -->|cache| items & thumbs
+  tests --> reading & filtering & insights & risk & photoq
+  ci --> tests
+```
+
+Version interactive, déployée avec la démo : [**architecture.html**](https://tatianat13.github.io/svelte-collection-explorer/architecture.html)
+(ou `static/architecture.html` en local). Au survol d'une brique, ses liens directs s'animent dans le sens des
+données, les briques liées s'allument, le reste s'estompe, et un panneau détaille fichier, rôle et liens entrants /
+sortants. Six parcours rejouent un flux complet pas à pas : recherche par image locale, distante, contrôle et dossier,
+texte et filtres, pipeline de données, évaluation → seuils. GitHub rend le Markdown sans script : c'est pourquoi la
+version animée est une page à part.
 
 **Routage** : chaque dossier sous `src/routes` est une URL. `+page.svelte` est la page,
 `+layout.svelte` l'enveloppe commune. Un `+layout.svelte` à la racine s'applique à toutes les routes

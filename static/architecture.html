@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture · svelte-collection-explorer</title>
+<meta name="description" content="Schéma interactif de l’application : briques, fichiers et liens directs. Survolez une brique pour voir ses liens ; cliquez un parcours pour suivre un flux complet.">
+<style>
+  :root {
+    --bg: #f6f5f0; --panel: #ffffff; --ink: #142033; --soft: #46506a; --line: #c9cbd3; --dim: #e4e5e9;
+    --accent: #1b9c8c; --accent2: #d4913a; --focus: #142033;
+    --g-interface: #2f6fb3; --g-state: #7a5cc4; --g-api: #1b9c8c; --g-ml: #d4913a; --g-data: #5e8c3a; --g-service: #b4541a; --g-eval: #8c3a7a; --g-platform: #6a7179;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11192a; --panel: #1a2438; --ink: #f1f3f7; --soft: #b8c4d6; --line: #3a4a66; --dim: #26324a; --focus: #f1f3f7; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  header { padding: 20px 24px 8px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 0; color: var(--soft); }
+  header a { color: var(--accent); }
+  .tours { padding: 4px 24px 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .tours button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  .tours button:hover, .tours button.on { border-color: var(--accent); color: var(--accent); }
+  .tours button.reset { color: var(--soft); }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; padding: 0 24px 24px; }
+  @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } }
+  .board { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: auto; min-width: 0; }
+  svg { display: block; width: 100%; max-width: 100%; min-width: 980px; height: auto; }
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow: auto; }
+  aside h2 { margin: 0 0 4px; font-size: 16px; }
+  aside .file { font-family: Menlo, "Courier New", monospace; font-size: 12px; color: var(--accent); word-break: break-all; }
+  aside p { margin: 8px 0; color: var(--soft); }
+  aside ul { margin: 6px 0 0; padding-left: 18px; }
+  aside li { margin: 3px 0; }
+  aside li b { color: var(--ink); font-weight: 600; }
+  aside .kind { font-size: 12px; color: var(--soft); }
+  aside .hint { font-size: 13px; color: var(--soft); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0 24px 10px; font-size: 12px; color: var(--soft); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+  /* nœuds et groupes */
+  .group rect { fill: none; stroke: var(--line); stroke-dasharray: 4 4; rx: 12; }
+  .group text { font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; fill: var(--soft); }
+  .node { cursor: pointer; transition: opacity .25s; }
+  .node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; rx: 8; }
+  .node .bar { stroke: none; }
+  .node text { fill: var(--ink); font-size: 13px; font-weight: 600; pointer-events: none; }
+  .node text.sub { fill: var(--soft); font-size: 11px; font-weight: 400; font-family: Menlo, "Courier New", monospace; }
+  .node.focus rect.box { stroke: var(--focus); stroke-width: 2.5; }
+  .node.linked rect.box { stroke: var(--accent); stroke-width: 2; }
+  .node.dim { opacity: .22; }
+  .node.step { opacity: 1; }
+  .node.step rect.box { stroke: var(--accent2); stroke-width: 2.5; }
+
+  /* liens */
+  .edge { fill: none; stroke: var(--line); stroke-width: 1.4; transition: opacity .25s, stroke .25s; marker-end: url(#arrow); }
+  .edge.dim { opacity: .12; }
+  .edge.active { stroke: var(--accent); stroke-width: 2.6; stroke-dasharray: 9 7; animation: flow .8s linear infinite; marker-end: url(#arrowOn); opacity: 1; }
+  .edge.step { stroke: var(--accent2); stroke-width: 2.8; stroke-dasharray: 9 7; animation: flow .8s linear infinite; marker-end: url(#arrowStep); opacity: 1; }
+  @keyframes flow { to { stroke-dashoffset: -32; } }
+  .elabel { font-size: 11px; fill: var(--ink); paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .elabel.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Architecture de l’application</h1>
+  <p>Survolez une brique : ses liens directs s’animent dans le sens des données. Cliquez pour épingler. <a href="./">← Retour à l’application</a></p>
+</header>
+<div class="tours" id="tours"></div>
+<div class="legend" id="legend"></div>
+<div class="wrap">
+  <div class="board"><svg id="svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schéma des briques de l’application et de leurs liens"></svg></div>
+  <aside id="panel">
+    <h2>Toutes les briques</h2>
+    <p>Chaque boîte est un fichier ou un petit ensemble de fichiers. Les flèches suivent le sens des données ou des appels. Survolez une brique pour isoler ce qui lui est directement lié ; les parcours en haut rejouent un flux complet, étape par étape.</p>
+    <p class="hint">Une seule interface compte : <b>CollectionAdapter</b>. Tout ce qui est à droite ne connaît que ses quatre méthodes ; tout ce qui est à gauche peut être remplacé sans toucher à l’interface.</p>
+  </aside>
+</div>
+
+<script>
+/* ---------- données du schéma ---------- */
+const GROUPS = {
+  interface: { label: 'Interface · SvelteKit', color: 'var(--g-interface)' },
+  state:     { label: 'Configuration, état, utilitaires', color: 'var(--g-state)' },
+  api:       { label: 'Couche API', color: 'var(--g-api)' },
+  ml:        { label: 'Modèle dans le navigateur', color: 'var(--g-ml)' },
+  data:      { label: 'Données et scripts', color: 'var(--g-data)' },
+  service:   { label: 'Service d’index (optionnel)', color: 'var(--g-service)' },
+  eval:      { label: 'Évaluation et calibration', color: 'var(--g-eval)' },
+  platform:  { label: 'Hors ligne, tests, déploiement', color: 'var(--g-platform)' }
+};
+
+const NODES = [
+  // interface
+  { id: 'layout', g: 'interface', label: 'Enveloppe', file: 'src/routes/+layout.svelte', desc: 'Navigation, logo, bascule de thème et de langue ; enveloppe toutes les routes. Prérendu statique (+layout.ts).' },
+  { id: 'explorer', g: 'interface', label: 'Explorateur  /', file: 'src/routes/+page.svelte', desc: 'Recherche texte, filtres, recherche par image, carte, comparaison. Un $effect relance la recherche quand texte, image, filtres ou page changent ; l’état est sérialisé dans l’URL.' },
+  { id: 'controle', g: 'interface', label: 'Contrôle  /controle', file: 'src/routes/controle/+page.svelte', desc: 'Parcours de l’agent en trois étapes dans un cadre de téléphone : photo → lecture → décision, puis export du dossier.' },
+  { id: 'compare', g: 'interface', label: 'Comparaison  /compare', file: 'src/routes/compare/+page.svelte', desc: 'Objets sélectionnés côte à côte : images et attributs, différences mises en évidence.' },
+  { id: 'c-upload', g: 'interface', label: 'Prise de vue', file: 'ImageUpload · SampleImages · ExtraViews', desc: 'Import ou capture, images d’exemple (vues alternatives du Met), vues supplémentaires d’un même objet fusionnées dans la requête.' },
+  { id: 'c-quality', g: 'interface', label: 'Qualité et métadonnées', file: 'PhotoQuality · ImageInfoPanel · ModelStatus', desc: 'Netteté, exposition, contraste, reflets ; EXIF/IPTC/XMP et empreinte ; progression du chargement du modèle.' },
+  { id: 'c-results', g: 'interface', label: 'Résultats et filtres', file: 'ResultCard · FilterPanel · FilterChips · MultiSelect', desc: 'Grille de cartes pilotée par le schéma, filtres à facettes, attributs cochables.' },
+  { id: 'c-insights', g: 'interface', label: 'Lecture agrégée', file: 'InsightsPanel.svelte', desc: 'Identification et provenance probables, confiance, hésitations, signal Liste rouge, ensemble conforme garanti ou « objet probablement absent ».' },
+  { id: 'c-map', g: 'interface', label: 'Carte', file: 'MapView.svelte (Leaflet)', desc: 'Résultats regroupés par lieu, lieu de la photo à part ; coordonnées du gazetier.' },
+  { id: 'c-detail', g: 'interface', label: 'Détail et comparaison', file: 'ItemDrawer · CompareTray · ImageCompare · AttributeList', desc: 'Volet de détail, sélection pour comparaison persistée en session, comparateur d’images.' },
+  // state
+  { id: 'schema', g: 'state', label: 'Schéma', file: 'src/lib/config/schema.ts', desc: 'Champs de métadonnées (pilotent l’UI), seuils de similarité, calibration τ (modèle, α, provenance), politique d’envoi et de qualité photo.' },
+  { id: 'vocab', g: 'state', label: 'Vocabulaires, pays', file: 'config/vocabularies.ts · countries.ts', desc: 'Vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets) et noms de pays localisés (Intl.DisplayNames).' },
+  { id: 'risk', g: 'state', label: 'Listes rouges ICOM', file: 'src/lib/config/risk.ts', desc: 'Origine × catégorie → règle de risque (Ukraine 2022, Syrie, Irak, Égypte, Pérou, Chine, Libye/Yémen/Afghanistan). Un signal, pas une preuve.' },
+  { id: 'i18n', g: 'state', label: 'Langue fr / en', file: 'src/lib/i18n/messages.ts · index.svelte.ts', desc: 'Textes d’interface et store de langue ; libellés localisés du schéma et des vocabulaires.' },
+  { id: 'stores', g: 'state', label: 'Stores', file: 'stores/query · compare · places · theme (.svelte.ts)', desc: 'Dernière photo de référence (pour le dossier), sélection de comparaison, gazetier Wikidata (hiérarchie, coordonnées), thème.' },
+  { id: 'urlstate', g: 'state', label: 'État ↔ URL', file: 'src/lib/utils/urlState.ts', desc: 'Sérialise texte, filtres et page dans les paramètres d’URL : recherche partageable.' },
+  { id: 'photoq', g: 'state', label: 'Qualité photo, réduction', file: 'utils/photoQuality.ts · resizeImage.ts', desc: 'Métriques sur une version ≤ 512 px (netteté = variance du laplacien ÷ variance de luminance) ; réduction ≤ 1600 px avant envoi.' },
+  { id: 'casefile', g: 'state', label: 'Dossier de contrôle', file: 'src/lib/utils/caseFile.ts', desc: 'Construit et télécharge le JSON : photo de référence, lecture, candidats, listes rouges, décision.' },
+  // api
+  { id: 'api-index', g: 'api', label: 'Point d’entrée', file: 'src/lib/api/index.ts', desc: 'Choisit l’adapter selon VITE_ADAPTER : local (défaut), mock, remote.' },
+  { id: 'adapter', g: 'api', label: 'CollectionAdapter', file: 'src/lib/api/adapter.ts', desc: 'Le contrat : search(query), getItem(id), getFacets(), archiveImage(original, info). Le reste de l’application ne connaît que ça.' },
+  { id: 'local', g: 'api', label: 'Adapter local', file: 'src/lib/api/localAdapter.ts', desc: 'Charge items.json, embarque la photo via le worker, cosinus contre tous les embeddings, filtres, lecture agrégée, carte. Zéro serveur.' },
+  { id: 'remote', g: 'api', label: 'Adapter distant', file: 'src/lib/api/remoteAdapter.ts', desc: 'Même inférence dans le navigateur ; seul le vecteur part au service. Vérifie /meta (même modèle que l’index). Lecture agrégée calculée côté client sur les candidats.' },
+  { id: 'mock', g: 'api', label: 'Adapter mock', file: 'src/lib/api/mockAdapter.ts', desc: 'Données générées, sans modèle : pour les tests et le développement d’interface.' },
+  { id: 'filtering', g: 'api', label: 'Filtrage, texte', file: 'src/lib/api/filtering.ts', desc: 'matchesFilters (égalité, texte, nombre, hiérarchie de lieux), matchesText (titre, libellés traduits), paginate. Pur, testé.' },
+  { id: 'insights', g: 'api', label: 'Agrégation', file: 'src/lib/api/insights.ts', desc: 'computeInsights : parts pondérées exp((s − best)/T) sur le top-K pour origine, catégorie, matériau, période ; geoBuckets pour la carte.' },
+  { id: 'reading', g: 'api', label: 'Lecture', file: 'src/lib/api/reading.ts', desc: 'readInsights : fiable (≥ τ), confiance, ambiguïtés, risques via les listes rouges, ensemble conforme (candidats ≥ τ) et rejet « inconnu ».' },
+  { id: 'imageinfo', g: 'api', label: 'Métadonnées image', file: 'src/lib/api/imageInfo.ts', desc: 'EXIF / IPTC / XMP lus côté client, GPS retirable, empreinte SHA-256 de l’original.' },
+  // ml
+  { id: 'embedder', g: 'ml', label: 'Client d’embedding', file: 'src/lib/ml/embedder.ts', desc: 'Crée le Web Worker, protocole de messages, repli sur le fil principal, cosine(). Exporte MODEL_ID.' },
+  { id: 'worker', g: 'ml', label: 'Worker CLIP', file: 'src/lib/ml/embed.worker.ts', desc: 'CLIP ViT-B/32, tour visuelle seule, int8 (~90 Mo), transformers.js sur ONNX Runtime Web ; vecteur 512-d normalisé, transféré sans copie.' },
+  { id: 'mlstatus', g: 'ml', label: 'État du modèle', file: 'src/lib/ml/status.svelte.ts', desc: 'Progression du téléchargement par fichier, prêt, erreur.' },
+  // data
+  { id: 'items', g: 'data', label: 'items.json', file: 'static/data/items.json', desc: '64 objets du Met (CC0) avec métadonnées au schéma et embedding 512-d ; champ model = identifiant du modèle qui a produit l’index.' },
+  { id: 'places', g: 'data', label: 'places.json', file: 'static/data/places.json', desc: 'Gazetier Wikidata : libellés fr/en, parent administratif, pays ISO, coordonnées.' },
+  { id: 'thumbs', g: 'data', label: 'Vignettes, exemples', file: 'static/data/thumbs · samples', desc: 'Vignettes 512 px (l’index est calculé sur elles), vues alternatives d’exemple.' },
+  { id: 'build-data', g: 'data', label: 'Constitution des données', file: 'scripts/build-data.mjs', desc: 'API Open Access du Met + Wikidata → items.json, places.json, vignettes ; embeddings avec le même modèle que le navigateur.' },
+  { id: 'build-samples', g: 'data', label: 'Images d’exemple', file: 'scripts/build-samples.mjs', desc: 'Vues alternatives (additionalImages) d’objets du corpus → samples.json.' },
+  // service
+  { id: 'svc', g: 'service', label: 'Service FastAPI', file: 'service/main.py', desc: '/meta, /search (vecteur + filtres + texte, pagination, candidats), /items, /facets, /archive. Autonome, aucun appel sortant.' },
+  { id: 'hnsw', g: 'service', label: 'Index HNSW', file: 'hnswlib · M = 16, ef = 64', desc: 'Produit scalaire sur vecteurs normalisés = cosinus ; recherche filtrée : seuls les objets passant les filtres sont explorés.' },
+  { id: 'archive', g: 'service', label: 'Archive', file: 'service/archive/', desc: 'Original conservé tel quel + reçu JSON ; SHA-256 recalculé, refus en 409 si l’empreinte annoncée diffère.' },
+  { id: 'bench', g: 'service', label: 'Banc d’échelle', file: 'service/bench.py', desc: 'Force brute contre HNSW sur 1 000 → 100 000 vecteurs synthétiques bruités depuis les réels ; latence, recall@10.' },
+  // eval
+  { id: 'evaluate', g: 'eval', label: 'Évaluation', file: 'scripts/evaluate.mjs', desc: 'Vues alternatives = vérité terrain. recall@k, MRR, catégorie/origine du top-1, distribution des scores ; --head, --rerank --crops (MaxSim sur patches).' },
+  { id: 'pairs', g: 'eval', label: 'Paires du Met', file: 'scripts/build-pairs.mjs → eval/pairs', desc: '400 objets (principale, vue alternative) embarqués ; corpus de démo exclu.' },
+  { id: 'train', g: 'eval', label: 'Tête apprise', file: 'scripts/train-head.mjs → eval/heads', desc: 'Projection W (d × d) sur embeddings gelés, InfoNCE symétrique, rappel vers l’identité ; gradient vérifié.' },
+  { id: 'calibrate', g: 'eval', label: 'Calibration conforme', file: 'scripts/calibrate.mjs → eval/calibration-*.json', desc: 'τ_α = quantile des similarités du bon objet ; couverture, taille des ensembles, rejet hors base (seuil absolu, marge).' },
+  // platform
+  { id: 'sw', g: 'platform', label: 'Service worker', file: 'src/service-worker.ts', desc: 'Cache de l’application, des données et des vignettes : fonctionne hors ligne.' },
+  { id: 'tests', g: 'platform', label: 'Tests', file: 'vitest (9 fichiers) · e2e/explore.spec.ts', desc: '45 tests unitaires sur les modules purs ; 6 parcours Playwright sur le build statique.' },
+  { id: 'ci', g: 'platform', label: 'Déploiement', file: '.github/workflows · GitHub Pages', desc: 'Tests puis build statique prérendu, publié sur GitHub Pages à chaque push.' }
+];
+
+// [source, cible, étiquette]
+const EDGES = [
+  ['layout', 'i18n', 'langue'], ['layout', 'stores', 'thème'],
+  ['explorer', 'c-upload', ''], ['explorer', 'c-results', ''], ['explorer', 'c-insights', ''], ['explorer', 'c-map', ''], ['explorer', 'c-detail', ''],
+  ['explorer', 'urlstate', 'état ↔ URL'], ['explorer', 'api-index', 'api.search'],
+  ['controle', 'c-upload', ''], ['controle', 'c-quality', ''], ['controle', 'reading', 'readInsights'], ['controle', 'casefile', 'export JSON'], ['controle', 'api-index', 'search · archiveImage'],
+  ['compare', 'c-detail', ''],
+  ['c-upload', 'photoq', 'réduction'], ['c-quality', 'photoq', 'métriques'], ['c-quality', 'imageinfo', 'EXIF, SHA-256'], ['c-quality', 'mlstatus', 'progression'],
+  ['c-insights', 'reading', 'readInsights'], ['c-insights', 'schema', 'seuils'], ['c-results', 'vocab', 'libellés'], ['c-results', 'schema', 'champs'],
+  ['c-map', 'stores', 'places'], ['c-detail', 'stores', 'compare'],
+  ['api-index', 'adapter', 'VITE_ADAPTER'], ['adapter', 'local', ''], ['adapter', 'remote', ''], ['adapter', 'mock', ''],
+  ['local', 'filtering', ''], ['local', 'insights', ''], ['local', 'embedder', 'embedImage'], ['local', 'items', 'fetch'], ['local', 'places', 'fetch'],
+  ['remote', 'embedder', 'embedImage'], ['remote', 'svc', 'POST /search (vecteur)'], ['remote', 'insights', 'candidats'], ['remote', 'places', 'fetch'],
+  ['filtering', 'schema', 'champs'], ['filtering', 'vocab', 'libellés'], ['filtering', 'stores', 'hiérarchie des lieux'],
+  ['reading', 'schema', 'τ, seuils'], ['reading', 'risk', 'riskForCodes'],
+  ['embedder', 'worker', 'postMessage'], ['embedder', 'mlstatus', ''],
+  ['build-data', 'items', ''], ['build-data', 'places', ''], ['build-data', 'thumbs', ''], ['build-samples', 'thumbs', ''],
+  ['svc', 'items', 'charge au démarrage'], ['svc', 'places', ''], ['svc', 'hnsw', 'knn_query filtrée'], ['svc', 'archive', 'SHA-256 vérifié'], ['bench', 'items', ''],
+  ['evaluate', 'thumbs', 'corpus'], ['evaluate', 'items', 'cohérence index'], ['pairs', 'train', ''], ['pairs', 'calibrate', ''], ['train', 'evaluate', '--head'], ['calibrate', 'schema', 'τ copié dans calibration'],
+  ['stores', 'casefile', 'photo de référence'], ['risk', 'casefile', 'listes rouges'],
+  ['sw', 'items', 'cache'], ['sw', 'thumbs', 'cache'],
+  ['tests', 'reading', ''], ['tests', 'filtering', ''], ['tests', 'insights', ''], ['tests', 'risk', ''], ['tests', 'photoq', ''], ['tests', 'urlstate', ''], ['tests', 'embedder', ''],
+  ['ci', 'tests', 'avant build']
+];
+
+// Parcours : suite ordonnée de liens [source, cible] rejoués pas à pas.
+const TOURS = [
+  { id: 'image-local', label: 'Recherche par image · local', steps: [['explorer', 'c-upload'], ['c-upload', 'photoq'], ['explorer', 'api-index'], ['api-index', 'adapter'], ['adapter', 'local'], ['local', 'embedder'], ['embedder', 'worker'], ['local', 'items'], ['local', 'filtering'], ['local', 'insights'], ['explorer', 'c-insights'], ['c-insights', 'reading'], ['reading', 'risk'], ['explorer', 'c-map']],
+    text: 'La photo est réduite, embarquée dans le worker (CLIP, 512-d), comparée par cosinus à tous les embeddings de items.json, filtrée, agrégée en parts pondérées, lue (fiabilité, risques, ensemble conforme), affichée avec la carte.' },
+  { id: 'image-remote', label: 'Recherche par image · distant', steps: [['explorer', 'api-index'], ['api-index', 'adapter'], ['adapter', 'remote'], ['remote', 'embedder'], ['embedder', 'worker'], ['remote', 'svc'], ['svc', 'hnsw'], ['remote', 'insights'], ['explorer', 'c-insights'], ['c-insights', 'reading']],
+    text: 'Même inférence dans le navigateur ; seuls 512 nombres partent. Le service vérifie le modèle, interroge l’index HNSW avec les filtres, renvoie la page et 200 candidats ; la lecture agrégée est calculée côté client.' },
+  { id: 'controle', label: 'Contrôle et dossier', steps: [['controle', 'c-upload'], ['controle', 'c-quality'], ['c-quality', 'photoq'], ['c-quality', 'imageinfo'], ['controle', 'api-index'], ['api-index', 'adapter'], ['adapter', 'local'], ['controle', 'reading'], ['reading', 'schema'], ['reading', 'risk'], ['controle', 'casefile'], ['stores', 'casefile'], ['risk', 'casefile']],
+    text: 'Étape 1 : qualité et métadonnées de la photo. Étape 2 : lecture avec τ calibré et listes rouges. Étape 3 : décision de l’agent, export du dossier JSON ; en mode distant, archiveImage envoie l’original au service qui vérifie son SHA-256.' },
+  { id: 'texte', label: 'Texte et filtres', steps: [['explorer', 'c-results'], ['c-results', 'schema'], ['explorer', 'urlstate'], ['explorer', 'api-index'], ['api-index', 'adapter'], ['adapter', 'local'], ['local', 'filtering'], ['filtering', 'vocab'], ['filtering', 'stores']],
+    text: 'Les filtres viennent du schéma, l’état part dans l’URL, l’adapter filtre par égalité, texte, nombre ou hiérarchie de lieux, avec les libellés traduits.' },
+  { id: 'donnees', label: 'Pipeline de données', steps: [['build-data', 'thumbs'], ['build-data', 'items'], ['build-data', 'places'], ['build-samples', 'thumbs'], ['svc', 'items'], ['sw', 'items'], ['sw', 'thumbs']],
+    text: 'Le script interroge l’API du Met et Wikidata, enregistre les vignettes, calcule les embeddings sur les vignettes stockées avec le même modèle que le navigateur. Le service et le service worker chargent les mêmes fichiers.' },
+  { id: 'eval', label: 'Évaluation → seuils', steps: [['pairs', 'train'], ['train', 'evaluate'], ['evaluate', 'thumbs'], ['evaluate', 'items'], ['pairs', 'calibrate'], ['calibrate', 'schema'], ['reading', 'schema'], ['c-insights', 'reading']],
+    text: 'Les vues alternatives servent de vérité terrain ; la tête apprise et la calibration conforme sortent des mêmes paires ; τ est recopié dans le schéma, d’où il pilote la lecture et l’affichage.' }
+];
+
+/* ---------- disposition ---------- */
+const W = 300, H = 52, GAP = 10, PAD = 16, TITLE = 30;
+const COLS = [
+  // x, groupes empilés verticalement dans la colonne
+  { x: 30, groups: ['data', 'eval'] },
+  { x: 390, groups: ['ml', 'service', 'platform'] },
+  { x: 750, groups: ['api', 'state'] },
+  { x: 1110, groups: ['interface'] }
+];
+const pos = {}; // id → {x, y}
+const groupBox = {}; // g → {x, y, w, h}
+let maxY = 0;
+for (const col of COLS) {
+  let y = 20;
+  for (const g of col.groups) {
+    const nodes = NODES.filter((n) => n.g === g);
+    const h = TITLE + PAD + nodes.length * (H + GAP) - GAP + PAD;
+    groupBox[g] = { x: col.x, y, w: W + 2 * PAD, h };
+    nodes.forEach((n, i) => { pos[n.id] = { x: col.x + PAD, y: y + TITLE + PAD + i * (H + GAP) }; });
+    y += h + 24;
+  }
+  maxY = Math.max(maxY, y);
+}
+// Marge à droite pour les boucles entre briques d'une même colonne (elles sortent à droite).
+const VW = 1110 + W + 2 * PAD + 110, VH = maxY;
+
+/* ---------- rendu ---------- */
+const svg = document.getElementById('svg');
+svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+svg.setAttribute('width', '100%');
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent = svg) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  parent.appendChild(e);
+  return e;
+};
+const defs = el('defs');
+for (const [id, color] of [['arrow', 'var(--line)'], ['arrowOn', 'var(--accent)'], ['arrowStep', 'var(--accent2)']]) {
+  const m = el('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0,0 L10,5 L0,10 z', fill: color }, m);
+}
+for (const [g, box] of Object.entries(groupBox)) {
+  const grp = el('g', { class: 'group' });
+  el('rect', { x: box.x, y: box.y, width: box.w, height: box.h }, grp);
+  const t = el('text', { x: box.x + PAD, y: box.y + 20, fill: GROUPS[g].color }, grp);
+  t.textContent = GROUPS[g].label;
+  t.style.fill = GROUPS[g].color;
+}
+
+// liens d'abord (sous les nœuds)
+const edgeEls = [];
+function anchor(a, b) {
+  const pa = pos[a], pb = pos[b];
+  const ax = pa.x + W / 2, bx = pb.x + W / 2;
+  if (Math.abs(ax - bx) < 1) {
+    // même colonne : on sort par la droite et on revient
+    const dir = 1;
+    return { x1: pa.x + W, y1: pa.y + H / 2, x2: pb.x + W, y2: pb.y + H / 2, c1x: pa.x + W + 60 * dir, c2x: pb.x + W + 60 * dir };
+  }
+  if (ax < bx) return { x1: pa.x + W, y1: pa.y + H / 2, x2: pb.x, y2: pb.y + H / 2, c1x: pa.x + W + 90, c2x: pb.x - 90 };
+  return { x1: pa.x, y1: pa.y + H / 2, x2: pb.x + W, y2: pb.y + H / 2, c1x: pa.x - 90, c2x: pb.x + W + 90 };
+}
+EDGES.forEach(([a, b, label], i) => {
+  const { x1, y1, x2, y2, c1x, c2x } = anchor(a, b);
+  const d = `M${x1},${y1} C${c1x},${y1} ${c2x},${y2} ${x2},${y2}`;
+  const p = el('path', { class: 'edge', d, 'data-a': a, 'data-b': b, id: `e${i}` });
+  const t = el('text', { class: 'elabel', x: (x1 + x2) / 2, y: (y1 + y2) / 2 - 6, 'text-anchor': 'middle' });
+  t.textContent = label;
+  edgeEls.push({ a, b, label, p, t });
+});
+
+const nodeEls = {};
+for (const n of NODES) {
+  const { x, y } = pos[n.id];
+  const g = el('g', { class: 'node', 'data-id': n.id, tabindex: 0, role: 'button', 'aria-label': `${n.label} — ${n.file}` });
+  el('rect', { class: 'box', x, y, width: W, height: H }, g);
+  const bar = el('rect', { class: 'bar', x: x + 1, y: y + 1, width: 6, height: H - 2, rx: 3 }, g);
+  bar.style.fill = GROUPS[n.g].color;
+  const t1 = el('text', { x: x + 16, y: y + 21 }, g); t1.textContent = n.label;
+  const t2 = el('text', { class: 'sub', x: x + 16, y: y + 40 }, g); t2.textContent = n.file;
+  nodeEls[n.id] = g;
+}
+
+/* ---------- interaction ---------- */
+const panel = document.getElementById('panel');
+const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
+let pinned = null;
+let tourTimers = [];
+
+function clear() {
+  for (const g of Object.values(nodeEls)) g.classList.remove('focus', 'linked', 'dim', 'step');
+  for (const e of edgeEls) { e.p.classList.remove('active', 'dim', 'step'); e.p.style.animationDelay = ''; e.t.classList.remove('on'); }
+  for (const b of document.querySelectorAll('.tours button')) b.classList.remove('on');
+  tourTimers.forEach(clearTimeout); tourTimers = [];
+}
+function showDefault() {
+  panel.innerHTML = '<h2>Toutes les briques</h2><p>Chaque boîte est un fichier ou un petit ensemble de fichiers. Les flèches suivent le sens des données ou des appels. Survolez une brique pour isoler ce qui lui est directement lié ; les parcours en haut rejouent un flux complet, étape par étape.</p><p class="hint">Une seule interface compte : <b>CollectionAdapter</b>. Tout ce qui est à droite ne connaît que ses quatre méthodes ; tout ce qui est à gauche peut être remplacé sans toucher à l’interface.</p>';
+}
+function focusNode(id) {
+  clear();
+  const linked = new Set();
+  const out = [], inn = [];
+  for (const e of edgeEls) {
+    if (e.a === id) { e.p.classList.add('active'); e.t.classList.add('on'); linked.add(e.b); out.push(e); }
+    else if (e.b === id) { e.p.classList.add('active'); e.t.classList.add('on'); linked.add(e.a); inn.push(e); }
+    else e.p.classList.add('dim');
+  }
+  for (const [nid, g] of Object.entries(nodeEls)) {
+    if (nid === id) g.classList.add('focus');
+    else if (linked.has(nid)) g.classList.add('linked');
+    else g.classList.add('dim');
+  }
+  const n = byId[id];
+  const li = (e, other) => `<li><b>${byId[other].label}</b> <span class="kind">${e.label ? '· ' + e.label : ''}</span></li>`;
+  panel.innerHTML = `<h2>${n.label}</h2><div class="file">${n.file}</div><p>${n.desc}</p>` +
+    (out.length ? `<p><b>Appelle ou alimente</b></p><ul>${out.map((e) => li(e, e.b)).join('')}</ul>` : '') +
+    (inn.length ? `<p><b>Utilisé par</b></p><ul>${inn.map((e) => li(e, e.a)).join('')}</ul>` : '') +
+    `<p class="hint">Couche : ${GROUPS[n.g].label}. ${pinned ? 'Épinglé — cliquez ailleurs pour libérer.' : 'Cliquez pour épingler.'}</p>`;
+}
+function runTour(tour, btn) {
+  clear();
+  pinned = null;
+  btn.classList.add('on');
+  for (const g of Object.values(nodeEls)) g.classList.add('dim');
+  for (const e of edgeEls) e.p.classList.add('dim');
+  const STEP = 420;
+  tour.steps.forEach(([a, b], i) => {
+    tourTimers.push(setTimeout(() => {
+      const e = edgeEls.find((x) => x.a === a && x.b === b);
+      if (e) { e.p.classList.remove('dim'); e.p.classList.add('step'); e.t.classList.add('on'); }
+      for (const id of [a, b]) { nodeEls[id].classList.remove('dim'); nodeEls[id].classList.add('step'); }
+    }, i * STEP));
+  });
+  const steps = tour.steps.map(([a, b], i) => `<li><b>${byId[a].label}</b> → ${byId[b].label}</li>`).join('');
+  panel.innerHTML = `<h2>${tour.label}</h2><p>${tour.text}</p><ol>${steps}</ol><p class="hint">Les flèches s’allument dans l’ordre. Survolez une brique pour quitter le parcours.</p>`;
+}
+
+for (const [id, g] of Object.entries(nodeEls)) {
+  g.addEventListener('mouseenter', () => { if (!pinned) focusNode(id); });
+  g.addEventListener('focus', () => { if (!pinned) focusNode(id); });
+  g.addEventListener('click', (ev) => { ev.stopPropagation(); pinned = pinned === id ? null : id; if (pinned) focusNode(id); else { clear(); showDefault(); } });
+  g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); g.dispatchEvent(new Event('click')); } });
+}
+svg.addEventListener('mouseleave', () => { if (!pinned && !tourTimers.length) { clear(); showDefault(); } });
+document.body.addEventListener('click', () => { if (pinned) { pinned = null; clear(); showDefault(); } });
+
+const tours = document.getElementById('tours');
+for (const t of TOURS) {
+  const b = document.createElement('button');
+  b.textContent = t.label;
+  b.addEventListener('click', (ev) => { ev.stopPropagation(); runTour(t, b); });
+  tours.appendChild(b);
+}
+const reset = document.createElement('button');
+reset.className = 'reset'; reset.textContent = 'Tout afficher';
+reset.addEventListener('click', (ev) => { ev.stopPropagation(); pinned = null; clear(); showDefault(); });
+tours.appendChild(reset);
+
+const legend = document.getElementById('legend');
+legend.innerHTML = Object.entries(GROUPS).map(([g, v]) => `<span><i style="background:${v.color}"></i>${v.label}</span>`).join('') + `<span>${NODES.length} briques · ${EDGES.length} liens</span>`;
+</script>
+</body>
+</html>
