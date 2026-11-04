@@ -68,6 +68,11 @@ export interface Insights {
   subjects: Share[];
   periods: Share[];
   references: Reference[];
+  /**
+   * Nombre d'objets du classement **complet** à similarité ≥ τ (seuil calibré), quand il est connu.
+   * `references` est tronqué au top-K : compter dessus sous-estimerait l'ensemble conforme.
+   */
+  aboveTau?: number;
 }
 
 /** Regroupement géographique de l'ensemble des résultats (pas seulement la page). */

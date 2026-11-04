@@ -100,7 +100,7 @@ export const localAdapter: CollectionAdapter = {
       results = results
         .map((it) => ({ ...it, score: Math.round(cosine(q, byId.get(it.id) ?? []) * 1000) / 1000 }))
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-      insights = computeInsights(results, schema.similarity.topK);
+      insights = computeInsights(results, schema.similarity.topK, schema.similarity.calibration?.tau);
     }
 
     return {

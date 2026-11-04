@@ -14,15 +14,23 @@ export interface Ambiguity {
 }
 
 /**
- * Ensemble conforme : les références de similarité ≥ τ. Il contient le bon objet avec probabilité
- * ≥ 1 − α (garantie de calibration). Vide, il signale un objet probablement absent de la base.
- * Borné par le top-K des `Insights` : un ensemble qui le remplit est à lire comme « au moins K ».
+ * Ensemble conforme : les objets de similarité ≥ τ. Sur le jeu de calibration, le bon objet dépasse τ
+ * dans une part visée de 1 − α des cas ; cette propriété ne vaut que pour des requêtes de même
+ * distribution que la calibration (vues de studio), elle n'est pas une garantie en conditions réelles.
+ * `total` compte sur le classement complet quand l'adapter le fournit (`Insights.aboveTau`) ;
+ * `candidates` est la partie visible (références du top-K). Vide : résultat non concluant.
  */
 export interface ConformalSet {
   alpha: number;
   tau: number;
+  /** Références affichables au-dessus de τ (sous-ensemble du top-K). */
   candidates: Reference[];
-  unknown: boolean;
+  /** Taille de l'ensemble sur le classement complet (ou sur les candidats connus). */
+  total: number;
+  /** Vrai si l'ensemble dépasse ce que `candidates` montre. */
+  truncated: boolean;
+  /** Aucun objet au-dessus de τ : non concluant, pas « absent de la base ». */
+  inconclusive: boolean;
 }
 
 export interface Reading {
@@ -38,9 +46,10 @@ export interface Reading {
   conformal?: ConformalSet;
 }
 
-export function conformalSet(references: Reference[], alpha: number, tau: number): ConformalSet {
+export function conformalSet(references: Reference[], alpha: number, tau: number, aboveTau?: number): ConformalSet {
   const candidates = references.filter((r) => r.score >= tau);
-  return { alpha, tau, candidates, unknown: candidates.length === 0 };
+  const total = aboveTau ?? candidates.length;
+  return { alpha, tau, candidates, total, truncated: total > candidates.length, inconclusive: total === 0 };
 }
 
 /** Deux hypothèses trop proches pour trancher : la première ne domine pas, la seconde pèse. */
@@ -56,7 +65,7 @@ export const RISK_ORIGIN_MIN_SHARE = 0.15;
 export function readInsights(insights: Insights, t: SimilarityThresholds): Reading {
   const best = insights.references[0]?.score ?? 0;
   // Avec une calibration, le seuil de fiabilité est τ (garanti) plutôt que la valeur réglée à la main.
-  const conformal = t.calibration ? conformalSet(insights.references, t.calibration.alpha, t.calibration.tau) : undefined;
+  const conformal = t.calibration ? conformalSet(insights.references, t.calibration.alpha, t.calibration.tau, insights.aboveTau) : undefined;
   const reliable = best >= (t.calibration?.tau ?? t.reliable);
   const origins = insights.origins.filter((o) => o.share >= 0.005);
   const topCategory = insights.categories[0];

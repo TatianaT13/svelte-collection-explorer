@@ -258,9 +258,9 @@
       {/if}
       {#if reading?.conformal}
         <div class="block notice">
-          {reading.conformal.unknown
-            ? i18n.t('insights.conformal.unknown')
-            : i18n.t('insights.conformal', { n: reading.conformal.candidates.length, pct: Math.round((1 - reading.conformal.alpha) * 100) })}
+          {reading.conformal.inconclusive
+            ? i18n.t('insights.conformal.unknown', { tau: reading.conformal.tau.toFixed(2) })
+            : i18n.t('insights.conformal', { n: reading.conformal.total, tau: reading.conformal.tau.toFixed(2), pct: Math.round((1 - reading.conformal.alpha) * 100) })}
         </div>
       {/if}
       <div class="block">

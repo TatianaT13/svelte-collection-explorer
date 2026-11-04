@@ -102,7 +102,7 @@ const NODES = [
   { id: 'c-upload', g: 'interface', label: 'Prise de vue', file: 'ImageUpload · SampleImages · ExtraViews', desc: 'Import ou capture, images d’exemple (vues alternatives du Met), vues supplémentaires d’un même objet fusionnées dans la requête.' },
   { id: 'c-quality', g: 'interface', label: 'Qualité et métadonnées', file: 'PhotoQuality · ImageInfoPanel · ModelStatus', desc: 'Netteté, exposition, contraste, reflets ; EXIF/IPTC/XMP et empreinte ; progression du chargement du modèle.' },
   { id: 'c-results', g: 'interface', label: 'Résultats et filtres', file: 'ResultCard · FilterPanel · FilterChips · MultiSelect', desc: 'Grille de cartes pilotée par le schéma, filtres à facettes, attributs cochables.' },
-  { id: 'c-insights', g: 'interface', label: 'Lecture agrégée', file: 'InsightsPanel.svelte', desc: 'Identification et provenance probables, confiance, hésitations, signal Liste rouge, ensemble conforme garanti ou « objet probablement absent ».' },
+  { id: 'c-insights', g: 'interface', label: 'Lecture agrégée', file: 'InsightsPanel.svelte', desc: 'Identification et provenance probables, confiance, hésitations, signal Liste rouge, références au-dessus du seuil calibré τ ou « résultat non concluant ».' },
   { id: 'c-map', g: 'interface', label: 'Carte', file: 'MapView.svelte (Leaflet)', desc: 'Résultats regroupés par lieu, lieu de la photo à part ; coordonnées du gazetier.' },
   { id: 'c-detail', g: 'interface', label: 'Détail et comparaison', file: 'ItemDrawer · CompareTray · ImageCompare · AttributeList', desc: 'Volet de détail, sélection pour comparaison persistée en session, comparateur d’images.' },
   // state
@@ -121,8 +121,8 @@ const NODES = [
   { id: 'remote', g: 'api', label: 'Adapter distant', file: 'src/lib/api/remoteAdapter.ts', desc: 'Même inférence dans le navigateur ; seul le vecteur part au service. Vérifie /meta (même modèle que l’index). Lecture agrégée calculée côté client sur les candidats.' },
   { id: 'mock', g: 'api', label: 'Adapter mock', file: 'src/lib/api/mockAdapter.ts', desc: 'Données générées, sans modèle : pour les tests et le développement d’interface.' },
   { id: 'filtering', g: 'api', label: 'Filtrage, texte', file: 'src/lib/api/filtering.ts', desc: 'matchesFilters (égalité, texte, nombre, hiérarchie de lieux), matchesText (titre, libellés traduits), paginate. Pur, testé.' },
-  { id: 'insights', g: 'api', label: 'Agrégation', file: 'src/lib/api/insights.ts', desc: 'computeInsights : parts pondérées exp((s − best)/T) sur le top-K pour origine, catégorie, matériau, période ; geoBuckets pour la carte.' },
-  { id: 'reading', g: 'api', label: 'Lecture', file: 'src/lib/api/reading.ts', desc: 'readInsights : fiable (≥ τ), confiance, ambiguïtés, risques via les listes rouges, ensemble conforme (candidats ≥ τ) et rejet « inconnu ».' },
+  { id: 'insights', g: 'api', label: 'Agrégation', file: 'src/lib/api/insights.ts', desc: 'computeInsights : parts pondérées exp((s − best)/T) sur le top-K pour origine, catégorie, matériau, période ; aboveTau compté sur tout le classement ; geoBuckets pour la carte.' },
+  { id: 'reading', g: 'api', label: 'Lecture', file: 'src/lib/api/reading.ts', desc: 'readInsights : fiable (≥ τ), confiance, ambiguïtés, risques via les listes rouges, ensemble conforme compté sur le classement complet (aboveTau), « non concluant » si vide.' },
   { id: 'imageinfo', g: 'api', label: 'Métadonnées image', file: 'src/lib/api/imageInfo.ts', desc: 'EXIF / IPTC / XMP lus côté client, GPS retirable, empreinte SHA-256 de l’original.' },
   // ml
   { id: 'embedder', g: 'ml', label: 'Client d’embedding', file: 'src/lib/ml/embedder.ts', desc: 'Crée le Web Worker, protocole de messages, repli sur le fil principal, cosine(). Exporte MODEL_ID.' },
@@ -135,9 +135,9 @@ const NODES = [
   { id: 'build-data', g: 'data', label: 'Constitution des données', file: 'scripts/build-data.mjs', desc: 'API Open Access du Met + Wikidata → items.json, places.json, vignettes ; embeddings avec le même modèle que le navigateur.' },
   { id: 'build-samples', g: 'data', label: 'Images d’exemple', file: 'scripts/build-samples.mjs', desc: 'Vues alternatives (additionalImages) d’objets du corpus → samples.json.' },
   // service
-  { id: 'svc', g: 'service', label: 'Service FastAPI', file: 'service/main.py', desc: '/meta, /search (vecteur + filtres + texte, pagination, candidats), /items, /facets, /archive. Autonome, aucun appel sortant.' },
+  { id: 'svc', g: 'service', label: 'Service FastAPI', file: 'service/main.py', desc: '/meta, /search (vecteur + filtres + texte, pagination, candidats), /items, /facets, /archive. Entrées validées, 25 Mo max, 15 tests pytest. Autonome, aucun appel sortant. Filtres encore linéaires en Python.' },
   { id: 'hnsw', g: 'service', label: 'Index HNSW', file: 'hnswlib · M = 16, ef = 64', desc: 'Produit scalaire sur vecteurs normalisés = cosinus ; recherche filtrée : seuls les objets passant les filtres sont explorés.' },
-  { id: 'archive', g: 'service', label: 'Archive', file: 'service/archive/', desc: 'Original conservé tel quel + reçu JSON ; SHA-256 recalculé, refus en 409 si l’empreinte annoncée diffère.' },
+  { id: 'archive', g: 'service', label: 'Archive', file: 'service/archive/', desc: 'Original conservé tel quel + reçu JSON ; SHA-256 recalculé, refus en 409 si l’empreinte annoncée diffère. Intégrité du fichier, pas encore une chaîne de preuve (opérateur, droits, journal d’audit).' },
   { id: 'bench', g: 'service', label: 'Banc d’échelle', file: 'service/bench.py', desc: 'Force brute contre HNSW sur 1 000 → 100 000 vecteurs synthétiques bruités depuis les réels ; latence, recall@10.' },
   // eval
   { id: 'evaluate', g: 'eval', label: 'Évaluation', file: 'scripts/evaluate.mjs', desc: 'Vues alternatives = vérité terrain. recall@k, MRR, catégorie/origine du top-1, distribution des scores ; --head, --rerank --crops (MaxSim sur patches).' },

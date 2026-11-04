@@ -39,13 +39,17 @@ function shares(items: CollectionItem[], key: string, weights: number[]): Share[
     .sort((a, b) => b.share - a.share);
 }
 
-export function computeInsights(ranked: CollectionItem[], topK = 12): Insights {
-  const top = ranked.filter((it) => typeof it.score === 'number').slice(0, topK);
+export function computeInsights(ranked: CollectionItem[], topK = 12, tau?: number): Insights {
+  const scored = ranked.filter((it) => typeof it.score === 'number');
+  const top = scored.slice(0, topK);
+  // L'ensemble conforme se compte sur tout le classement, pas sur le top-K affiché.
+  const aboveTau = tau === undefined ? undefined : scored.filter((it) => (it.score ?? 0) >= tau).length;
   const best = top[0]?.score ?? 0;
   let weights = top.map((it) => weightOf(it.score ?? 0, best));
   if (weights.every((w) => w === 0)) weights = top.map(() => 1); // tout est loin : parts égales
   return {
     topK: top.length,
+    aboveTau,
     origins: shares(top, 'origin', weights).slice(0, 3),
     places: shares(top, 'place', weights).slice(0, 6),
     categories: shares(top, 'category', weights).slice(0, 3),

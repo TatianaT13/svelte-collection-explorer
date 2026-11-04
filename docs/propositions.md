@@ -140,6 +140,25 @@ Section README « Passage à l'échelle » (HNSW, DiskANN, Milvus).
 - **Licence** : DINOv3 est sous licence Meta sur mesure (commercial permis, mention « Built with DINOv3 »,
   exclusions ITAR / militaire) ; à concilier avec les *Government Purpose Rights* du §10.2.
 
+## Consolidation après relecture (4 novembre 2026)
+
+Une relecture extérieure du dépôt a pointé des formulations trop affirmatives et des limites non dites.
+Traité :
+
+- **Formulations de confiance** : « garanti à 90 % » → « couverture visée de 90 % sur le jeu de calibration,
+  non vérifiée en conditions réelles » ; « objet probablement absent » → « résultat non concluant ». — fait
+- **Ensemble conforme sur le top-K** : compté désormais sur le classement complet (`Insights.aboveTau`),
+  borne documentée en mode distant. — fait
+- **Rappel de l'index ≠ reconnaissance**, banc = index seul, filtres linéaires en Python, service =
+  démonstration : écrit noir sur blanc dans le README § 17. — fait
+- **Chaîne de preuve** : qualifiée d'intégrité de fichier ; manquent identité de l'opérateur, droits d'accès,
+  journal d'audit protégé. — documenté, à faire
+- **Service** : validation des entrées, limites d'upload (25 Mo, images seules), 15 tests pytest sans réseau. — fait
+- **Expérimentation contre intégration** : bandeau en tête du § 16 ; l'application reste sur CLIP. — fait
+
+Reste, dans cet ordre et avant tout nouveau modèle : journal d'audit et identité d'opérateur côté service ;
+préfiltre indexé pour les attributs ; mesure du coût complet d'une requête (API + filtre + réseau).
+
 ## Réserves
 
 Les gains cités viennent de benchmarks de monuments (Oxford, Paris), pas d'antiquités : ils se

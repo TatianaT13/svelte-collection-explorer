@@ -60,12 +60,20 @@ describe('ensemble conforme', () => {
   it('garde les références au-dessus de τ, dans l’ordre', () => {
     const r = readInsights(base({ references: refs }), calibrated);
     expect(r.conformal?.candidates.map((x) => x.id)).toEqual(['a', 'b']);
-    expect(r.conformal?.unknown).toBe(false);
+    expect(r.conformal?.total).toBe(2);
+    expect(r.conformal?.truncated).toBe(false);
+    expect(r.conformal?.inconclusive).toBe(false);
     expect(r.reliable).toBe(true);
   });
-  it('ensemble vide : objet probablement absent, lecture non fiable', () => {
-    const r = readInsights(base({ references: [{ id: 'c', title: 'c', score: 0.69 }] }), calibrated);
-    expect(r.conformal?.unknown).toBe(true);
+  it('compte sur le classement complet quand l’adapter le fournit, pas sur le top-K', () => {
+    const r = readInsights(base({ references: refs, aboveTau: 7 }), calibrated);
+    expect(r.conformal?.candidates.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(r.conformal?.total).toBe(7);
+    expect(r.conformal?.truncated).toBe(true);
+  });
+  it('ensemble vide : non concluant, lecture non fiable', () => {
+    const r = readInsights(base({ references: [{ id: 'c', title: 'c', score: 0.69 }], aboveTau: 0 }), calibrated);
+    expect(r.conformal?.inconclusive).toBe(true);
     expect(r.conformal?.candidates).toEqual([]);
     expect(r.reliable).toBe(false);
   });
@@ -74,6 +82,6 @@ describe('ensemble conforme', () => {
     expect(r.reliable).toBe(true);
   });
   it('conformalSet est pur', () => {
-    expect(conformalSet(refs, 0.05, 0.95)).toEqual({ alpha: 0.05, tau: 0.95, candidates: [], unknown: true });
+    expect(conformalSet(refs, 0.05, 0.95)).toEqual({ alpha: 0.05, tau: 0.95, candidates: [], total: 0, truncated: false, inconclusive: true });
   });
 });

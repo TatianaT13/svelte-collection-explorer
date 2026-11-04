@@ -13,6 +13,7 @@
     "pairs": "node scripts/build-pairs.mjs",
     "train": "node scripts/train-head.mjs",
     "calibrate": "node scripts/calibrate.mjs",
+    "test:service": "PYTHONPATH=. service/.venv/bin/python -m pytest service -q",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

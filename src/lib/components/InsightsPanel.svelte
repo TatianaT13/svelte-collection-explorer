@@ -65,9 +65,9 @@
   {/if}
   {#if reading.conformal}
     <p class="notice conformal" role="status">
-      {reading.conformal.unknown
-        ? i18n.t('insights.conformal.unknown')
-        : i18n.t('insights.conformal', { n: reading.conformal.candidates.length, pct: Math.round((1 - reading.conformal.alpha) * 100) })}
+      {reading.conformal.inconclusive
+        ? i18n.t('insights.conformal.unknown', { tau: reading.conformal.tau.toFixed(2) })
+        : i18n.t('insights.conformal', { n: reading.conformal.total, tau: reading.conformal.tau.toFixed(2), pct: Math.round((1 - reading.conformal.alpha) * 100) })}
     </p>
   {/if}
   <div class="grid">

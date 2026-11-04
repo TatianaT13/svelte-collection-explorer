@@ -14,6 +14,7 @@ modèle que le navigateur charge, et /meta expose son identifiant pour que le cl
 """
 import hashlib
 import json
+import re
 import time
 import uuid
 from pathlib import Path
@@ -23,7 +24,7 @@ import hnswlib
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "static/data/items.json"
@@ -66,6 +67,12 @@ TEXT_FIELDS = {"description", "inscriptions", "distinguishing_features", "maker"
 NUMBER_FIELDS = {"year", "height_cm", "width_cm", "depth_cm", "weight_g"}
 PLACE_FIELDS = {"place"}
 FACET_FIELDS = ["category", "origin", "place", "period", "material", "technique", "subject"]
+KNOWN_FILTER_KEYS = {k for it in items for k in it["metadata"]}
+
+# Limites d'entrée : un service autonome reste exposé à des entrées malformées ou trop grandes.
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_INFO_BYTES = 64 * 1024
+SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 def as_list(v: Any) -> list[str]:
@@ -122,12 +129,12 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 
 class SearchQuery(BaseModel):
-    text: str = ""
-    filters: dict[str, Any] = {}
-    vector: list[float] | None = None
-    page: int = 1
-    pageSize: int = 12
-    candidates: int = 200
+    text: str = Field("", max_length=200)
+    filters: dict[str, Any] = Field(default_factory=dict)
+    vector: list[float] | None = Field(None, max_length=4096)
+    page: int = Field(1, ge=1, le=10_000)
+    pageSize: int = Field(12, ge=1, le=100)
+    candidates: int = Field(200, ge=1, le=500)
 
 
 @app.get("/meta")
@@ -137,11 +144,18 @@ def meta() -> dict:
 
 @app.post("/search")
 def search(q: SearchQuery) -> dict:
+    unknown = sorted(set(q.filters) - KNOWN_FILTER_KEYS)
+    if unknown:
+        raise HTTPException(400, f"clé(s) de filtre inconnue(s) : {', '.join(unknown)}")
+    # Les filtres parcourent tous les objets en Python : linéaire, acceptable pour une démonstration,
+    # à remplacer par un préfiltre indexé (attributs dans Milvus, pgvector…) au-delà de quelques dizaines de milliers.
     allowed = [i for i in range(len(items)) if matches_filters(items[i], q.filters) and matches_text(i, q.text)]
     if q.vector is not None:
         if len(q.vector) != DIM:
             raise HTTPException(400, f"vecteur de dimension {len(q.vector)}, index en {DIM}")
         v = np.asarray(q.vector, dtype=np.float32)
+        if not np.all(np.isfinite(v)):
+            raise HTTPException(400, "vecteur non fini")
         v /= np.linalg.norm(v) or 1.0
         allowed_set = set(allowed)
         k = min(len(allowed), max(q.candidates, q.page * q.pageSize))
@@ -181,7 +195,19 @@ def facets() -> dict[str, list[str]]:
 async def archive(file: UploadFile = File(...), sha256: str | None = Form(None), info: str | None = Form(None)) -> dict:
     """Conserve l'original tel quel. L'empreinte est recalculée ici : si le client en a annoncé une
     différente, l'archivage est refusé — le fichier reçu n'est pas celui qui a été analysé."""
-    data = await file.read()
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(415, f"type non accepté : {file.content_type}")
+    if sha256 is not None and not SHA256_RE.match(sha256):
+        raise HTTPException(400, "empreinte attendue : 64 caractères hexadécimaux")
+    if info is not None and len(info) > MAX_INFO_BYTES:
+        raise HTTPException(413, "métadonnées trop volumineuses")
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"fichier au-delà de {MAX_UPLOAD_BYTES // (1024 * 1024)} Mo")
+    try:
+        parsed_info = json.loads(info) if info else None
+    except json.JSONDecodeError:
+        raise HTTPException(400, "métadonnées : JSON invalide")
     digest = hashlib.sha256(data).hexdigest()
     if sha256 and sha256.lower() != digest:
         raise HTTPException(409, f"empreinte annoncée {sha256[:12]}… ≠ calculée {digest[:12]}…")
@@ -190,6 +216,6 @@ async def archive(file: UploadFile = File(...), sha256: str | None = Form(None),
     suffix = Path(file.filename or "").suffix or ".bin"
     (ARCHIVE / f"{receipt_id}{suffix}").write_bytes(data)
     (ARCHIVE / f"{receipt_id}.json").write_text(
-        json.dumps({"id": receipt_id, "sha256": digest, "bytes": len(data), "filename": file.filename, "receivedAt": time.strftime("%Y-%m-%dT%H:%M:%S"), "info": json.loads(info) if info else None}, indent=2)
+        json.dumps({"id": receipt_id, "sha256": digest, "bytes": len(data), "filename": file.filename, "receivedAt": time.strftime("%Y-%m-%dT%H:%M:%S"), "info": parsed_info}, indent=2)
     )
     return {"id": receipt_id, "sha256": digest}

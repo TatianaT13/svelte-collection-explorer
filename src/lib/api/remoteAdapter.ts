@@ -109,7 +109,8 @@ export const remoteAdapter: CollectionAdapter = {
       total: r.total,
       page: r.page,
       pageSize: r.pageSize,
-      insights: vector ? computeInsights(candidates, schema.similarity.topK) : undefined,
+      // L'ensemble conforme est compté sur les candidats rapatriés (200) : une borne, documentée dans le README.
+      insights: vector ? computeInsights(candidates, schema.similarity.topK, schema.similarity.calibration?.tau) : undefined,
       geo: geoBuckets(candidates)
     };
   },

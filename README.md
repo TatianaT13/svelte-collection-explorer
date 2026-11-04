@@ -767,6 +767,10 @@ Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
 
 ## 16. Évaluation chiffrée de la recherche par image
 
+> **Expérimentation, pas intégration.** Tout ce chapitre est mesuré hors application, par des scripts. Le
+> parcours applicatif reste sur CLIP ; DINOv2, la tête apprise et le ré-ordonnancement sont des expériences,
+> et le moteur DINOv3 / Milvus de l'équipe n'est pas reproduit ici. Seule la calibration τ est intégrée.
+
 Le Met fournit pour beaucoup d'objets des **vues alternatives** (dos, détail, autre angle). Une vue
 alternative est une requête dont on connaît la bonne réponse : l'objet lui-même. C'est une vérité
 terrain gratuite, qui permet de mesurer la recherche au lieu de la juger à l'œil.
@@ -886,11 +890,21 @@ ou un modèle plus fort. C'est une limite mesurée, pas supposée.
 
 **Dans l'application.** La même calibration, faite pour CLIP (le modèle du navigateur, 400 paires, 69 en
 calibration), donne **τ = 0,747 à α = 0,1** — à trois millièmes du 0,75 réglé à la main dans
-`schema.similarity.reliable`. Le schéma porte maintenant `similarity.calibration` (modèle, α, τ, provenance) ;
-`readInsights` en déduit un `ConformalSet` — les références de similarité ≥ τ — et le seuil de fiabilité
-devient τ. Le panneau et la page Contrôle affichent « *n* candidats, garantie 90 % » ou « objet probablement
-absent de la base ». Limite : l'ensemble est borné par le top-K des références (12) ; CLIP donne en moyenne
-9,7 candidats à 90 % contre 3,8 pour DINOv2 avec tête — un argument de plus pour changer d'encodeur.
+`schema.similarity.reliable`. Le schéma porte `similarity.calibration` (modèle, α, τ, provenance) ;
+`readInsights` en déduit un `ConformalSet` et le seuil de fiabilité devient τ.
+
+Ce que l'application **dit**, et pourquoi elle ne dit pas plus : « *n* références au-dessus du seuil calibré
+τ = 0,75 ; seuil réglé pour une couverture visée de 90 % sur le jeu de calibration, non vérifié en conditions
+réelles », et, quand rien ne dépasse τ, « résultat non concluant » — pas « objet absent de la base ». Les
+chiffres l'imposent : sur CLIP, le seuil visant 90 % donne **81,6 % de couverture observée** sur 38 requêtes de
+test et ne rejette que **2,7 %** des objets hors base. La propriété conforme tient en espérance, pour des requêtes
+de même distribution que la calibration (vues de studio) ; elle n'est pas une promesse opérationnelle.
+
+Une erreur corrigée au passage : la première version comptait l'ensemble sur les références déjà tronquées au
+top-K, et ce sous-ensemble n'hérite pas de la propriété de l'ensemble complet. `computeInsights` compte
+maintenant les objets ≥ τ sur **tout le classement** (`Insights.aboveTau`) ; en mode distant, sur les 200
+candidats rapatriés, ce qui reste une borne. CLIP donne en moyenne 9,7 objets au-dessus de τ contre 3,8 pour
+DINOv2 avec tête — un argument de plus pour changer d'encodeur, le jour où ce sera une intégration.
 
 ### Ré-ordonnancement par patches : retrouver un objet depuis un fragment
 
@@ -947,8 +961,13 @@ appel sortant, aucune dépendance réseau.
 **Ce que le service rend réel.** `getFacets()` renvoie les valeurs distinctes du corpus (plus un objet
 vide) ; `archiveImage()` conserve l'original **et recalcule son SHA-256** : si l'empreinte annoncée par le
 client ne correspond pas, l'archivage est refusé (409) — le fichier reçu n'est pas celui qui a été
-analysé. C'est la chaîne de preuve de l'interface, enfin tenue par quelqu'un. Et `/meta` expose le modèle
-de l'index : l'adapter refuse de travailler si le navigateur en charge un autre.
+analysé. C'est une garantie d'**intégrité du fichier**, pas encore une chaîne de preuve complète : il manque
+l'identité de l'opérateur, les droits d'accès et un journal d'audit protégé contre la modification. Et `/meta`
+expose le modèle de l'index : l'adapter refuse de travailler si le navigateur en charge un autre.
+
+Le service valide ses entrées (bornes de pagination, clés de filtre connues, vecteur de la bonne dimension et
+fini, type d'image, empreinte hexadécimale, 25 Mo au plus) et a ses propres tests, sans réseau :
+`npm run test:service` (pytest, 15 cas, archive redirigée vers un dossier temporaire).
 
 **Le banc** (`service/bench.py`) : corpus synthétiques construits en bruitant les vecteurs réels
 (cosinus ≈ 0,8 avec l'original, l'ordre de grandeur d'une vue alternative), 50 requêtes, k = 10, M = 16,
@@ -959,6 +978,14 @@ ef = 128, sur un portable :
 | 1 000 | 0,09 s | 0,04 ms | 0,52 ms | ×0,1 | 100 % |
 | 10 000 | 1,3 s | 0,47 ms | 0,40 ms | ×1,2 | 100 % |
 | 100 000 | 26 s | 12,1 ms | 1,4 ms | **×8,8** | 99,4 % |
+
+**Ce que le banc ne mesure pas.** Il chronomètre l'index seul : ni le coût de l'API, ni le filtrage, ni le
+réseau. Or les filtres du service parcourent encore **tous les objets en Python à chaque requête** — linéaire,
+acceptable pour une démonstration, à remplacer par un préfiltre indexé (attributs dans Milvus, pgvector) au-delà
+de quelques dizaines de milliers d'objets. Et le **rappel de l'index n'est pas la qualité de reconnaissance** :
+99,4 % veut dire que HNSW retrouve 99,4 % des voisins que la force brute aurait trouvés, pas que l'application
+reconnaît 99,4 % des objets. Ce service est une démonstration de passage à l'échelle, pas une architecture
+validée à grande échelle.
 
 Deux lectures. En dessous de dix mille objets, la force brute gagne : un produit matriciel numpy est
 imbattable à cette taille, et un index n'y sert à rien. Au-delà, la force brute est linéaire (×10 d'objets,

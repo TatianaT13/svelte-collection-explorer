@@ -3,3 +3,5 @@ uvicorn
 hnswlib
 numpy
 python-multipart
+pytest
+httpx
