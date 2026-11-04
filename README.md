@@ -44,6 +44,14 @@ chargement de données, build Vite. Ce projet n'utilise que le routage et le SSR
 ```
 scripts/build-data.mjs         # constitution du jeu de données (API du Met, vignettes, embeddings)
 scripts/build-samples.mjs      # images d'exemple : vues alternatives d'objets du jeu de données
+scripts/evaluate.mjs           # évaluation chiffrée : recall@k, CLIP contre DINOv2, calibration des seuils
+scripts/build-pairs.mjs        # paires (principale, vue alternative) du Met, embarquées : affinage et calibration
+scripts/train-head.mjs         # projection apprise sur embeddings gelés (InfoNCE), sans GPU
+scripts/calibrate.mjs          # prédiction conforme : ensembles garantis, rejet hors base
+docs/propositions.md           # feuille de route : toutes les propositions d'avancement, état et mesures
+eval/                          # jeu de requêtes, résultats, têtes apprises, calibrations, banc d'index (images, caches et paires ignorés par git)
+service/main.py                # service d'index (FastAPI + hnswlib) pour l'adapter distant ; archive avec SHA-256 vérifié
+service/bench.py               # passage à l'échelle : force brute contre HNSW, 1 000 → 100 000 vecteurs
 docs/vision-cible.html         # maquette de l'outil complet : parcours de l'agent et architecture
 e2e/explore.spec.ts            # parcours Playwright sur le build statique
 src/
@@ -60,6 +68,7 @@ src/
       types.ts                 # contrats de données
       adapter.ts               # interface CollectionAdapter
       localAdapter.ts          # jeu de données statique + recherche par image dans le navigateur (défaut)
+      remoteAdapter.ts         # index dans un service séparé, inférence dans le navigateur (VITE_ADAPTER=remote)
       mockAdapter.ts           # données générées, sans modèle (VITE_ADAPTER=mock)
       filtering.ts             # filtrage et recherche texte, purs et testés
       insights.ts              # lecture agrégée des meilleurs résultats (identification, provenance)
@@ -620,7 +629,9 @@ plateforme : le code applicatif ne change pas.
 Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
 
 - `npm test` : Vitest sur les modules purs (sérialisation d'URL, libellés, filtrage et recherche
-  texte, similarité).
+  texte, similarité, lecture agrégée et ensemble conforme, listes rouges, qualité photo).
+- `npm run evaluate`, `npm run calibrate` : mesures de la recherche par image (§ 16), hors CI — elles
+  téléchargent les modèles.
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
   (`e2e/`). Six parcours : filtres et URL partageable, recherche texte avec délai, attributs
   cochables, volet puis comparaison, bascule de langue, page de contrôle. La recherche par image n'est pas testée en
@@ -628,7 +639,213 @@ Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
 
 ---
 
-## 16. Pour aller plus loin
+## 16. Évaluation chiffrée de la recherche par image
+
+Le Met fournit pour beaucoup d'objets des **vues alternatives** (dos, détail, autre angle). Une vue
+alternative est une requête dont on connaît la bonne réponse : l'objet lui-même. C'est une vérité
+terrain gratuite, qui permet de mesurer la recherche au lieu de la juger à l'œil.
+
+```bash
+npm run evaluate -- --build                       # constitue eval/queries.json : une vue par objet qui en a une (API du Met)
+npm run evaluate                                  # CLIP sur ce jeu
+npm run evaluate -- --models clip,dinov2-small    # plusieurs modèles, même jeu, même tableau
+```
+
+Le script recalcule les embeddings du corpus par modèle depuis `static/data/thumbs` (cache dans
+`eval/cache/`), embarque chaque requête, classe les 64 objets par cosinus et relève le rang du bon
+objet. Résultat dans `eval/results.json`, et ce tableau (64 objets, 39 requêtes, CPU, int8) :
+
+| mesure | CLIP ViT-B/32 | DINOv2 small | DINOv2 base |
+|---|---:|---:|---:|
+| recall@1 | 64,1 % | **74,4 %** | 59,0 % |
+| recall@5 | 89,7 % | **92,3 %** | 82,1 % |
+| recall@10 | **94,9 %** | 92,3 % | 87,2 % |
+| MRR | 0,765 | **0,827** | 0,710 |
+| catégorie du top-1 correcte | 82,1 % | **89,7 %** | 74,4 % |
+| origine du top-1 correcte | 71,8 % | **82,1 %** | 64,1 % |
+| score médian de la bonne réponse | 0,855 | 0,766 | 0,836 |
+| bonne réponse ≥ 0,75 (seuil « fiable ») | 84,6 % | 53,8 % | 87,2 % |
+| marge médiane (bon objet − meilleur autre) | 0,051 | **0,110** | 0,016 |
+| inférence médiane par image | 28 ms | 46 ms | 104 ms |
+| dimension | 512 | 384 | 768 |
+
+Trois lectures :
+
+- **Pour retrouver *le même objet* sous un autre angle, DINOv2 small fait mieux que CLIP** : +10 points de
+  recall@1 et une marge deux fois plus large entre le bon objet et le meilleur intrus. C'est attendu :
+  DINOv2 est auto-supervisé sur la structure visuelle, CLIP sur le sens partagé avec une légende. Pour
+  l'appariement d'instance, c'est la bonne famille ; CLIP garde l'avantage de la recherche par texte.
+- **Les scores ne se comparent pas d'un modèle à l'autre.** CLIP tasse tout vers le haut (bonne réponse
+  à 0,855, intrus à 0,80) ; DINOv2 étale (bonne réponse à 0,766, intrus bien plus bas). Les seuils de
+  `schema.similarity` (0,75 fiable, 0,8 fort) sont **calibrés pour CLIP** : appliqués tels quels à DINOv2,
+  ils rejetteraient la moitié des bonnes réponses. Changer de modèle impose de recalibrer, et ce script
+  donne la distribution pour le faire (`truth>=…`, `medianMargin`).
+- **L'index doit décrire exactement l'artefact servi.** La première passe a révélé un écart médian de
+  0,019 (max 0,12) entre les embeddings de `items.json` et leur recalcul : l'index avait été calculé sur
+  l'image en mémoire, pas sur la vignette JPEG réellement stockée. `build-data.mjs` relit maintenant la
+  vignette enregistrée avant de l'embarquer, et `items.json` a été réaligné.
+
+Limites : 39 requêtes, c'est peu — assez pour orienter, pas pour conclure à deux points près. DINOv2
+base derrière small est probablement un effet de la quantification int8 ou de l'échantillon ; à vérifier
+en fp32 avant d'en tirer quoi que ce soit. Et une vue alternative est une requête facile (même objet,
+même studio, même lumière) : une photo de terrain, floue, sous néon, sur fond de comptoir, fera moins bien.
+La métrique d'acceptation reste la concordance avec des experts ; celle-ci sert à itérer avant.
+
+### Affinage par métrique sans GPU : une projection apprise
+
+Le *Met Dataset* (NeurIPS 2021) montre que sur des œuvres, l'apprentissage de métrique suivi d'un kNN
+bat largement un classifieur. On n'a pas de GPU : on apprend donc une **projection linéaire W (384 × 384)**
+sur les embeddings gelés de DINOv2-small, avec une perte contrastive InfoNCE symétrique sur des paires
+(photo principale, vue alternative) et un rappel vers l'identité pour ne pas sur-apprendre.
+
+```bash
+npm run pairs -- --model dinov2-small --max 400     # 400 objets du Met avec vue alternative, embarqués (eval/pairs/)
+npm run train -- --model dinov2-small              # W → eval/heads/dinov2-small.json (gradient vérifié par différences finies)
+npm run evaluate -- --models dinov2-small --head eval/heads/dinov2-small.json
+```
+
+Les 64 objets du corpus de démo sont exclus de l'entraînement. Partition par hash d'identifiant :
+254 paires d'entraînement, 67 de calibration, 79 de test.
+
+| DINOv2-small, 39 requêtes de démo | sans tête | avec tête |
+|---|---:|---:|
+| recall@1 | 74,4 % | 76,9 % |
+| recall@5 | 92,3 % | 94,9 % |
+| recall@10 | 92,3 % | 97,4 % |
+| MRR | 0,827 | 0,848 |
+| marge médiane (bon objet − meilleur intrus) | 0,110 | **0,179** |
+| score médian de la bonne réponse | 0,766 | 0,695 |
+
+Lecture honnête : sur le recall, l'écart est d'une requête sur 39 (et de −2 sur 40 en test réservé) — du
+bruit. Ce qui change vraiment, c'est la **séparation** : la marge entre le bon objet et le meilleur intrus
+augmente de 63 %, et les scores s'étalent. C'est précisément ce qui rend les ensembles conformes
+ci-dessous quatre fois plus petits. Avec quelques milliers de paires et l'affinage du backbone, c'est le
+recall qui bougerait.
+
+### Prédiction conforme et rejet « inconnu »
+
+Un cosinus n'est pas une probabilité, et un seuil fixe ne vaut que pour un modèle. La **prédiction
+conforme** (RCIR, AAAI 2025) construit pour chaque requête un ensemble de candidats de taille adaptative
+qui contient le bon objet avec une probabilité garantie 1 − α, sans réentraînement, pour n'importe quel
+encodeur : τ_α = quantile d'ordre α des similarités du bon objet sur un jeu de calibration ; ensemble =
+objets de similarité ≥ τ_α. Ensemble vide = « objet absent de la base ».
+
+```bash
+npm run calibrate -- --model dinov2-small                                   # embeddings bruts
+npm run calibrate -- --model dinov2-small --head eval/heads/dinov2-small.json
+```
+
+Corpus de 107 photos principales, 67 requêtes de calibration, 40 requêtes d'objets présents, 39 requêtes
+d'objets **retirés** du corpus (hors base) :
+
+| α | garanti ≥ | couverture, brut | taille moy., brut | couverture, tête | taille moy., tête | singletons, tête |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0,05 | 95 % | 92,5 % | 23,2 | 92,5 % | **5,5** | 7,5 % |
+| 0,10 | 90 % | 92,5 % | 7,9 | 82,5 % | **3,8** | 7,5 % |
+| 0,20 | 80 % | 75,0 % | 2,4 | 75,0 % | **1,7** | 30 % |
+
+À 95 % de garantie, la tête ramène l'ensemble de 23 à 5,5 candidats en moyenne, à couverture égale :
+pour un agent, « l'un de ces cinq » est utilisable, « l'un de ces vingt-trois » ne l'est pas. Les
+couvertures légèrement sous la garantie (92,5 contre 95) sont l'effet de 40 requêtes de test et 67 de
+calibration — la garantie vaut en espérance, et il faut des centaines de points pour la voir tenir à deux
+points près.
+
+**Rejet hors base.** Deux règles calibrées : ensemble vide (seuil absolu), et **marge top-1 − top-2**
+inférieure à un quantile (un objet absent a un premier candidat sans avance nette). Marge médiane :
+0,167 pour un objet présent contre 0,057 pour un objet absent (avec tête). Mais la queue basse des objets
+présents (ceux que le modèle classe mal) recouvre les objets absents : à 10 % de faux rejets, on ne
+rejette que **≈ 30 % des objets absents**, avec l'une ou l'autre règle. Dire « inconnu » de façon fiable
+demande plus que la similarité globale — une vérification locale du top-1 (patches DINO, § propositions 3)
+ou un modèle plus fort. C'est une limite mesurée, pas supposée.
+
+**Dans l'application.** La même calibration, faite pour CLIP (le modèle du navigateur, 400 paires, 69 en
+calibration), donne **τ = 0,747 à α = 0,1** — à trois millièmes du 0,75 réglé à la main dans
+`schema.similarity.reliable`. Le schéma porte maintenant `similarity.calibration` (modèle, α, τ, provenance) ;
+`readInsights` en déduit un `ConformalSet` — les références de similarité ≥ τ — et le seuil de fiabilité
+devient τ. Le panneau et la page Contrôle affichent « *n* candidats, garantie 90 % » ou « objet probablement
+absent de la base ». Limite : l'ensemble est borné par le top-K des références (12) ; CLIP donne en moyenne
+9,7 candidats à 90 % contre 3,8 pour DINOv2 avec tête — un argument de plus pour changer d'encodeur.
+
+### Ré-ordonnancement par patches : retrouver un objet depuis un fragment
+
+Un vecteur global décrit l'image entière. Quand l'agent n'a qu'un détail — un fragment, un objet à
+moitié emballé — ce vecteur s'éloigne de celui de la fiche. DINOv2 produit aussi 256 **jetons de patch**
+par image : on les utilise pour ré-ordonner les top-20 de la recherche globale.
+
+```bash
+npm run evaluate -- --models dinov2-small --rerank --crops --topk 20
+```
+
+`--crops` simule des fragments par recadrage centré (70 % et 50 % du côté, soit 49 % et 25 % de la
+surface). Deux scores locaux comparés : **voisins mutuels** (part des patches qui se choisissent
+réciproquement, symétrique) et **MaxSim** (moyenne, sur les patches de la requête, de la meilleure
+similarité dans le candidat — asymétrique, type ColBERT : un fragment est *contenu* dans l'objet).
+
+| fragment | global seul | voisins mutuels | **MaxSim** | global + MaxSim |
+|---|---:|---:|---:|---:|
+| image entière, recall@1 | 74,4 % | 74,4 % | 74,4 % | 76,9 % |
+| 70 % du côté, recall@1 | 66,7 % | 66,7 % | **74,4 %** | 66,7 % |
+| 50 % du côté, recall@1 | 59,0 % | 56,4 % | **69,2 %** | 66,7 % |
+| 50 % du côté, MRR | 0,713 | 0,670 | **0,791** | 0,758 |
+
+Lecture : sur l'image entière, rien à réordonner — le global a déjà raison. Sur un fragment à 50 %, le
+global perd 15,4 points ; MaxSim en récupère 10,2, **les deux tiers de la perte**, et ramène le fragment
+au niveau de l'image à 70 %. Le comptage de voisins mutuels ne sert à rien : symétrique, il fait matcher
+les patches de fond. Combiner global et MaxSim est moins bon que MaxSim seul sur les fragments, le global
+tirant vers le bas. Coût : ~700 ms par requête pour 20 candidats en JavaScript naïf (des millisecondes en
+numpy ou ONNX). C'est la brique à placer **après** un index ANN, jamais à sa place.
+
+---
+
+## 17. Passage à l'échelle : l'inférence sur le poste, l'index sur le serveur
+
+Comparer un vecteur à 64 objets dans le navigateur est raisonnable ; à deux millions, non — il faudrait
+télécharger la base et la parcourir à chaque requête. L'architecture de l'adapter rend le changement
+local : `search()` devient un appel à un service, le reste de l'application ne bouge pas.
+
+```bash
+python3 -m venv service/.venv && service/.venv/bin/pip install -r service/requirements.txt
+service/.venv/bin/uvicorn service.main:app --port 8000
+VITE_ADAPTER=remote npm run dev          # VITE_API_URL=http://localhost:8000 par défaut
+```
+
+**Le partage des rôles.** Le navigateur garde l'inférence : il calcule le vecteur de la photo (28–104 ms
+mesurés en int8) et n'envoie que ses 512 nombres — 2 Ko au lieu d'une image ; **l'image de recherche ne
+quitte jamais le poste**. Le service (`service/main.py`, FastAPI) tient les vecteurs du corpus dans un
+index **HNSW** (hnswlib, produit scalaire sur vecteurs normalisés = cosinus), applique les filtres *dans*
+l'index (recherche filtrée : seuls les objets qui passent les filtres sont explorés), renvoie la page
+demandée et les 200 meilleurs candidats ; la lecture agrégée et la carte sont calculées côté client avec
+les mêmes fonctions pures (`computeInsights`, `geoBuckets`) que l'adapter local. Il est autonome : aucun
+appel sortant, aucune dépendance réseau.
+
+**Ce que le service rend réel.** `getFacets()` renvoie les valeurs distinctes du corpus (plus un objet
+vide) ; `archiveImage()` conserve l'original **et recalcule son SHA-256** : si l'empreinte annoncée par le
+client ne correspond pas, l'archivage est refusé (409) — le fichier reçu n'est pas celui qui a été
+analysé. C'est la chaîne de preuve de l'interface, enfin tenue par quelqu'un. Et `/meta` expose le modèle
+de l'index : l'adapter refuse de travailler si le navigateur en charge un autre.
+
+**Le banc** (`service/bench.py`) : corpus synthétiques construits en bruitant les vecteurs réels
+(cosinus ≈ 0,8 avec l'original, l'ordre de grandeur d'une vue alternative), 50 requêtes, k = 10, M = 16,
+ef = 128, sur un portable :
+
+| objets | construction | force brute (numpy, exact) | HNSW | accélération | recall@10 de HNSW |
+|---:|---:|---:|---:|---:|---:|
+| 1 000 | 0,09 s | 0,04 ms | 0,52 ms | ×0,1 | 100 % |
+| 10 000 | 1,3 s | 0,47 ms | 0,40 ms | ×1,2 | 100 % |
+| 100 000 | 26 s | 12,1 ms | 1,4 ms | **×8,8** | 99,4 % |
+
+Deux lectures. En dessous de dix mille objets, la force brute gagne : un produit matriciel numpy est
+imbattable à cette taille, et un index n'y sert à rien. Au-delà, la force brute est linéaire (×10 d'objets,
+×10 de temps : à un million, ≈ 120 ms ; à vingt millions, plusieurs secondes par requête) alors que HNSW
+reste à quelques millisecondes pour 99 % de recall. C'est ce que fait un service comme Milvus en
+production ; DiskANN va plus loin en mettant le graphe sur SSD quand les vecteurs ne tiennent plus en RAM.
+Première version du banc : avec un bruit dix fois trop fort, les vecteurs synthétiques étaient quasi
+aléatoires et le recall de HNSW tombait à 7 % — un nuage uniforme en haute dimension est le pire cas de
+tout index approché. Le bug a été corrigé, la leçon gardée : un banc se vérifie avant de se lire.
+
+---
+
+## 18. Pour aller plus loin
 
 - **Chargement de données serveur** : un `+page.ts` ou `+page.server.ts` avec une fonction `load`
   permet de récupérer les données avant le rendu, au lieu d'un `$effect` côté client.
