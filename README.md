@@ -104,130 +104,45 @@ src/
     utils/resizeImage.ts       # réduction de l'image côté client avant envoi
 ```
 
-### Schéma des briques et de leurs liens
+### Vue d'ensemble
 
-Toutes les briques, groupées par couche, avec les liens directs (appels ou flux de données). Une seule
-interface sépare la droite de la gauche : `CollectionAdapter` — l'interface ne connaît que ses quatre
-méthodes, et tout ce qui est derrière se remplace sans la toucher.
+Une seule frontière compte : `CollectionAdapter`. À droite, l'interface ne connaît que ses quatre méthodes ;
+à gauche, tout se remplace sans la toucher.
 
 ```mermaid
 flowchart LR
-  subgraph UI["Interface · SvelteKit"]
-    direction TB
-    layout["+layout.svelte<br/>nav, thème, langue"]
-    explorer["routes/+page.svelte<br/>explorateur"]
-    controle["routes/controle<br/>photo → lecture → décision"]
-    compare["routes/compare<br/>côte à côte"]
-    cUpload["ImageUpload · SampleImages · ExtraViews"]
-    cQuality["PhotoQuality · ImageInfoPanel · ModelStatus"]
-    cResults["ResultCard · FilterPanel · FilterChips"]
-    cInsights["InsightsPanel<br/>identification, provenance, risque, ensemble conforme"]
-    cMap["MapView (Leaflet)"]
-    cDetail["ItemDrawer · CompareTray · ImageCompare"]
-  end
-  subgraph CFG["Configuration, état, utilitaires"]
-    direction TB
-    schema["config/schema.ts<br/>champs, seuils, calibration τ"]
-    vocab["vocabularies.ts · countries.ts"]
-    risk["config/risk.ts<br/>Listes rouges ICOM"]
-    i18n["i18n fr / en"]
-    stores["stores: query · compare · places · theme"]
-    urlstate["utils/urlState.ts"]
-    photoq["photoQuality.ts · resizeImage.ts"]
-    casefile["utils/caseFile.ts<br/>dossier JSON"]
-  end
-  subgraph API["Couche API"]
-    direction TB
-    apiIndex["api/index.ts<br/>VITE_ADAPTER"]
-    adapter["CollectionAdapter<br/>search · getItem · getFacets · archiveImage"]
-    local["localAdapter.ts<br/>cosinus dans le navigateur"]
-    remote["remoteAdapter.ts<br/>vecteur ici, index distant"]
-    mock["mockAdapter.ts"]
-    filtering["filtering.ts"]
-    insights["insights.ts<br/>parts pondérées, geoBuckets"]
-    reading["reading.ts<br/>fiabilité, risques, ensemble conforme"]
-    imageinfo["imageInfo.ts<br/>EXIF, SHA-256"]
-  end
-  subgraph ML["Modèle dans le navigateur"]
-    direction TB
-    embedder["ml/embedder.ts"]
-    worker["embed.worker.ts<br/>CLIP ViT-B/32 int8, ONNX Runtime Web"]
-    mlstatus["ml/status.svelte.ts"]
-  end
-  subgraph DATA["Données et scripts"]
-    direction TB
-    items["items.json<br/>64 objets, embeddings 512-d, model"]
-    places["places.json<br/>gazetier Wikidata"]
-    thumbs["thumbs · samples"]
-    buildData["scripts/build-data.mjs<br/>API du Met + Wikidata"]
-  end
-  subgraph SVC["Service d'index (optionnel)"]
-    direction TB
-    svc["service/main.py<br/>/meta /search /items /facets /archive"]
-    hnsw["index HNSW (hnswlib)<br/>recherche filtrée"]
-    archive["archive/<br/>SHA-256 vérifié"]
-  end
-  subgraph EVAL["Évaluation et calibration"]
-    direction TB
-    evaluate["evaluate.mjs<br/>recall@k, MaxSim"]
-    pairs["build-pairs.mjs"]
-    train["train-head.mjs"]
-    calibrate["calibrate.mjs<br/>τ, ensembles garantis"]
-  end
-  subgraph PLAT["Hors ligne, tests, déploiement"]
-    direction TB
-    sw["service-worker.ts"]
-    tests["vitest · Playwright"]
-    ci["GitHub Pages"]
-  end
+  UI["Interface<br/>explorateur · contrôle · comparaison"]
+  READ["Lecture<br/>insights.ts · reading.ts"]
+  CFG["Schéma, listes rouges ICOM,<br/>seuil calibré τ"]
+  ADP{{"CollectionAdapter<br/>search · getItem · getFacets · archiveImage"}}
+  LOCAL["Adapter local<br/>cosinus dans le navigateur"]
+  REMOTE["Adapter distant<br/>vecteur ici, index là-bas"]
+  ML["Worker CLIP<br/>transformers.js, int8"]
+  DATA[("items.json · places.json<br/>vignettes")]
+  SVC["Service FastAPI<br/>index HNSW · archive SHA-256"]
+  BUILD["build-data.mjs<br/>API du Met + Wikidata"]
+  EVAL["evaluate · calibrate<br/>recall@k, τ"]
 
-  layout --> i18n & stores
-  explorer --> cUpload & cResults & cInsights & cMap & cDetail
-  explorer -->|état ↔ URL| urlstate
-  explorer -->|api.search| apiIndex
-  controle --> cUpload & cQuality
-  controle -->|readInsights| reading
-  controle -->|export| casefile
-  controle -->|search · archiveImage| apiIndex
-  compare --> cDetail
-  cUpload -->|réduction| photoq
-  cQuality --> photoq & imageinfo & mlstatus
-  cInsights --> reading
-  cResults --> schema & vocab
-  cMap -->|places| stores
-  cDetail -->|compare| stores
-  apiIndex --> adapter
-  adapter --> local & remote & mock
-  local --> filtering & insights
-  local -->|embedImage| embedder
-  local -->|fetch| items & places
-  remote -->|embedImage| embedder
-  remote -->|POST /search, vecteur| svc
-  remote -->|candidats| insights
-  filtering --> schema & vocab & stores
-  reading -->|τ, seuils| schema
-  reading --> risk
-  embedder -->|postMessage| worker
-  embedder --> mlstatus
-  buildData --> items & places & thumbs
-  svc -->|charge au démarrage| items
-  svc --> hnsw & archive
-  evaluate --> thumbs & items
-  pairs --> train & calibrate
-  train -->|--head| evaluate
-  calibrate -->|τ recopié| schema
-  stores & risk --> casefile
-  sw -->|cache| items & thumbs
-  tests --> reading & filtering & insights & risk & photoq
-  ci --> tests
+  UI --> ADP
+  UI --> READ
+  READ --> CFG
+  ADP --> LOCAL
+  ADP --> REMOTE
+  LOCAL --> ML
+  LOCAL --> DATA
+  REMOTE --> ML
+  REMOTE --> SVC
+  SVC --> DATA
+  BUILD --> DATA
+  EVAL --> DATA
+  EVAL -. "τ recopié" .-> CFG
 ```
 
-Version interactive, déployée avec la démo : [**architecture.html**](https://tatianat13.github.io/svelte-collection-explorer/architecture.html)
-(ou `static/architecture.html` en local). Au survol d'une brique, ses liens directs s'animent dans le sens des
-données, les briques liées s'allument, le reste s'estompe, et un panneau détaille fichier, rôle et liens entrants /
-sortants. Six parcours rejouent un flux complet pas à pas : recherche par image locale, distante, contrôle et dossier,
-texte et filtres, pipeline de données, évaluation → seuils. GitHub rend le Markdown sans script : c'est pourquoi la
-version animée est une page à part.
+Le détail — 46 briques, 72 liens, fichier par fichier — est sur la page interactive
+[**architecture.html**](https://tatianat13.github.io/svelte-collection-explorer/architecture.html)
+(ou `static/architecture.html` en local) : au survol d'une brique, ses liens directs s'animent dans le sens des
+données et le reste s'estompe ; six parcours rejouent un flux complet pas à pas. GitHub rend le Markdown sans
+script, c'est pourquoi la version animée est une page à part.
 
 **Routage** : chaque dossier sous `src/routes` est une URL. `+page.svelte` est la page,
 `+layout.svelte` l'enveloppe commune. Un `+layout.svelte` à la racine s'applique à toutes les routes
