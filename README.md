@@ -4,6 +4,58 @@ Front d'exploration de collections (recherche texte, recherche par image, filtre
 écrit avec **Svelte 5**, **SvelteKit 2** et **TypeScript**. Le code est volontairement compact :
 chaque fichier illustre un mécanisme de Svelte. Ce README le parcourt comme un tutoriel.
 
+## Vue d'ensemble
+
+Un agent photographie un objet ; l'application le compare à des objets de référence et dit ce qu'il est
+probablement, d'où il vient probablement, et si cette combinaison figure sur une Liste rouge. L'interface
+dépend du contrat `CollectionAdapter`, pas de l'implémentation du moteur : deux moteurs existent, l'un
+entièrement dans le navigateur, l'autre avec un index côté serveur.
+
+```mermaid
+flowchart LR
+  UI["Interface<br/>explorateur · contrôle · comparaison"]
+  READ["Lecture<br/>insights.ts · reading.ts"]
+  CFG["Schéma, listes rouges ICOM,<br/>seuil calibré τ"]
+  ADP{{"CollectionAdapter<br/>search · getItem · getFacets · archiveImage"}}
+  LOCAL["Adapter local<br/>tout dans le navigateur"]
+  REMOTE["Adapter distant<br/>inférence navigateur · recherche serveur"]
+  ML["Worker CLIP<br/>transformers.js, int8"]
+  DATA[("items.json · places.json<br/>vignettes")]
+  SVC["Service FastAPI<br/>index HNSW · archive SHA-256"]
+
+  UI --> ADP
+  UI --> READ
+  READ --> CFG
+  ADP --> LOCAL
+  ADP --> REMOTE
+  LOCAL --> ML
+  LOCAL --> DATA
+  REMOTE --> ML
+  REMOTE --> SVC
+  SVC --> DATA
+```
+
+Hors parcours, la préparation des données et les mesures, qui produisent ce que l'application consomme :
+
+```mermaid
+flowchart LR
+  MET["API du Met (CC0)<br/>+ Wikidata"]
+  BUILD["build-data.mjs<br/>vignettes, embeddings, gazetier"]
+  DATA[("items.json · places.json<br/>vignettes")]
+  EVAL["evaluate · build-pairs · train-head · calibrate<br/>recall@k, tête apprise, τ"]
+  CFG["Schéma : seuil calibré τ"]
+
+  MET --> BUILD --> DATA
+  DATA --> EVAL
+  EVAL -. "τ recopié à la main" .-> CFG
+```
+
+Le détail — 46 briques, 72 liens, fichier par fichier — est sur la page interactive
+[**architecture.html**](https://tatianat13.github.io/svelte-collection-explorer/architecture.html)
+(ou `static/architecture.html` en local) : au survol d'une brique, ses liens directs s'animent dans le sens des
+données et le reste s'estompe ; six parcours rejouent un flux complet pas à pas. GitHub rend le Markdown sans
+script, c'est pourquoi la version animée est une page à part.
+
 ```bash
 npm install
 npm run dev      # http://localhost:5173
@@ -103,46 +155,6 @@ src/
     utils/flag.ts              # emoji drapeau depuis un code ISO
     utils/resizeImage.ts       # réduction de l'image côté client avant envoi
 ```
-
-### Vue d'ensemble
-
-Une seule frontière compte : `CollectionAdapter`. À droite, l'interface ne connaît que ses quatre méthodes ;
-à gauche, tout se remplace sans la toucher.
-
-```mermaid
-flowchart LR
-  UI["Interface<br/>explorateur · contrôle · comparaison"]
-  READ["Lecture<br/>insights.ts · reading.ts"]
-  CFG["Schéma, listes rouges ICOM,<br/>seuil calibré τ"]
-  ADP{{"CollectionAdapter<br/>search · getItem · getFacets · archiveImage"}}
-  LOCAL["Adapter local<br/>cosinus dans le navigateur"]
-  REMOTE["Adapter distant<br/>vecteur ici, index là-bas"]
-  ML["Worker CLIP<br/>transformers.js, int8"]
-  DATA[("items.json · places.json<br/>vignettes")]
-  SVC["Service FastAPI<br/>index HNSW · archive SHA-256"]
-  BUILD["build-data.mjs<br/>API du Met + Wikidata"]
-  EVAL["evaluate · calibrate<br/>recall@k, τ"]
-
-  UI --> ADP
-  UI --> READ
-  READ --> CFG
-  ADP --> LOCAL
-  ADP --> REMOTE
-  LOCAL --> ML
-  LOCAL --> DATA
-  REMOTE --> ML
-  REMOTE --> SVC
-  SVC --> DATA
-  BUILD --> DATA
-  EVAL --> DATA
-  EVAL -. "τ recopié" .-> CFG
-```
-
-Le détail — 46 briques, 72 liens, fichier par fichier — est sur la page interactive
-[**architecture.html**](https://tatianat13.github.io/svelte-collection-explorer/architecture.html)
-(ou `static/architecture.html` en local) : au survol d'une brique, ses liens directs s'animent dans le sens des
-données et le reste s'estompe ; six parcours rejouent un flux complet pas à pas. GitHub rend le Markdown sans
-script, c'est pourquoi la version animée est une page à part.
 
 **Routage** : chaque dossier sous `src/routes` est une URL. `+page.svelte` est la page,
 `+layout.svelte` l'enveloppe commune. Un `+layout.svelte` à la racine s'applique à toutes les routes
