@@ -1,0 +1,318 @@
+{
+  "note": "Vues alternatives d’objets du corpus (Met, CC0) : vérité terrain = objectId",
+  "generatedAt": "2026-11-04T15:38:50.139Z",
+  "queries": [
+    {
+      "file": "eval/images/26485-alt.jpg",
+      "objectId": "26485",
+      "title": "Icon Fragment",
+      "category": "icon",
+      "origin": "IL",
+      "source": "https://images.metmuseum.org/CRDImages/aa/original/DP77637.jpg"
+    },
+    {
+      "file": "eval/images/465941-alt.jpg",
+      "objectId": "465941",
+      "title": "Devotional Icon",
+      "category": "icon",
+      "origin": "RU",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/sf18-88d1.jpg"
+    },
+    {
+      "file": "eval/images/317829-alt.jpg",
+      "objectId": "317829",
+      "title": "Double Diptych Icon Pendant",
+      "category": "icon",
+      "origin": "ET",
+      "source": "https://images.metmuseum.org/CRDImages/ao/original/DP-25652-002.jpg"
+    },
+    {
+      "file": "eval/images/466046-alt.jpg",
+      "objectId": "466046",
+      "title": "Icon with Christ Pantokrator",
+      "category": "other",
+      "origin": "TR",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/sf1979-217s2.jpg"
+    },
+    {
+      "file": "eval/images/464554-alt.jpg",
+      "objectId": "464554",
+      "title": "Temple Pendant with Two Sirens Flanking a Tree of Life (front) and Confronted Birds (back)",
+      "category": "jewellery",
+      "origin": "UA",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DT11968.jpg"
+    },
+    {
+      "file": "eval/images/464577-alt.jpg",
+      "objectId": "464577",
+      "title": "One of a Pair of Temple Pendants, with Confronted Birds (front) and Human Heads (back)",
+      "category": "jewellery",
+      "origin": "UA",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DT11966.jpg"
+    },
+    {
+      "file": "eval/images/464552-alt.jpg",
+      "objectId": "464552",
+      "title": "Temple Pendant with Two Birds Flanking a Tree of Life (front) and Geometric Lead Motifs (back)",
+      "category": "jewellery",
+      "origin": "UA",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DT204689.jpg"
+    },
+    {
+      "file": "eval/images/464555-alt.jpg",
+      "objectId": "464555",
+      "title": "Chain with Birds and Geometric Motifs",
+      "category": "costume",
+      "origin": "UA",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/sf17-190-681s2.jpg"
+    },
+    {
+      "file": "eval/images/209287-alt.jpg",
+      "objectId": "209287",
+      "title": "Christ Preaching",
+      "category": "icon",
+      "origin": "RU",
+      "source": "https://images.metmuseum.org/CRDImages/es/original/SF32_72_img2.jpg"
+    },
+    {
+      "file": "eval/images/831188-alt.jpg",
+      "objectId": "831188",
+      "title": "Icon of the Virgin and Child, Hodegetria variant",
+      "category": "icon",
+      "origin": "EG",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DP-22753-002.jpg"
+    },
+    {
+      "file": "eval/images/477499-alt.jpg",
+      "objectId": "477499",
+      "title": "Jaharis Byzantine Lectionary",
+      "category": "manuscript",
+      "origin": "TR",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/DP211530.jpg"
+    },
+    {
+      "file": "eval/images/253384-alt.jpg",
+      "objectId": "253384",
+      "title": "Faience aryballos (perfume vase)",
+      "category": "other",
+      "origin": "GR",
+      "source": "https://images.metmuseum.org/CRDImages/gr/original/DP-32671-004.jpg"
+    },
+    {
+      "file": "eval/images/1029-alt.jpg",
+      "objectId": "1029",
+      "title": "The Bryant Vase",
+      "category": "vessel",
+      "origin": "US",
+      "source": "https://images.metmuseum.org/CRDImages/ad/original/DP161660.jpg"
+    },
+    {
+      "file": "eval/images/825933-alt.jpg",
+      "objectId": "825933",
+      "title": "Egyptian Goddess",
+      "category": "sculpture",
+      "origin": "FR",
+      "source": "https://images.metmuseum.org/CRDImages/es/original/DP-19429-011.jpg"
+    },
+    {
+      "file": "eval/images/825935-alt.jpg",
+      "objectId": "825935",
+      "title": "Egyptian God",
+      "category": "sculpture",
+      "origin": "FR",
+      "source": "https://images.metmuseum.org/CRDImages/es/original/DP-19429-013.jpg"
+    },
+    {
+      "file": "eval/images/682823-alt.jpg",
+      "objectId": "682823",
+      "title": "Egyptian Revival demi-parure",
+      "category": "metalwork",
+      "origin": "IT",
+      "source": "https://images.metmuseum.org/CRDImages/es/original/DP_12365-001.jpg"
+    },
+    {
+      "file": "eval/images/11860-alt.jpg",
+      "objectId": "11860",
+      "title": "The Broncho Buster",
+      "category": "sculpture",
+      "origin": "US",
+      "source": "https://images.metmuseum.org/CRDImages/ad/original/1986.81.2.jpg"
+    },
+    {
+      "file": "eval/images/11863-alt.jpg",
+      "objectId": "11863",
+      "title": "Coming Through the Rye",
+      "category": "sculpture",
+      "origin": "US",
+      "source": "https://images.metmuseum.org/CRDImages/ad/original/APS1152.jpg"
+    },
+    {
+      "file": "eval/images/251088-alt.jpg",
+      "objectId": "251088",
+      "title": "Terracotta kantharos (drinking cup with high handles)",
+      "category": "vessel",
+      "origin": "GR",
+      "source": "https://images.metmuseum.org/CRDImages/gr/original/DP114407.jpg"
+    },
+    {
+      "file": "eval/images/443197-alt.jpg",
+      "objectId": "443197",
+      "title": "Anthology of Persian Poetry",
+      "category": "manuscript",
+      "origin": "IR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/94200.jpg"
+    },
+    {
+      "file": "eval/images/934487-alt.jpg",
+      "objectId": "934487",
+      "title": "Persian Dragon-Handled Ewer",
+      "category": "other",
+      "origin": "IR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/DP-46698-004.jpg"
+    },
+    {
+      "file": "eval/images/452079-alt.jpg",
+      "objectId": "452079",
+      "title": "Bowl with Persian Inscription",
+      "category": "vessel",
+      "origin": "IR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/Cdish1970.28.jpg"
+    },
+    {
+      "file": "eval/images/451833-alt.jpg",
+      "objectId": "451833",
+      "title": "Footed Dish with Foliate Rim in Imitation of Chinese Porcelain",
+      "category": "ceramic",
+      "origin": "TR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/sf66-4-2a.jpg"
+    },
+    {
+      "file": "eval/images/460669-alt.jpg",
+      "objectId": "460669",
+      "title": "Small wine pot or teapot",
+      "category": "ceramic",
+      "origin": "CN",
+      "source": "https://images.metmuseum.org/CRDImages/rl/original/SF-1975-1-1713.jpg"
+    },
+    {
+      "file": "eval/images/65014-alt.jpg",
+      "objectId": "65014",
+      "title": "One of a pair of medallions with portrait busts",
+      "category": "medal",
+      "origin": "IN",
+      "source": "https://images.metmuseum.org/CRDImages/as/original/DP-18252-001.jpg"
+    },
+    {
+      "file": "eval/images/207886-alt.jpg",
+      "objectId": "207886",
+      "title": "Dish with stenciled decoration",
+      "category": "ceramic",
+      "origin": "IT",
+      "source": "https://images.metmuseum.org/CRDImages/es/original/DP157889.jpg"
+    },
+    {
+      "file": "eval/images/448620-alt.jpg",
+      "objectId": "448620",
+      "title": "Tiraz Textile Fragment",
+      "category": "textile",
+      "origin": "IR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/wb-31.106.41b.JPG"
+    },
+    {
+      "file": "eval/images/455295-alt.jpg",
+      "objectId": "455295",
+      "title": "Tiraz Textile Fragment",
+      "category": "textile",
+      "origin": "IQ",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/wb-31.106.55d.JPG"
+    },
+    {
+      "file": "eval/images/37631-alt.jpg",
+      "objectId": "37631",
+      "title": "Textile Panel with Scenes from the Ramayana",
+      "category": "textile",
+      "origin": "",
+      "source": "https://images.metmuseum.org/CRDImages/as/original/DP225679.jpg"
+    },
+    {
+      "file": "eval/images/448298-alt.jpg",
+      "objectId": "448298",
+      "title": "Textile Fragment",
+      "category": "textile",
+      "origin": "EG",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/77258.jpg"
+    },
+    {
+      "file": "eval/images/16818-alt.jpg",
+      "objectId": "16818",
+      "title": "Belt Buckle",
+      "category": "other",
+      "origin": "US",
+      "source": "https://images.metmuseum.org/CRDImages/ad/original/269021.jpg"
+    },
+    {
+      "file": "eval/images/450083-alt.jpg",
+      "objectId": "450083",
+      "title": "Jewelry",
+      "category": "jewellery",
+      "origin": "IR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/sf40-170-408a.jpg"
+    },
+    {
+      "file": "eval/images/454608-alt.jpg",
+      "objectId": "454608",
+      "title": "Book of Prayers, Surat al-Yasin and Surat al-Fath",
+      "category": "manuscript",
+      "origin": "IR",
+      "source": "https://images.metmuseum.org/CRDImages/is/original/TR199.2003.JPG"
+    },
+    {
+      "file": "eval/images/58449-alt.jpg",
+      "objectId": "58449",
+      "title": "Krishna Dancing: Page from the Dispersed \"Boston\" Rasikapriya (Lover's Breviary)",
+      "category": "painting",
+      "origin": "IN",
+      "source": "https://images.metmuseum.org/CRDImages/as/original/18_85_5a_recto.jpg"
+    },
+    {
+      "file": "eval/images/467704-alt.jpg",
+      "objectId": "467704",
+      "title": "Pricket Candlestick with a Naked Youth Fighting a Dragon",
+      "category": "metalwork",
+      "origin": "NL",
+      "source": "https://images.metmuseum.org/CRDImages/md/original/sf41-100-131s1.jpg"
+    },
+    {
+      "file": "eval/images/22739-alt.jpg",
+      "objectId": "22739",
+      "title": "Mask",
+      "category": "weapon",
+      "origin": "JP",
+      "source": "https://images.metmuseum.org/CRDImages/aa/original/LC-19_115_2-004.jpg"
+    },
+    {
+      "file": "eval/images/310350-alt.jpg",
+      "objectId": "310350",
+      "title": "Mask",
+      "category": "sculpture",
+      "origin": "",
+      "source": "https://images.metmuseum.org/CRDImages/ao/original/DP145463.jpg"
+    },
+    {
+      "file": "eval/images/708744-alt.jpg",
+      "objectId": "708744",
+      "title": "Mask",
+      "category": "sculpture",
+      "origin": "",
+      "source": "https://images.metmuseum.org/CRDImages/ao/original/DP-13017-010.jpg"
+    },
+    {
+      "file": "eval/images/22469-alt.jpg",
+      "objectId": "22469",
+      "title": "Mask",
+      "category": "weapon",
+      "origin": "JP",
+      "source": "https://images.metmuseum.org/CRDImages/aa/original/LC-14_100_45-009.jpg"
+    }
+  ]
+}

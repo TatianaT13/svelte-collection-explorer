@@ -10,3 +10,8 @@ vite.config.ts.timestamp-*
 .DS_Store
 /test-results
 /playwright-report
+/eval/images
+/eval/cache
+/eval/pairs
+/service/.venv
+/service/archive

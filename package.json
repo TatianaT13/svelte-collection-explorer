@@ -9,6 +9,10 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "data": "node scripts/build-data.mjs",
+    "evaluate": "node scripts/evaluate.mjs",
+    "pairs": "node scripts/build-pairs.mjs",
+    "train": "node scripts/train-head.mjs",
+    "calibrate": "node scripts/calibrate.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

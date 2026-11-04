@@ -426,7 +426,10 @@ async function main() {
     const thumb = scale < 1 ? await img.resize(Math.round(img.width * scale), Math.round(img.height * scale)) : img;
     await thumb.save(`static/data/thumbs/${id}.jpg`);
 
-    const inputs = await processor(thumb);
+    // L'embedding est calculé sur la vignette telle que stockée (JPEG), pas sur l'image en mémoire :
+    // l'index doit décrire exactement l'artefact que l'on sert, sinon l'écart de compression se retrouve dans les scores.
+    const stored = await RawImage.read(`static/data/thumbs/${id}.jpg`);
+    const inputs = await processor(stored);
     const { image_embeds } = await vision(inputs);
     const vec = image_embeds.normalize(2, -1).tolist()[0].map((x) => Math.round(x * 10000) / 10000);
 

@@ -1,0 +1,629 @@
+{
+  "generatedAt": "2026-11-04T21:09:23.460Z",
+  "corpus": 64,
+  "queries": 39,
+  "head": null,
+  "results": {
+    "dinov2-small": {
+      "summary": {
+        "model": "Xenova/dinov2-small",
+        "dim": 384,
+        "queries": 39,
+        "recall@1": 74.4,
+        "recall@5": 92.3,
+        "recall@10": 92.3,
+        "mrr": 0.827,
+        "medianRank": 1,
+        "category@1": 89.7,
+        "origin@1": 82.1,
+        "medianTruthScore": 0.766,
+        "truth>=0.75": 53.8,
+        "truth>=0.8": 43.6,
+        "medianMargin": 0.11,
+        "medianMs": 50
+      },
+      "rows": [
+        {
+          "objectId": "26485",
+          "title": "Icon Fragment",
+          "rank": 1,
+          "truthScore": 0.8798478732755808,
+          "top1": "26485",
+          "top1Score": 0.8798478732755808,
+          "marginVsBestOther": 0.5306428725731103,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 50
+        },
+        {
+          "objectId": "465941",
+          "title": "Devotional Icon",
+          "rank": 1,
+          "truthScore": 0.7085071557195124,
+          "top1": "465941",
+          "top1Score": 0.7085071557195124,
+          "marginVsBestOther": 0.263583127087081,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 39
+        },
+        {
+          "objectId": "317829",
+          "title": "Double Diptych Icon Pendant",
+          "rank": 1,
+          "truthScore": 0.8958384404044638,
+          "top1": "317829",
+          "top1Score": 0.8958384404044638,
+          "marginVsBestOther": 0.34124995161494565,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 36
+        },
+        {
+          "objectId": "466046",
+          "title": "Icon with Christ Pantokrator",
+          "rank": 14,
+          "truthScore": 0.21099947293959606,
+          "top1": "455295",
+          "top1Score": 0.5198866285332197,
+          "marginVsBestOther": -0.30888715559362356,
+          "categoryHit": false,
+          "originHit": false,
+          "ms": 37
+        },
+        {
+          "objectId": "464554",
+          "title": "Temple Pendant with Two Sirens Flanking a Tree of Life (front) and Confronted Birds (back)",
+          "rank": 1,
+          "truthScore": 0.8665691593500696,
+          "top1": "464554",
+          "top1Score": 0.8665691593500696,
+          "marginVsBestOther": 0.038068931227006386,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 35
+        },
+        {
+          "objectId": "464577",
+          "title": "One of a Pair of Temple Pendants, with Confronted Birds (front) and Human Heads (back)",
+          "rank": 1,
+          "truthScore": 0.7155559139924247,
+          "top1": "464577",
+          "top1Score": 0.7155559139924247,
+          "marginVsBestOther": 0.05521351626873294,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 34
+        },
+        {
+          "objectId": "464552",
+          "title": "Temple Pendant with Two Birds Flanking a Tree of Life (front) and Geometric Lead Motifs (back)",
+          "rank": 2,
+          "truthScore": 0.6973028282504377,
+          "top1": "464554",
+          "top1Score": 0.7131462500496248,
+          "marginVsBestOther": -0.015843421799187185,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 35
+        },
+        {
+          "objectId": "464555",
+          "title": "Chain with Birds and Geometric Motifs",
+          "rank": 1,
+          "truthScore": 0.5529931329455,
+          "top1": "464555",
+          "top1Score": 0.5529931329455,
+          "marginVsBestOther": 0.10044836026235765,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 34
+        },
+        {
+          "objectId": "209287",
+          "title": "Christ Preaching",
+          "rank": 29,
+          "truthScore": 0.09320354280753841,
+          "top1": "455295",
+          "top1Score": 0.3605920510626809,
+          "marginVsBestOther": -0.2673885082551425,
+          "categoryHit": false,
+          "originHit": false,
+          "ms": 37
+        },
+        {
+          "objectId": "831188",
+          "title": "Icon of the Virgin and Child, Hodegetria variant",
+          "rank": 13,
+          "truthScore": 0.18404554720943345,
+          "top1": "448298",
+          "top1Score": 0.4719395167799045,
+          "marginVsBestOther": -0.28789396957047103,
+          "categoryHit": false,
+          "originHit": true,
+          "ms": 45
+        },
+        {
+          "objectId": "477499",
+          "title": "Jaharis Byzantine Lectionary",
+          "rank": 1,
+          "truthScore": 0.7746101878209463,
+          "top1": "477499",
+          "top1Score": 0.7746101878209463,
+          "marginVsBestOther": 0.14133177892425675,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 35
+        },
+        {
+          "objectId": "253384",
+          "title": "Faience aryballos (perfume vase)",
+          "rank": 1,
+          "truthScore": 0.9292329977076403,
+          "top1": "253384",
+          "top1Score": 0.9292329977076403,
+          "marginVsBestOther": 0.35259044247837734,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 36
+        },
+        {
+          "objectId": "1029",
+          "title": "The Bryant Vase",
+          "rank": 1,
+          "truthScore": 0.29584939403290994,
+          "top1": "1029",
+          "top1Score": 0.29584939403290994,
+          "marginVsBestOther": 0.023832923517779825,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 39
+        },
+        {
+          "objectId": "825933",
+          "title": "Egyptian Goddess",
+          "rank": 1,
+          "truthScore": 0.8306561185991853,
+          "top1": "825933",
+          "top1Score": 0.8306561185991853,
+          "marginVsBestOther": 0.12196567301720007,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 59
+        },
+        {
+          "objectId": "825935",
+          "title": "Egyptian God",
+          "rank": 1,
+          "truthScore": 0.8110111169352097,
+          "top1": "825935",
+          "top1Score": 0.8110111169352097,
+          "marginVsBestOther": 0.08672744686666034,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 51
+        },
+        {
+          "objectId": "682823",
+          "title": "Egyptian Revival demi-parure",
+          "rank": 1,
+          "truthScore": 0.8234704892136909,
+          "top1": "682823",
+          "top1Score": 0.8234704892136909,
+          "marginVsBestOther": 0.3090802487763581,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 54
+        },
+        {
+          "objectId": "11860",
+          "title": "The Broncho Buster",
+          "rank": 2,
+          "truthScore": 0.7600552465149135,
+          "top1": "11868",
+          "top1Score": 0.7637450090247083,
+          "marginVsBestOther": -0.003689762509794803,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 54
+        },
+        {
+          "objectId": "11863",
+          "title": "Coming Through the Rye",
+          "rank": 2,
+          "truthScore": 0.7307461668550937,
+          "top1": "11871",
+          "top1Score": 0.7825323323335204,
+          "marginVsBestOther": -0.05178616547842663,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 48
+        },
+        {
+          "objectId": "251088",
+          "title": "Terracotta kantharos (drinking cup with high handles)",
+          "rank": 1,
+          "truthScore": 0.8878726896760186,
+          "top1": "251088",
+          "top1Score": 0.8878726896760186,
+          "marginVsBestOther": 0.4237213101609181,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 57
+        },
+        {
+          "objectId": "443197",
+          "title": "Anthology of Persian Poetry",
+          "rank": 2,
+          "truthScore": 0.5297430741084909,
+          "top1": "919132",
+          "top1Score": 0.5327342130534605,
+          "marginVsBestOther": -0.002991138944969607,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 55
+        },
+        {
+          "objectId": "934487",
+          "title": "Persian Dragon-Handled Ewer",
+          "rank": 1,
+          "truthScore": 0.7123735719072252,
+          "top1": "934487",
+          "top1Score": 0.7123735719072252,
+          "marginVsBestOther": 0.10955776330525313,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 54
+        },
+        {
+          "objectId": "452079",
+          "title": "Bowl with Persian Inscription",
+          "rank": 1,
+          "truthScore": 0.9033475993908467,
+          "top1": "452079",
+          "top1Score": 0.9033475993908467,
+          "marginVsBestOther": 0.16552050834250442,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 57
+        },
+        {
+          "objectId": "451833",
+          "title": "Footed Dish with Foliate Rim in Imitation of Chinese Porcelain",
+          "rank": 1,
+          "truthScore": 0.898958413746589,
+          "top1": "451833",
+          "top1Score": 0.898958413746589,
+          "marginVsBestOther": 0.08748473955092528,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 51
+        },
+        {
+          "objectId": "460669",
+          "title": "Small wine pot or teapot",
+          "rank": 1,
+          "truthScore": 0.9033736945909764,
+          "top1": "460669",
+          "top1Score": 0.9033736945909764,
+          "marginVsBestOther": 0.22592762917739861,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 50
+        },
+        {
+          "objectId": "65014",
+          "title": "One of a pair of medallions with portrait busts",
+          "rank": 1,
+          "truthScore": 0.9147491840427324,
+          "top1": "65014",
+          "top1Score": 0.9147491840427324,
+          "marginVsBestOther": 0.2874190151026136,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 54
+        },
+        {
+          "objectId": "207886",
+          "title": "Dish with stenciled decoration",
+          "rank": 3,
+          "truthScore": 0.3229398473360742,
+          "top1": "452079",
+          "top1Score": 0.4776501725385959,
+          "marginVsBestOther": -0.15471032520252165,
+          "categoryHit": false,
+          "originHit": false,
+          "ms": 50
+        },
+        {
+          "objectId": "448620",
+          "title": "Tiraz Textile Fragment",
+          "rank": 1,
+          "truthScore": 0.6860180930600364,
+          "top1": "448620",
+          "top1Score": 0.6860180930600364,
+          "marginVsBestOther": 0.06490175033143486,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 52
+        },
+        {
+          "objectId": "455295",
+          "title": "Tiraz Textile Fragment",
+          "rank": 2,
+          "truthScore": 0.6335161119158258,
+          "top1": "448298",
+          "top1Score": 0.6877853247022742,
+          "marginVsBestOther": -0.05426921278644836,
+          "categoryHit": true,
+          "originHit": false,
+          "ms": 54
+        },
+        {
+          "objectId": "37631",
+          "title": "Textile Panel with Scenes from the Ramayana",
+          "rank": 1,
+          "truthScore": 0.630429762368698,
+          "top1": "37631",
+          "top1Score": 0.630429762368698,
+          "marginVsBestOther": 0.1924036341846329,
+          "categoryHit": true,
+          "originHit": false,
+          "ms": 57
+        },
+        {
+          "objectId": "448298",
+          "title": "Textile Fragment",
+          "rank": 1,
+          "truthScore": 0.8510787253764807,
+          "top1": "448298",
+          "top1Score": 0.8510787253764807,
+          "marginVsBestOther": 0.2386641417791847,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 45
+        },
+        {
+          "objectId": "16818",
+          "title": "Belt Buckle",
+          "rank": 1,
+          "truthScore": 0.874841096488127,
+          "top1": "16818",
+          "top1Score": 0.874841096488127,
+          "marginVsBestOther": 0.40590609380652865,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 51
+        },
+        {
+          "objectId": "450083",
+          "title": "Jewelry",
+          "rank": 1,
+          "truthScore": 0.41472361398381175,
+          "top1": "450083",
+          "top1Score": 0.41472361398381175,
+          "marginVsBestOther": 0.054573766808043545,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 55
+        },
+        {
+          "objectId": "454608",
+          "title": "Book of Prayers, Surat al-Yasin and Surat al-Fath",
+          "rank": 4,
+          "truthScore": 0.45766344152376637,
+          "top1": "443197",
+          "top1Score": 0.6305570013053459,
+          "marginVsBestOther": -0.1728935597815795,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 55
+        },
+        {
+          "objectId": "58449",
+          "title": "Krishna Dancing: Page from the Dispersed \"Boston\" Rasikapriya (Lover's Breviary)",
+          "rank": 1,
+          "truthScore": 0.7811792360320265,
+          "top1": "58449",
+          "top1Score": 0.7811792360320265,
+          "marginVsBestOther": 0.2139909116214016,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 52
+        },
+        {
+          "objectId": "467704",
+          "title": "Pricket Candlestick with a Naked Youth Fighting a Dragon",
+          "rank": 1,
+          "truthScore": 0.8786208098356675,
+          "top1": "467704",
+          "top1Score": 0.8786208098356675,
+          "marginVsBestOther": 0.3711083298212159,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 53
+        },
+        {
+          "objectId": "22739",
+          "title": "Mask",
+          "rank": 1,
+          "truthScore": 0.7409246257596782,
+          "top1": "22739",
+          "top1Score": 0.7409246257596782,
+          "marginVsBestOther": 0.03311322455846488,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 49
+        },
+        {
+          "objectId": "310350",
+          "title": "Mask",
+          "rank": 1,
+          "truthScore": 0.8399409711555204,
+          "top1": "310350",
+          "top1Score": 0.8399409711555204,
+          "marginVsBestOther": 0.44814358501084384,
+          "categoryHit": true,
+          "originHit": false,
+          "ms": 50
+        },
+        {
+          "objectId": "708744",
+          "title": "Mask",
+          "rank": 1,
+          "truthScore": 0.7664825324759129,
+          "top1": "708744",
+          "top1Score": 0.7664825324759129,
+          "marginVsBestOther": 0.40795287363167976,
+          "categoryHit": true,
+          "originHit": false,
+          "ms": 49
+        },
+        {
+          "objectId": "22469",
+          "title": "Mask",
+          "rank": 1,
+          "truthScore": 0.8673084664715225,
+          "top1": "22469",
+          "top1Score": 0.8673084664715225,
+          "marginVsBestOther": 0.1737476194123353,
+          "categoryHit": true,
+          "originHit": true,
+          "ms": 42
+        }
+      ]
+    }
+  },
+  "rerank": {
+    "topK": 20,
+    "crops": [
+      1,
+      0.7,
+      0.5
+    ],
+    "byModel": {
+      "dinov2-small": [
+        {
+          "fragment": "100 %",
+          "mode": "global",
+          "recall@1": 74.4,
+          "recall@5": 92.3,
+          "mrr": 0.827,
+          "msRerank": 0
+        },
+        {
+          "fragment": "100 %",
+          "mode": "mnn",
+          "recall@1": 74.4,
+          "recall@5": 89.7,
+          "mrr": 0.811,
+          "msRerank": 703
+        },
+        {
+          "fragment": "100 %",
+          "mode": "maxsim",
+          "recall@1": 74.4,
+          "recall@5": 89.7,
+          "mrr": 0.822,
+          "msRerank": 703
+        },
+        {
+          "fragment": "100 %",
+          "mode": "global+mnn",
+          "recall@1": 76.9,
+          "recall@5": 92.3,
+          "mrr": 0.84,
+          "msRerank": 703
+        },
+        {
+          "fragment": "100 %",
+          "mode": "global+maxsim",
+          "recall@1": 76.9,
+          "recall@5": 92.3,
+          "mrr": 0.845,
+          "msRerank": 703
+        },
+        {
+          "fragment": "70 %",
+          "mode": "global",
+          "recall@1": 66.7,
+          "recall@5": 89.7,
+          "mrr": 0.769,
+          "msRerank": 0
+        },
+        {
+          "fragment": "70 %",
+          "mode": "mnn",
+          "recall@1": 66.7,
+          "recall@5": 87.2,
+          "mrr": 0.754,
+          "msRerank": 703
+        },
+        {
+          "fragment": "70 %",
+          "mode": "maxsim",
+          "recall@1": 74.4,
+          "recall@5": 87.2,
+          "mrr": 0.82,
+          "msRerank": 703
+        },
+        {
+          "fragment": "70 %",
+          "mode": "global+mnn",
+          "recall@1": 69.2,
+          "recall@5": 89.7,
+          "mrr": 0.786,
+          "msRerank": 703
+        },
+        {
+          "fragment": "70 %",
+          "mode": "global+maxsim",
+          "recall@1": 66.7,
+          "recall@5": 92.3,
+          "mrr": 0.773,
+          "msRerank": 703
+        },
+        {
+          "fragment": "50 %",
+          "mode": "global",
+          "recall@1": 59,
+          "recall@5": 89.7,
+          "mrr": 0.713,
+          "msRerank": 0
+        },
+        {
+          "fragment": "50 %",
+          "mode": "mnn",
+          "recall@1": 56.4,
+          "recall@5": 79.5,
+          "mrr": 0.67,
+          "msRerank": 703
+        },
+        {
+          "fragment": "50 %",
+          "mode": "maxsim",
+          "recall@1": 69.2,
+          "recall@5": 89.7,
+          "mrr": 0.791,
+          "msRerank": 703
+        },
+        {
+          "fragment": "50 %",
+          "mode": "global+mnn",
+          "recall@1": 64.1,
+          "recall@5": 87.2,
+          "mrr": 0.743,
+          "msRerank": 703
+        },
+        {
+          "fragment": "50 %",
+          "mode": "global+maxsim",
+          "recall@1": 66.7,
+          "recall@5": 89.7,
+          "mrr": 0.758,
+          "msRerank": 703
+        }
+      ]
+    }
+  }
+}
