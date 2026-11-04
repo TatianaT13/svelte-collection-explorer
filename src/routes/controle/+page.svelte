@@ -256,6 +256,13 @@
       {#if !reliable}
         <div class="block notice">{i18n.t('insights.unreliable', { pct: Math.round(best * 100) })}</div>
       {/if}
+      {#if reading?.conformal}
+        <div class="block notice">
+          {reading.conformal.unknown
+            ? i18n.t('insights.conformal.unknown')
+            : i18n.t('insights.conformal', { n: reading.conformal.candidates.length, pct: Math.round((1 - reading.conformal.alpha) * 100) })}
+        </div>
+      {/if}
       <div class="block">
         <h4>{i18n.t('insights.identification')}</h4>
         <p class="id">{termLabel('category', topCategory.code, L)} <span class="conf {confidence}">{i18n.t('control.confidence', { level: i18n.t(`score.${confidence}`) })}</span></p>

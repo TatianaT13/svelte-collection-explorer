@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isAmbiguous, readInsights } from './reading';
+import { conformalSet, isAmbiguous, readInsights } from './reading';
 import type { Insights } from './types';
 import { schema } from '$lib/config/schema';
 
@@ -43,5 +43,37 @@ describe('readInsights', () => {
     const r = readInsights(base({ categories: [{ code: 'painting', share: 0.84, count: 10 }], origins: [{ code: 'FR', share: 1, count: 10 }] }), schema.similarity);
     expect(r.confidence).toBe('strong');
     expect(r.ambiguities).toEqual([]);
+  });
+  it('sans calibration, pas d’ensemble conforme', () => {
+    const r = readInsights(base({}), { ...schema.similarity, calibration: undefined });
+    expect(r.conformal).toBeUndefined();
+  });
+});
+
+describe('ensemble conforme', () => {
+  const calibrated = { ...schema.similarity, calibration: { model: 'test', alpha: 0.1, tau: 0.7, source: 'test' } };
+  const refs = [
+    { id: 'a', title: 'a', score: 0.9 },
+    { id: 'b', title: 'b', score: 0.72 },
+    { id: 'c', title: 'c', score: 0.69 }
+  ];
+  it('garde les références au-dessus de τ, dans l’ordre', () => {
+    const r = readInsights(base({ references: refs }), calibrated);
+    expect(r.conformal?.candidates.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(r.conformal?.unknown).toBe(false);
+    expect(r.reliable).toBe(true);
+  });
+  it('ensemble vide : objet probablement absent, lecture non fiable', () => {
+    const r = readInsights(base({ references: [{ id: 'c', title: 'c', score: 0.69 }] }), calibrated);
+    expect(r.conformal?.unknown).toBe(true);
+    expect(r.conformal?.candidates).toEqual([]);
+    expect(r.reliable).toBe(false);
+  });
+  it('τ remplace le seuil réglé à la main', () => {
+    const r = readInsights(base({ references: [{ id: 'a', title: 'a', score: 0.74 }] }), { ...calibrated, reliable: 0.75 });
+    expect(r.reliable).toBe(true);
+  });
+  it('conformalSet est pur', () => {
+    expect(conformalSet(refs, 0.05, 0.95)).toEqual({ alpha: 0.05, tau: 0.95, candidates: [], unknown: true });
   });
 });

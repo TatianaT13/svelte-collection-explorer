@@ -1,4 +1,4 @@
-import type { Insights, Share } from './types';
+import type { Insights, Reference, Share } from './types';
 import type { SimilarityThresholds } from '$lib/config/schema';
 import { riskForCodes, type RiskRule } from '$lib/config/risk';
 
@@ -13,6 +13,18 @@ export interface Ambiguity {
   options: Share[];
 }
 
+/**
+ * Ensemble conforme : les références de similarité ≥ τ. Il contient le bon objet avec probabilité
+ * ≥ 1 − α (garantie de calibration). Vide, il signale un objet probablement absent de la base.
+ * Borné par le top-K des `Insights` : un ensemble qui le remplit est à lire comme « au moins K ».
+ */
+export interface ConformalSet {
+  alpha: number;
+  tau: number;
+  candidates: Reference[];
+  unknown: boolean;
+}
+
 export interface Reading {
   best: number;
   reliable: boolean;
@@ -22,6 +34,13 @@ export interface Reading {
   origins: Share[];
   ambiguities: Ambiguity[];
   risks: RiskRule[];
+  /** Présent seulement si le schéma porte une calibration. */
+  conformal?: ConformalSet;
+}
+
+export function conformalSet(references: Reference[], alpha: number, tau: number): ConformalSet {
+  const candidates = references.filter((r) => r.score >= tau);
+  return { alpha, tau, candidates, unknown: candidates.length === 0 };
 }
 
 /** Deux hypothèses trop proches pour trancher : la première ne domine pas, la seconde pèse. */
@@ -36,7 +55,9 @@ export const RISK_ORIGIN_MIN_SHARE = 0.15;
 
 export function readInsights(insights: Insights, t: SimilarityThresholds): Reading {
   const best = insights.references[0]?.score ?? 0;
-  const reliable = best >= t.reliable;
+  // Avec une calibration, le seuil de fiabilité est τ (garanti) plutôt que la valeur réglée à la main.
+  const conformal = t.calibration ? conformalSet(insights.references, t.calibration.alpha, t.calibration.tau) : undefined;
+  const reliable = best >= (t.calibration?.tau ?? t.reliable);
   const origins = insights.origins.filter((o) => o.share >= 0.005);
   const topCategory = insights.categories[0];
   const topPeriod = insights.periods[0];
@@ -70,5 +91,5 @@ export function readInsights(insights: Insights, t: SimilarityThresholds): Readi
     }
   }
 
-  return { best, reliable, confidence, topCategory, topPeriod, origins, ambiguities, risks };
+  return { best, reliable, confidence, topCategory, topPeriod, origins, ambiguities, risks, conformal };
 }

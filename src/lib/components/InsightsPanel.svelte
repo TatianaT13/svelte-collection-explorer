@@ -63,6 +63,13 @@
       {i18n.t('insights.unreliable', { pct: Math.round(best * 100) })}
     </p>
   {/if}
+  {#if reading.conformal}
+    <p class="notice conformal" role="status">
+      {reading.conformal.unknown
+        ? i18n.t('insights.conformal.unknown')
+        : i18n.t('insights.conformal', { n: reading.conformal.candidates.length, pct: Math.round((1 - reading.conformal.alpha) * 100) })}
+    </p>
+  {/if}
   <div class="grid">
     <div class="block">
       <h3>{i18n.t('insights.identification')}</h3>
