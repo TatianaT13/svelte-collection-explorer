@@ -1,0 +1,69 @@
+{
+  "model": "Xenova/dinov2-small",
+  "head": null,
+  "generatedAt": "2026-11-04T20:58:49.044Z",
+  "corpus": 107,
+  "calibration": 67,
+  "testIn": 40,
+  "testOut": 39,
+  "recall1": 77.5,
+  "recall5": 95,
+  "thresholds": [
+    {
+      "alpha": 0.05,
+      "tau": 0.223,
+      "guaranteed": 95,
+      "coverage": 92.5,
+      "meanSetSize": 23.2,
+      "medianSetSize": 23.5,
+      "singletons": 2.5,
+      "falseRejectRate": 0,
+      "outOfBaseRejectRate": 0,
+      "outOfBaseMeanSetSize": 30.8
+    },
+    {
+      "alpha": 0.1,
+      "tau": 0.369,
+      "guaranteed": 90,
+      "coverage": 92.5,
+      "meanSetSize": 7.9,
+      "medianSetSize": 7,
+      "singletons": 5,
+      "falseRejectRate": 5,
+      "outOfBaseRejectRate": 2.6,
+      "outOfBaseMeanSetSize": 10.1
+    },
+    {
+      "alpha": 0.2,
+      "tau": 0.537,
+      "guaranteed": 80,
+      "coverage": 75,
+      "meanSetSize": 2.4,
+      "medianSetSize": 2,
+      "singletons": 30,
+      "falseRejectRate": 17.5,
+      "outOfBaseRejectRate": 25.6,
+      "outOfBaseMeanSetSize": 2.8
+    }
+  ],
+  "marginRule": [
+    {
+      "alpha": 0.05,
+      "marginThreshold": 0.001,
+      "falseRejectRate": 2.5,
+      "outOfBaseRejectRate": 2.6
+    },
+    {
+      "alpha": 0.1,
+      "marginThreshold": 0.009,
+      "falseRejectRate": 5,
+      "outOfBaseRejectRate": 10.3
+    },
+    {
+      "alpha": 0.2,
+      "marginThreshold": 0.019,
+      "falseRejectRate": 12.5,
+      "outOfBaseRejectRate": 28.2
+    }
+  ]
+}
