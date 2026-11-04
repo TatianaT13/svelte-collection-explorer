@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+hnswlib
+numpy
+python-multipart
