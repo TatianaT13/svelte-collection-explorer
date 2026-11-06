@@ -54,7 +54,9 @@ Le détail — 46 briques, 72 liens, fichier par fichier — est sur la page int
 [**architecture.html**](https://tatianat13.github.io/svelte-collection-explorer/architecture.html)
 (ou `static/architecture.html` en local) : au survol d'une brique, ses liens directs s'animent dans le sens des
 données et le reste s'estompe ; six parcours rejouent un flux complet pas à pas. GitHub rend le Markdown sans
-script, c'est pourquoi la version animée est une page à part.
+script, c'est pourquoi la version animée est une page à part. Le parcours de la donnée elle-même, octet
+par octet (ce que devient une image, où l'information se perd, les tailles à chaque étape), est dans
+[`docs/parcours-donnee.md`](docs/parcours-donnee.md).
 
 ```bash
 npm install
