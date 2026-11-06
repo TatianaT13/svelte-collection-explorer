@@ -14,6 +14,7 @@ import service.main as m
 
 client = TestClient(m.app)
 FIRST = m.items[0]
+FIRST_VECTOR = m.vectors[0].tolist()
 THUMB = m.ROOT / "static/data/thumbs" / f"{FIRST['id']}.jpg"
 
 
@@ -42,14 +43,14 @@ def test_cle_de_filtre_inconnue_refusee():
 
 
 def test_recherche_vectorielle_retrouve_l_objet_lui_meme():
-    r = client.post("/search", json={"vector": FIRST["embedding"], "candidates": 5}).json()
+    r = client.post("/search", json={"vector": FIRST_VECTOR, "candidates": 5}).json()
     assert r["candidates"][0]["id"] == FIRST["id"]
     assert r["candidates"][0]["score"] == 1.0
     assert "embedding" not in r["candidates"][0]
 
 
 def test_recherche_vectorielle_filtree_dans_l_index():
-    r = client.post("/search", json={"vector": FIRST["embedding"], "filters": {"category": "icon"}, "candidates": 50}).json()
+    r = client.post("/search", json={"vector": FIRST_VECTOR, "filters": {"category": "icon"}, "candidates": 50}).json()
     assert r["total"] == 9
     assert all(c["metadata"]["category"] == "icon" for c in r["candidates"])
 

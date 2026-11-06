@@ -19,8 +19,9 @@
     insights,
     onopen,
     onfilterOrigin,
+    ondecide,
     stacked = false
-  }: { insights: Insights; onopen?: (id: string) => void; onfilterOrigin?: (code: string) => void; stacked?: boolean } = $props();
+  }: { insights: Insights; onopen?: (id: string) => void; onfilterOrigin?: (code: string) => void; ondecide?: (d: Decision | null) => void; stacked?: boolean } = $props();
 
   const L = $derived(i18n.locale);
   const reading = $derived(readInsights(insights, schema.similarity));
@@ -51,6 +52,7 @@
       period: topPeriod?.code,
       risk: risks.map((r) => r.label)
     });
+    ondecide?.(d);
   }
 
   const pct = (x: number) => `${Math.round(x * 100)} %`;

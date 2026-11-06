@@ -23,8 +23,8 @@ K = 10
 
 
 def load_real() -> np.ndarray:
-    items = json.loads((ROOT / "static/data/items.json").read_text())["items"]
-    v = np.array([it["embedding"] for it in items], dtype=np.float32)
+    meta = json.loads((ROOT / "static/data/items.json").read_text())
+    v = np.fromfile(ROOT / "static/data/embeddings.bin", dtype=np.float32).reshape(len(meta["items"]), meta["dim"])
     return v / np.linalg.norm(v, axis=1, keepdims=True)
 
 

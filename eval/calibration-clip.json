@@ -1,7 +1,7 @@
 {
   "model": "Xenova/clip-vit-base-patch32",
   "head": null,
-  "generatedAt": "2026-11-04T21:21:19.133Z",
+  "generatedAt": "2026-11-06T07:57:16.067Z",
   "corpus": 107,
   "calibration": 69,
   "testIn": 38,
@@ -12,7 +12,7 @@
     {
       "alpha": 0.05,
       "tau": 0.632,
-      "guaranteed": 95,
+      "target": 95,
       "coverage": 92.1,
       "meanSetSize": 57.6,
       "medianSetSize": 62.5,
@@ -24,7 +24,7 @@
     {
       "alpha": 0.1,
       "tau": 0.747,
-      "guaranteed": 90,
+      "target": 90,
       "coverage": 81.6,
       "meanSetSize": 9.7,
       "medianSetSize": 7,
@@ -36,7 +36,7 @@
     {
       "alpha": 0.2,
       "tau": 0.807,
-      "guaranteed": 80,
+      "target": 80,
       "coverage": 73.7,
       "meanSetSize": 2.7,
       "medianSetSize": 2,

@@ -77,9 +77,11 @@ describe('ensemble conforme', () => {
     expect(r.conformal?.candidates).toEqual([]);
     expect(r.reliable).toBe(false);
   });
-  it('τ remplace le seuil réglé à la main', () => {
-    const r = readInsights(base({ references: [{ id: 'a', title: 'a', score: 0.74 }] }), { ...calibrated, reliable: 0.75 });
-    expect(r.reliable).toBe(true);
+  it('τ fait foi quand il existe ; sans calibration, il faut une similarité forte', () => {
+    expect(readInsights(base({ references: [{ id: 'a', title: 'a', score: 0.74 }] }), calibrated).reliable).toBe(true);
+    const uncalibrated = { ...schema.similarity, calibration: undefined };
+    expect(readInsights(base({ references: [{ id: 'a', title: 'a', score: 0.74 }] }), uncalibrated).reliable).toBe(false);
+    expect(readInsights(base({ references: [{ id: 'a', title: 'a', score: 0.85 }] }), uncalibrated).reliable).toBe(true);
   });
   it('conformalSet est pur', () => {
     expect(conformalSet(refs, 0.05, 0.95)).toEqual({ alpha: 0.05, tau: 0.95, candidates: [], total: 0, truncated: false, inconclusive: true });

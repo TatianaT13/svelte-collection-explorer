@@ -72,14 +72,12 @@ export interface SimilarityThresholds {
   calibration?: Calibration;
   /** Score (cosinus) à partir duquel la similarité est dite forte. */
   strong: number;
-  /** Score à partir duquel elle est dite moyenne ; en dessous, faible. */
-  medium: number;
   /**
-   * Meilleure similarité en dessous de laquelle la lecture agrégée est jugée non fiable :
-   * confiance faible, aucun signal de risque. Mesuré : images sans rapport 0,63–0,72, vraies
-   * correspondances 0,93–0,97 avec CLIP ViT-B/32.
+   * Score à partir duquel elle est dite moyenne ; en dessous, faible.
+   * La fiabilité de la lecture (hésitations examinées, signaux de risque émis) est jugée sur τ quand une
+   * calibration existe ; sans calibration, sur `strong` — on exige alors une similarité forte.
    */
-  reliable: number;
+  medium: number;
   /** Nombre de meilleurs résultats utilisés pour la lecture agrégée (identification, provenance). */
   topK: number;
 }
@@ -129,10 +127,10 @@ export const schema: CollectionSchema = {
   similarity: {
     strong: 0.8,
     medium: 0.65,
-    reliable: 0.75,
     topK: 12,
     // τ mesuré par scripts/calibrate.mjs sur 400 paires (principale, vue alternative) du Met, 69 en calibration :
-    // le bon objet est à similarité ≥ 0,747 dans 90 % des cas. Coïncide avec le 0,75 réglé à la main ci-dessus.
+    // le bon objet est à similarité ≥ 0,747 dans 90 % des cas sur ce jeu. Avant calibration, le seuil réglé à la
+    // main valait 0,75 (images sans rapport 0,63–0,72, vraies correspondances 0,93–0,97 avec CLIP ViT-B/32).
     calibration: { model: 'Xenova/clip-vit-base-patch32', alpha: 0.1, tau: 0.747, source: 'eval/calibration-clip.json · 2026-11-04' }
   },
   upload: { maxPx: 1600, skipBelowBytes: 2 * 1024 * 1024, quality: 0.85 },

@@ -2,26 +2,23 @@
   /**
    * Parcours de contrôle, fidèle à docs/vision-cible.html : trois écrans côte à côte
    * sur grand écran (photo · résultat et décision · dossier), un seul à la fois sur téléphone.
+   * La lecture des résultats est celle de l'explorateur (InsightsPanel, en mode empilé) :
+   * un seul composant pour une seule logique.
    */
   import { onMount } from 'svelte';
   import { api, extractImageInfo, withoutGps, type CollectionItem, type ImageInfo, type SearchResult } from '$lib/api';
   import { schema } from '$lib/config/schema';
-  import { countryName } from '$lib/config/countries';
-  import { termLabel } from '$lib/config/vocabularies';
-  import { readInsights } from '$lib/api/reading';
   import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
   import PhotoQuality from '$lib/components/PhotoQuality.svelte';
   import SampleImages from '$lib/components/SampleImages.svelte';
   import { resizeImage, type ResizeResult } from '$lib/utils/resizeImage';
   import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
-  import { flagEmoji } from '$lib/utils/flag';
-  import { fallbackToThumb } from '$lib/utils/imgFallback';
   import { i18n } from '$lib/i18n/index.svelte';
-  import { lastQuery, type Decision } from '$lib/stores/query.svelte';
-  import { modelStatus } from '$lib/ml/status.svelte';
+  import { lastQuery } from '$lib/stores/query.svelte';
   import ImageUpload from '$lib/components/ImageUpload.svelte';
   import ExtraViews from '$lib/components/ExtraViews.svelte';
   import ModelStatus from '$lib/components/ModelStatus.svelte';
+  import InsightsPanel from '$lib/components/InsightsPanel.svelte';
   import ItemDrawer from '$lib/components/ItemDrawer.svelte';
 
   type Step = 1 | 2 | 3;
@@ -163,40 +160,6 @@
     step = 1;
   }
 
-  // ---- lecture partagée avec InsightsPanel
-  const reading = $derived(insights ? readInsights(insights, schema.similarity) : null);
-  const best = $derived(reading?.best ?? 0);
-  const reliable = $derived(reading?.reliable ?? false);
-  const topCategory = $derived(reading?.topCategory);
-  const topPeriod = $derived(reading?.topPeriod);
-  const origins = $derived(reading?.origins ?? []);
-  const confidence = $derived(reading?.confidence ?? 'weak');
-  const risks = $derived(reading?.risks ?? []);
-  const ambiguities = $derived(reading?.ambiguities ?? []);
-  function optionLabel(kind: 'category' | 'origin', code: string) {
-    return kind === 'category' ? termLabel('category', code, L) : countryName(code, L);
-  }
-  /** « Pourquoi » : attributs dominants parmi les références, en langage courant. */
-  const sharedTags = $derived.by(() => {
-    if (!insights) return [];
-    const tags: string[] = [];
-    for (const m of insights.materials.slice(0, 2)) tags.push(termLabel('material', m.code, L));
-    for (const t of insights.techniques.slice(0, 2)) tags.push(termLabel('technique', t.code, L));
-    for (const s of insights.subjects.slice(0, 1)) tags.push(termLabel('subject', s.code, L));
-    if (topPeriod) tags.push(termLabel('period', topPeriod.code, L));
-    return [...new Set(tags)].slice(0, 5);
-  });
-
-  function decide(d: Decision | null) {
-    lastQuery.decide(d, {
-      origins: origins.map((o) => ({ code: o.code, share: Math.round(o.share * 100) / 100 })),
-      category: topCategory?.code,
-      period: topPeriod?.code,
-      risk: risks.map((r) => i18n.l(r.label))
-    });
-    if (d) step = 3;
-  }
-
   async function openById(id: string) {
     selected = result?.items.find((it) => it.id === id) ?? (await api.getItem(id));
   }
@@ -208,7 +171,6 @@
   const record = $derived(lastQuery.record);
   const caseId = $derived(record ? `${record.at.slice(0, 10).replaceAll('-', '')}-${(record.sha256 ?? '').slice(0, 4)}` : '');
   const photoCount = $derived(1 + extra.length + (crop ? 1 : 0));
-  const pct = (x: number) => `${Math.round(x * 100)} %`;
 </script>
 
 <svelte:head>
@@ -248,72 +210,12 @@
     <p class="hint small">{i18n.t('control.privacy')}</p>
   </article>
 
-  <!-- 2 · RÉSULTAT ET DÉCISION -->
+  <!-- 2 · RÉSULTAT ET DÉCISION : le même panneau que l'explorateur, empilé -->
   <article class="phone" class:active={step === 2} class:hidden={step !== 2} class:empty={!insights}>
     <span class="pill">2 · {i18n.t('control.step2Title').toUpperCase()}</span>
     <div class="bar"><span>{clock}</span><span>{analysedMs !== null ? i18n.t('control.analysedIn', { s: (analysedMs / 1000).toFixed(1) }) : ''}</span></div>
-    {#if insights && topCategory}
-      {#if !reliable}
-        <div class="block notice">{i18n.t('insights.unreliable', { pct: Math.round(best * 100) })}</div>
-      {/if}
-      {#if reading?.conformal}
-        <div class="block notice">
-          {reading.conformal.inconclusive
-            ? i18n.t('insights.conformal.unknown', { tau: reading.conformal.tau.toFixed(2) })
-            : i18n.t('insights.conformal', { n: reading.conformal.total, tau: reading.conformal.tau.toFixed(2), pct: Math.round((1 - reading.conformal.alpha) * 100) })}
-        </div>
-      {/if}
-      <div class="block">
-        <h4>{i18n.t('insights.identification')}</h4>
-        <p class="id">{termLabel('category', topCategory.code, L)} <span class="conf {confidence}">{i18n.t('control.confidence', { level: i18n.t(`score.${confidence}`) })}</span></p>
-        <p class="meta">
-          {insights.materials.slice(0, 2).map((m) => termLabel('material', m.code, L)).join(', ')}
-          {#if topPeriod} · {termLabel('period', topPeriod.code, L)}{/if}
-        </p>
-      </div>
-      <div class="block">
-        <h4>{i18n.t('insights.provenance')}</h4>
-        <div class="prov">
-          {#each origins as o (o.code)}
-            <div><span class="flag" aria-hidden="true">{flagEmoji(o.code)}</span><span class="b" title={countryName(o.code, L)}><i style="width: {o.share * 100}%"></i></span><span class="n">{pct(o.share)}</span></div>
-          {:else}
-            <p class="meta">{i18n.t('insights.unknownOrigin')}</p>
-          {/each}
-        </div>
-        <p class="meta">{i18n.t('insights.basedOn', { n: insights.topK })}</p>
-      </div>
-      {#each ambiguities as a (a.kind)}
-        <div class="block amb">
-          <p class="id">{i18n.t('insights.ambiguous')}</p>
-          <p class="meta">{i18n.t(`insights.ambiguous.${a.kind}`, { a: optionLabel(a.kind, a.options[0].code), pa: Math.round(a.options[0].share * 100), b: optionLabel(a.kind, a.options[1].code), pb: Math.round(a.options[1].share * 100) })} {i18n.t('insights.ambiguousAdvice')}</p>
-        </div>
-      {/each}
-      {#each risks as r (r.id)}
-        <div class="block alert" class:emergency={r.emergency}>
-          <p class="id">⚠ {i18n.t('insights.risk', { label: i18n.l(r.label) })}</p>
-          <p class="meta"><strong>{i18n.t('insights.riskNotStolen')}</strong> {i18n.l(r.advice)} <a href={r.url} target="_blank" rel="noopener">{i18n.t('insights.riskLink')}</a></p>
-        </div>
-      {/each}
-      <div class="block">
-        <h4>{i18n.t('control.why')}</h4>
-        <div class="why">
-          {#each insights.references.slice(0, 3) as r (r.id)}
-            <button type="button" class="t" onclick={() => openById(r.id)} title={r.title}>
-              <img src={r.thumbnailUrl} alt={r.title} onerror={(e) => fallbackToThumb(e, r.thumbnailUrl)} />
-              <span>{Math.round(r.score * 100)}</span>
-            </button>
-          {/each}
-        </div>
-        {#if sharedTags.length}
-          <div class="tags">{#each sharedTags as t (t)}<span>{t}</span>{/each}</div>
-        {/if}
-      </div>
-      <div class="actions">
-        <button type="button" class="hold" onclick={() => decide('hold')}>{i18n.t('control.hold')}</button>
-        <button type="button" class="ok" onclick={() => decide('release')}>{i18n.t('control.release')}</button>
-      </div>
-      <button type="button" class="link center" onclick={() => decide('expert')}>{i18n.t('control.expertRemote')}</button>
-      {#if decision}<p class="hint small done">✓ {i18n.t(`decision.${decision}`)}</p>{/if}
+    {#if insights}
+      <InsightsPanel {insights} stacked onopen={openById} ondecide={(d) => { if (d) step = 3; }} />
     {:else}
       <div class="placeholder">
         <p>{i18n.t('control.waitPhoto')}</p>
@@ -471,14 +373,8 @@
   .hint.small {
     font-size: 11px;
   }
-  .done {
-    color: var(--compare);
-    font-weight: 600;
-  }
   .primary,
-  .secondary,
-  .hold,
-  .ok {
+  .secondary {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -499,24 +395,13 @@
     opacity: 0.45;
     cursor: not-allowed;
   }
+  .primary.warn {
+    background: #b45309;
+  }
   .secondary {
     background: var(--surface-2);
     color: var(--fg);
     font-weight: 500;
-    margin-top: auto;
-  }
-  .hold {
-    background: #b42318;
-    color: #fff;
-  }
-  .ok {
-    background: var(--compare);
-    color: var(--compare-ink);
-  }
-  .actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
     margin-top: auto;
   }
   .link {
@@ -527,10 +412,6 @@
     font-size: 12px;
     cursor: pointer;
     padding: 2px 0;
-  }
-  .link.center {
-    color: var(--muted);
-    text-align: center;
   }
   .links {
     display: flex;
@@ -554,147 +435,6 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
-  }
-  .block.notice {
-    background: var(--surface-2);
-    font-size: 12px;
-    color: var(--fg);
-  }
-  .id {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .conf {
-    font-size: 11px;
-    padding: 1px 7px;
-    border-radius: 999px;
-    font-weight: 600;
-  }
-  .conf.strong { background: var(--compare-soft); color: var(--compare); }
-  .conf.medium { background: var(--accent-soft); color: var(--accent); }
-  .conf.weak { background: var(--surface-2); color: var(--muted); }
-  .meta {
-    margin: 2px 0 0;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .meta a {
-    color: inherit;
-  }
-  .prov {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .prov div {
-    display: grid;
-    grid-template-columns: 22px 1fr 40px;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-  }
-  .prov .b {
-    height: 8px;
-    border-radius: 4px;
-    background: var(--surface-2);
-    overflow: hidden;
-  }
-  .prov .b i {
-    display: block;
-    height: 100%;
-    background: var(--accent);
-  }
-  .prov .n {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    color: var(--muted);
-    font-size: 12px;
-  }
-  .amb {
-    border: 1px dashed var(--accent);
-    background: var(--accent-soft);
-  }
-  .amb .id {
-    font-size: 13px;
-    color: var(--accent);
-  }
-  .primary.warn {
-    background: #b45309;
-  }
-  .alert {
-    border-color: #f3c48c;
-    background: #fff6e8;
-  }
-  .alert .id {
-    color: #b45309;
-    font-size: 13px;
-  }
-  .alert .meta {
-    color: var(--fg);
-  }
-  .alert.emergency {
-    border-color: #f1a7a0;
-    background: #fdecea;
-  }
-  .alert.emergency .id {
-    color: #b42318;
-  }
-  :global(:root[data-theme='dark']) .alert {
-    background: color-mix(in srgb, #f59e0b 14%, var(--surface));
-    border-color: color-mix(in srgb, #f59e0b 40%, transparent);
-  }
-  :global(:root[data-theme='dark']) .alert .meta {
-    color: #f6d9a8;
-  }
-  .why {
-    display: flex;
-    gap: 6px;
-  }
-  .why .t {
-    position: relative;
-    flex: 1;
-    aspect-ratio: 1;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--surface-2);
-    cursor: pointer;
-  }
-  .why img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .why span {
-    position: absolute;
-    right: 4px;
-    top: 4px;
-    padding: 1px 5px;
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.92);
-    color: #1b1c1f;
-    font-size: 10px;
-    font-weight: 600;
-  }
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 6px;
-  }
-  .tags span {
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 999px;
-    background: var(--accent-soft);
   }
   .rows div {
     display: flex;
@@ -782,7 +522,6 @@
   }
   @media print {
     .tabs,
-    .actions,
     .links,
     .primary,
     .secondary,

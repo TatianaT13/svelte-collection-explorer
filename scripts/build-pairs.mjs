@@ -1,23 +1,23 @@
 /**
  * Paires (photo principale, vue alternative) d'objets du Met, embarquées avec un modèle gelé.
- * Sert à l'affinage par métrique (train-head.mjs) et à la calibration conforme (calibrate.mjs).
+ * Servent à la calibration conforme (calibrate.mjs) et à l'affinage (experiments/train-head.mjs).
  *
  *   node scripts/build-pairs.mjs                      # dinov2-small, ~400 objets
  *   node scripts/build-pairs.mjs --model clip --max 600
  *
  * Produit eval/pairs/<modèle>.json : { model, dim, objects: [{ id, category, origin, primary: [...], alt: [...] }] }.
- * Vecteurs seulement, pas d'images. Les objets de static/data/items.json (corpus de démo) sont exclus :
- * ils restent le jeu de test de evaluate.mjs.
+ * Vecteurs seulement, pas d'images. Les objets du corpus de démo sont exclus : ils restent le jeu de test.
  */
 import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
-import { AutoModel, AutoProcessor, CLIPVisionModelWithProjection, RawImage, env } from '@huggingface/transformers';
+import { RawImage } from '@huggingface/transformers';
+import { getModel } from './lib/models.mjs';
+import { argValue } from './lib/metrics.mjs';
 
 const API = 'https://collectionapi.metmuseum.org/public/collection/v1';
-const MODEL_KEY = process.argv[process.argv.indexOf('--model') + 1] || 'dinov2-small';
-const MAX = Number(process.argv[process.argv.indexOf('--max') + 1]) || 400;
+const MODEL_KEY = argValue('--model', 'dinov2-small');
+const MAX = Number(argValue('--max', 400));
 const PX = 512;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-env.allowLocalModels = false;
 
 /** Mêmes thèmes que build-data.mjs, élargis : variété de types et d'origines, accent Europe de l'Est et pays du 19 CFR §12.104g. */
 const QUERIES = [
@@ -26,27 +26,6 @@ const QUERIES = [
   'medal', 'ivory', 'cypriot', 'etruscan', 'mesopotamia', 'syrian', 'coptic', 'islamic ceramic', 'precolumbian', 'maya',
   'inca', 'nubian', 'reliquary', 'chalice', 'bronze figure', 'terracotta figurine', 'glass bottle', 'seal cylinder'
 ];
-
-const MODELS = {
-  clip: {
-    id: 'Xenova/clip-vit-base-patch32',
-    async load() {
-      const processor = await AutoProcessor.from_pretrained(this.id);
-      const model = await CLIPVisionModelWithProjection.from_pretrained(this.id, { dtype: 'q8' });
-      return async (img) => Float32Array.from((await model(await processor(img))).image_embeds.normalize(2, -1).data);
-    }
-  },
-  'dinov2-small': { id: 'Xenova/dinov2-small', load: loadDino },
-  'dinov2-base': { id: 'Xenova/dinov2-base', load: loadDino }
-};
-async function loadDino() {
-  const processor = await AutoProcessor.from_pretrained(this.id);
-  const model = await AutoModel.from_pretrained(this.id, { dtype: 'q8' });
-  return async (img) => {
-    const out = await model(await processor(img));
-    return Float32Array.from((out.pooler_output ?? out.last_hidden_state.slice(null, 0)).normalize(2, -1).data);
-  };
-}
 
 async function getJson(url, attempt = 0) {
   const res = await fetch(url, { headers: { accept: 'application/json' } });
@@ -69,21 +48,19 @@ const origin = (o) => COUNTRY[(o.country || '').toLowerCase().trim()] ?? '';
 const category = (o) => `${o.objectName || ''} ${o.classification || ''}`.toLowerCase().split(/[^a-z]+/).find((w) => w.length > 2) ?? 'other';
 
 async function main() {
-  const def = MODELS[MODEL_KEY];
-  if (!def) throw new Error(`modèle inconnu : ${MODEL_KEY}`);
+  const def = getModel(MODEL_KEY);
   const exclude = new Set(JSON.parse(await readFile('static/data/items.json', 'utf8')).items.map((it) => String(it.id)));
   await mkdir('eval/pairs', { recursive: true });
   const outPath = `eval/pairs/${MODEL_KEY}.json`;
-  const done = new Map();
+  const objects = [];
   if (await access(outPath).then(() => true, () => false)) {
-    for (const o of JSON.parse(await readFile(outPath, 'utf8')).objects) done.set(o.id, o);
-    console.log(`${done.size} objets déjà présents dans ${outPath}, on complète`);
+    objects.push(...JSON.parse(await readFile(outPath, 'utf8')).objects);
+    console.log(`${objects.length} objets déjà présents dans ${outPath}, on complète`);
   }
+  const seen = new Set(objects.map((o) => o.id));
 
   console.log('chargement du modèle', def.id);
   const embed = await def.load();
-  const seen = new Set(done.keys());
-  const objects = [...done.values()];
   const rounded = (v) => [...v].map((x) => Math.round(x * 10000) / 10000);
 
   for (const q of QUERIES) {

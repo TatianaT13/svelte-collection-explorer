@@ -1,9 +1,8 @@
-import { base } from '$app/paths';
 import type { ArchiveReceipt, CollectionAdapter } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { computeInsights, geoBuckets } from './insights';
-import { places } from '$lib/stores/places.svelte';
+import { loadPlaces, queryVector, withBase } from './shared';
 import { schema } from '$lib/config/schema';
 
 /**
@@ -16,7 +15,7 @@ import { schema } from '$lib/config/schema';
  *   VITE_ADAPTER=remote VITE_API_URL=http://localhost:8000 npm run dev
  */
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000';
-/** Nombre de candidats scorés rapatriés pour la lecture agrégée et la carte. */
+/** Nombre de candidats scorés rapatriés pour la lecture agrégée et la carte (borne de l'ensemble conforme). */
 const CANDIDATES = 200;
 
 interface Meta {
@@ -41,45 +40,10 @@ async function checkMeta(): Promise<Meta> {
   return meta;
 }
 
-async function loadPlaces() {
-  try {
-    const r = await fetch(`${base}/data/places.json`);
-    if (r.ok) places.set((await r.json()).places ?? {});
-  } catch {
-    /* gazetier absent : les lieux s'affichent par identifiant */
-  }
-}
-
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return r.json() as Promise<T>;
-}
-
-function withBase(it: CollectionItem): CollectionItem {
-  return { ...it, thumbnailUrl: it.thumbnailUrl ? `${base}/${it.thumbnailUrl}` : it.thumbnailUrl };
-}
-
-/** Moyenne de vecteurs normalisés, renormalisée : une seule requête pour plusieurs vues. */
-function averageNormalized(vectors: Float32Array[]): Float32Array {
-  if (vectors.length === 1) return vectors[0];
-  const out = new Float32Array(vectors[0].length);
-  for (const v of vectors) for (let i = 0; i < out.length; i++) out[i] += v[i];
-  let norm = 0;
-  for (let i = 0; i < out.length; i++) norm += out[i] * out[i];
-  norm = Math.sqrt(norm) || 1;
-  for (let i = 0; i < out.length; i++) out[i] /= norm;
-  return out;
-}
-
-const queryCache = new WeakMap<File, Promise<Float32Array>>();
-async function queryEmbedding(file: File): Promise<Float32Array> {
-  let p = queryCache.get(file);
-  if (!p) {
-    p = import('$lib/ml/embedder').then(({ embedImage }) => embedImage(file));
-    queryCache.set(file, p);
-  }
-  return p;
 }
 
 interface RemoteSearch {
@@ -93,11 +57,7 @@ interface RemoteSearch {
 export const remoteAdapter: CollectionAdapter = {
   async search(query: SearchQuery): Promise<SearchResult> {
     await checkMeta();
-    let vector: number[] | undefined;
-    if (query.image) {
-      const views = [query.image, ...(query.extraImages ?? [])];
-      vector = [...averageNormalized(await Promise.all(views.map(queryEmbedding)))];
-    }
+    const vector = query.image ? [...(await queryVector(query.image, query.extraImages))] : undefined;
     const r = await getJson<RemoteSearch>(`${API}/search`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -109,7 +69,6 @@ export const remoteAdapter: CollectionAdapter = {
       total: r.total,
       page: r.page,
       pageSize: r.pageSize,
-      // L'ensemble conforme est compté sur les candidats rapatriés (200) : une borne, documentée dans le README.
       insights: vector ? computeInsights(candidates, schema.similarity.topK, schema.similarity.calibration?.tau) : undefined,
       geo: geoBuckets(candidates)
     };

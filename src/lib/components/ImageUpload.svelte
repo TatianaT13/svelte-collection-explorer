@@ -12,6 +12,14 @@
     oncrop
   }: { file?: File | null; onchange?: (f: File | null) => void; oncrop?: (f: File | null) => void } = $props();
 
+  // Le modèle (~90 Mo) part pendant que l'agent cherche sa photo, pas après l'avoir choisie.
+  let preloaded = false;
+  function preload() {
+    if (preloaded) return;
+    preloaded = true;
+    import('$lib/ml/embedder').then(({ preloadModel }) => preloadModel());
+  }
+
   let dragging = $state(false);
   let inputEl: HTMLInputElement;
   let cameraEl: HTMLInputElement;
@@ -114,6 +122,8 @@
 
 <div
   class="dropzone"
+  onmouseenter={preload}
+  onfocusin={preload}
   class:dragging
   class:has-file={!!file}
   role="group"

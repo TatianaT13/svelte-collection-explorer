@@ -35,10 +35,11 @@ ARCHIVE = Path(__file__).resolve().parent / "archive"
 
 dataset = json.loads(DATA.read_text())
 items: list[dict[str, Any]] = dataset["items"]
-vectors = np.array([it["embedding"] for it in items], dtype=np.float32)
-vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)  # arrondis à 4 décimales dans le fichier
-DIM = int(vectors.shape[1])
-public = [{k: v for k, v in it.items() if k != "embedding"} for it in items]
+DIM = int(dataset["dim"])
+# Vecteurs à part, en binaire (Float32 n × dim, même ordre que items) : voir scripts/build-data.mjs.
+vectors = np.fromfile(ROOT / "static/data/embeddings.bin", dtype=np.float32).reshape(len(items), DIM)
+vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+public = items
 row_by_id = {it["id"]: i for i, it in enumerate(items)}
 
 places: dict[str, dict] = json.loads(PLACES.read_text())["places"] if PLACES.exists() else {}

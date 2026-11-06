@@ -8,7 +8,8 @@
  *
  * Produit :
  *   static/data/thumbs/<id>.jpg   vignettes 512 px
- *   static/data/items.json        objets au format CollectionItem + embedding CLIP
+ *   static/data/items.json        objets au format CollectionItem (métadonnées, champ model)
+ *   static/data/embeddings.bin    vecteurs Float32, un par objet dans le même ordre (n × dim)
  *   static/data/places.json       gazetier : lieux Wikidata (libellés, hiérarchie, coordonnées)
  *
  * Les embeddings sont calculés avec le même modèle que celui chargé dans le
@@ -413,6 +414,7 @@ async function main() {
   const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { dtype: 'q8' });
 
   const items = [];
+  const vectors = [];
   for (const { o, category } of collected) {
     const id = String(o.objectID);
     let img;
@@ -431,7 +433,7 @@ async function main() {
     const stored = await RawImage.read(`static/data/thumbs/${id}.jpg`);
     const inputs = await processor(stored);
     const { image_embeds } = await vision(inputs);
-    const vec = image_embeds.normalize(2, -1).tolist()[0].map((x) => Math.round(x * 10000) / 10000);
+    vectors.push(Float32Array.from(image_embeds.normalize(2, -1).data));
 
     const medium = o.medium || '';
     items.push({
@@ -456,16 +458,20 @@ async function main() {
         description: [medium, o.culture, o.objectDate].filter(Boolean).join(' · '),
         inventory: o.accessionNumber || '',
         source: `The Metropolitan Museum of Art, Open Access (CC0) · ${o.objectURL}`
-      },
-      embedding: vec
+      }
     });
     process.stdout.write(`\rembeddings ${items.length}/${collected.length}   `);
   }
   console.log();
 
-  const out = { model: MODEL, generatedAt: new Date().toISOString(), source: 'The Metropolitan Museum of Art Open Access API (CC0)', items };
+  const dim = vectors[0]?.length ?? 0;
+  const out = { model: MODEL, dim, generatedAt: new Date().toISOString(), source: 'The Metropolitan Museum of Art Open Access API (CC0)', items };
   await writeFile('static/data/items.json', JSON.stringify(out));
-  console.log(`écrit static/data/items.json (${items.length} objets)`);
+  // Les vecteurs à part, en binaire : 128 Ko au lieu de 3 Mo de texte, et le mode distant n'en a pas besoin.
+  const bin = new Float32Array(items.length * dim);
+  vectors.forEach((v, i) => bin.set(v, i * dim));
+  await writeFile('static/data/embeddings.bin', Buffer.from(bin.buffer));
+  console.log(`écrit static/data/items.json (${items.length} objets) et embeddings.bin (${items.length} × ${dim})`);
 }
 
 main().catch((e) => {

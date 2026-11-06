@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-11-06T08:00:26.052Z",
+  "model": "Xenova/dinov2-small",
+  "topK": 20,
+  "crops": [
+    1
+  ],
+  "rows": [
+    {
+      "fragment": "100 %",
+      "mode": "global",
+      "recall@1": 74.4,
+      "recall@5": 92.3,
+      "mrr": 0.827,
+      "msRerank": 0
+    },
+    {
+      "fragment": "100 %",
+      "mode": "maxsim",
+      "recall@1": 74.4,
+      "recall@5": 89.7,
+      "mrr": 0.822,
+      "msRerank": 707
+    }
+  ]
+}

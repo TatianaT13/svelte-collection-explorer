@@ -1,35 +1,24 @@
 /**
- * Affinage par métrique sans GPU : une projection linéaire W (d × d) apprise sur les embeddings gelés
- * d'un modèle, avec une perte contrastive InfoNCE symétrique sur des paires (principale, vue alternative).
- * Les autres objets du lot servent de négatifs. W part de l'identité et y est rappelée (régularisation),
- * pour ne pas sur-apprendre quelques centaines de paires.
+ * Expérience : affinage par métrique sans GPU. Une projection linéaire W (d × d) apprise sur les embeddings
+ * gelés d'un modèle, avec une perte contrastive InfoNCE symétrique sur des paires (principale, vue alternative) ;
+ * les autres objets du lot servent de négatifs. W part de l'identité et y est rappelée (régularisation).
+ * Résultat retenu (README § 16) : recall inchangé, marge +63 %, ensembles conformes quatre fois plus petits.
  *
- *   node scripts/train-head.mjs                                  # eval/pairs/dinov2-small.json
- *   node scripts/train-head.mjs --model clip --epochs 40 --temp 0.05 --lambda 0.1
+ *   node experiments/train-head.mjs                              # eval/pairs/dinov2-small.json → eval/heads/dinov2-small.json
+ *   node experiments/train-head.mjs --model clip --epochs 40 --temp 0.05 --lambda 0.1
  *
- * Partition déterministe par objet (hash de l'identifiant) : 0–5 entraînement, 6–7 calibration, 8–9 test.
- * Produit eval/heads/<modèle>.json, que evaluate.mjs (--head) et calibrate.mjs (--head) appliquent.
+ * Partition par objet (scripts/lib/metrics.mjs) : 0–5 entraînement, 6–7 calibration, 8–9 test.
+ * La tête s'applique avec `scripts/evaluate.mjs --head` et `scripts/calibrate.mjs --head`.
  */
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { argValue as arg, isTrain } from '../scripts/lib/metrics.mjs';
 
-const arg = (name, dflt) => {
-  const i = process.argv.indexOf(name);
-  return i === -1 ? dflt : process.argv[i + 1];
-};
 const MODEL_KEY = arg('--model', 'dinov2-small');
 const EPOCHS = Number(arg('--epochs', 30));
 const BATCH = Number(arg('--batch', 64));
 const TEMP = Number(arg('--temp', 0.07));
 const LAMBDA = Number(arg('--lambda', 0.05)); // rappel vers l'identité
 const LR = Number(arg('--lr', 0.002));
-
-/** Partition stable : même objet, même lot, dans tous les scripts. */
-export function bucket(id) {
-  let h = 5381;
-  for (const c of String(id)) h = ((h << 5) + h + c.charCodeAt(0)) | 0;
-  return Math.abs(h) % 10;
-}
-export const isTrain = (id) => bucket(id) <= 5;
 
 function normalizeRows(M, n, d) {
   const out = new Float32Array(n * d);
@@ -58,8 +47,8 @@ function matmul(A, W, n, d) {
   return C;
 }
 
-/** Gradient d'une perte InfoNCE symétrique sur un lot : renvoie { loss, dW }. */
-export function batchGrad(P, A, W, B, d) {
+/** Gradient d'une perte InfoNCE symétrique sur un lot : { loss, dW }. Vérifié par différences finies. */
+export function batchGrad(P, A, W, B, d, temp = TEMP, lambda = LAMBDA) {
   const U = matmul(P, W, B, d);
   const V = matmul(A, W, B, d);
   const { Z: Zp, norms: np } = normalizeRows(U, B, d);
@@ -70,7 +59,7 @@ export function batchGrad(P, A, W, B, d) {
   for (let i = 0; i < B; i++) for (let j = 0; j < B; j++) {
     let s = 0;
     for (let k = 0; k < d; k++) s += Za[i * d + k] * Zp[j * d + k];
-    S[i * B + j] = s / TEMP;
+    S[i * B + j] = s / temp;
   }
   // softmax par ligne (vue → principale) et par colonne (principale → vue)
   const G = new Float32Array(B * B);
@@ -95,7 +84,7 @@ export function batchGrad(P, A, W, B, d) {
   const dZa = new Float32Array(B * d);
   const dZp = new Float32Array(B * d);
   for (let i = 0; i < B; i++) for (let j = 0; j < B; j++) {
-    const g = G[i * B + j] / TEMP;
+    const g = G[i * B + j] / temp;
     if (g === 0) continue;
     for (let k = 0; k < d; k++) {
       dZa[i * d + k] += g * Zp[j * d + k];
@@ -128,8 +117,8 @@ export function batchGrad(P, A, W, B, d) {
   let reg = 0;
   for (let k = 0; k < d; k++) for (let j = 0; j < d; j++) {
     const diff = W[k * d + j] - (k === j ? 1 : 0);
-    dW[k * d + j] += 2 * LAMBDA * diff;
-    reg += LAMBDA * diff * diff;
+    dW[k * d + j] += 2 * lambda * diff;
+    reg += lambda * diff * diff;
   }
   return { loss: loss + reg, dW };
 }
@@ -138,8 +127,7 @@ async function main() {
   const pairs = JSON.parse(await readFile(`eval/pairs/${MODEL_KEY}.json`, 'utf8'));
   const d = pairs.dim;
   const train = pairs.objects.filter((o) => isTrain(o.id));
-  const held = pairs.objects.length - train.length;
-  console.log(`${pairs.objects.length} paires (${pairs.model}, d=${d}) : ${train.length} entraînement, ${held} réservées à la calibration et au test`);
+  console.log(`${pairs.objects.length} paires (${pairs.model}, d=${d}) : ${train.length} entraînement, ${pairs.objects.length - train.length} réservées à la calibration et au test`);
   if (train.length < BATCH) throw new Error(`trop peu de paires d'entraînement (${train.length}) pour un lot de ${BATCH}`);
 
   const W = new Float32Array(d * d);
@@ -166,9 +154,7 @@ async function main() {
       for (let i = 0; i < W.length; i++) {
         m[i] = b1 * m[i] + (1 - b1) * dW[i];
         v[i] = b2 * v[i] + (1 - b2) * dW[i] * dW[i];
-        const mh = m[i] / (1 - b1 ** step);
-        const vh = v[i] / (1 - b2 ** step);
-        W[i] -= (LR * mh) / (Math.sqrt(vh) + 1e-8);
+        W[i] -= (LR * (m[i] / (1 - b1 ** step))) / (Math.sqrt(v[i] / (1 - b2 ** step)) + 1e-8);
       }
       total += loss;
       batches++;

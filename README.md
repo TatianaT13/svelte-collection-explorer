@@ -20,7 +20,7 @@ flowchart LR
   LOCAL["Adapter local<br/>tout dans le navigateur"]
   REMOTE["Adapter distant<br/>inférence navigateur · recherche serveur"]
   ML["Worker CLIP<br/>transformers.js, int8"]
-  DATA[("items.json · places.json<br/>vignettes")]
+  DATA[("items.json · embeddings.bin<br/>places.json · vignettes")]
   SVC["Service FastAPI<br/>index HNSW · archive SHA-256"]
 
   UI --> ADP
@@ -41,7 +41,7 @@ Hors parcours, la préparation des données et les mesures, qui produisent ce qu
 flowchart LR
   MET["API du Met (CC0)<br/>+ Wikidata"]
   BUILD["build-data.mjs<br/>vignettes, embeddings, gazetier"]
-  DATA[("items.json · places.json<br/>vignettes")]
+  DATA[("items.json · embeddings.bin<br/>places.json · vignettes")]
   EVAL["evaluate · build-pairs · train-head · calibrate<br/>recall@k, tête apprise, τ"]
   CFG["Schéma : seuil calibré τ"]
 
@@ -96,10 +96,11 @@ chargement de données, build Vite. Ce projet n'utilise que le routage et le SSR
 ```
 scripts/build-data.mjs         # constitution du jeu de données (API du Met, vignettes, embeddings)
 scripts/build-samples.mjs      # images d'exemple : vues alternatives d'objets du jeu de données
-scripts/evaluate.mjs           # évaluation chiffrée : recall@k, CLIP contre DINOv2, calibration des seuils
-scripts/build-pairs.mjs        # paires (principale, vue alternative) du Met, embarquées : affinage et calibration
-scripts/train-head.mjs         # projection apprise sur embeddings gelés (InfoNCE), sans GPU
-scripts/calibrate.mjs          # prédiction conforme : ensembles garantis, rejet hors base
+scripts/evaluate.mjs           # mesure : recall@k, MRR sur vues alternatives, cohérence de l'index
+scripts/build-pairs.mjs        # paires (principale, vue alternative) du Met, embarquées : calibration et expériences
+scripts/calibrate.mjs          # prédiction conforme : τ, couverture, rejet hors base
+scripts/lib/                   # models.mjs (CLIP, DINOv2-small, même interface), metrics.mjs (cosinus, partition, corpus)
+experiments/                   # hors application : train-head.mjs (projection apprise), rerank.mjs (MaxSim sur patches)
 docs/propositions.md           # feuille de route : toutes les propositions d'avancement, état et mesures
 eval/                          # jeu de requêtes, résultats, têtes apprises, calibrations, banc d'index (images, caches et paires ignorés par git)
 service/main.py                # service d'index (FastAPI + hnswlib) pour l'adapter distant ; archive avec SHA-256 vérifié
@@ -122,6 +123,7 @@ src/
       adapter.ts               # interface CollectionAdapter
       localAdapter.ts          # jeu de données statique + recherche par image dans le navigateur (défaut)
       remoteAdapter.ts         # index dans un service séparé, inférence dans le navigateur (VITE_ADAPTER=remote)
+      shared.ts                # ce que les deux adapters partagent : gazetier, vignettes, vecteur de requête
       mockAdapter.ts           # données générées, sans modèle (VITE_ADAPTER=mock)
       filtering.ts             # filtrage et recherche texte, purs et testés
       insights.ts              # lecture agrégée des meilleurs résultats (identification, provenance)
@@ -449,10 +451,11 @@ et le Proche-Orient. `npm run data` lance `scripts/build-data.mjs`, qui :
    recherche `objectBeginDate`, qui reflète souvent la période d'activité de l'artiste : un testeur
    avait relevé « 1837 » pour un tableau de 1892. La date textuelle est conservée telle quelle ;
 3. enregistre des vignettes de 512 px dans `static/data/thumbs/` ;
-4. calcule pour chaque image un **embedding CLIP** (`Xenova/clip-vit-base-patch32`) et écrit
-   `static/data/items.json`.
+4. calcule pour chaque vignette **stockée** un **embedding CLIP** (`Xenova/clip-vit-base-patch32`) et écrit
+   `static/data/items.json` (métadonnées, champ `model`) et `static/data/embeddings.bin` (Float32, un
+   vecteur par objet dans le même ordre : 128 Ko au lieu de 3 Mo de JSON).
 
-Côté navigateur, `localAdapter.ts` charge ce fichier. Quand une photo est déposée,
+Côté navigateur, `localAdapter.ts` charge ces deux fichiers une fois et garde une `Map` identifiant → vecteur. Quand une photo est déposée,
 `ml/embedder.ts` confie le travail à un **Web Worker** (`ml/embed.worker.ts`) qui charge le **même
 modèle** avec transformers.js (ONNX Runtime Web, ~90 Mo quantifiés, téléchargés une fois puis en
 cache), calcule le vecteur de la photo et renvoie le résultat ; l'interface ne gèle jamais, même
@@ -740,11 +743,13 @@ Trois lectures :
 - **L'index doit décrire exactement l'artefact servi.** La première passe a révélé un écart médian de
   0,019 (max 0,12) entre les embeddings de `items.json` et leur recalcul : l'index avait été calculé sur
   l'image en mémoire, pas sur la vignette JPEG réellement stockée. `build-data.mjs` relit maintenant la
-  vignette enregistrée avant de l'embarquer, et `items.json` a été réaligné.
+  vignette enregistrée avant de l'embarquer, et les vecteurs vivent dans `embeddings.bin` (Float32, 128 Ko)
+  à part des métadonnées ; l'écart recalculé est tombé à 0,0001.
 
 Limites : 39 requêtes, c'est peu — assez pour orienter, pas pour conclure à deux points près. DINOv2
 base derrière small est probablement un effet de la quantification int8 ou de l'échantillon ; à vérifier
-en fp32 avant d'en tirer quoi que ce soit. Et une vue alternative est une requête facile (même objet,
+en fp32 avant d'en tirer quoi que ce soit — il a été retiré de `scripts/lib/models.mjs`, on ne garde que ce
+qu'on sait expliquer. Et une vue alternative est une requête facile (même objet,
 même studio, même lumière) : une photo de terrain, floue, sous néon, sur fond de comptoir, fera moins bien.
 La métrique d'acceptation reste la concordance avec des experts ; celle-ci sert à itérer avant.
 
@@ -757,7 +762,7 @@ sur les embeddings gelés de DINOv2-small, avec une perte contrastive InfoNCE sy
 
 ```bash
 npm run pairs -- --model dinov2-small --max 400     # 400 objets du Met avec vue alternative, embarqués (eval/pairs/)
-npm run train -- --model dinov2-small              # W → eval/heads/dinov2-small.json (gradient vérifié par différences finies)
+npm run train -- --model dinov2-small              # experiments/train-head.mjs : W → eval/heads/ (non suivi par git ; gradient vérifié par différences finies)
 npm run evaluate -- --models dinov2-small --head eval/heads/dinov2-small.json
 ```
 
@@ -816,9 +821,9 @@ demande plus que la similarité globale — une vérification locale du top-1 (p
 ou un modèle plus fort. C'est une limite mesurée, pas supposée.
 
 **Dans l'application.** La même calibration, faite pour CLIP (le modèle du navigateur, 400 paires, 69 en
-calibration), donne **τ = 0,747 à α = 0,1** — à trois millièmes du 0,75 réglé à la main dans
-`schema.similarity.reliable`. Le schéma porte `similarity.calibration` (modèle, α, τ, provenance) ;
-`readInsights` en déduit un `ConformalSet` et le seuil de fiabilité devient τ.
+calibration), donne **τ = 0,747 à α = 0,1** — à trois millièmes du 0,75 qui était réglé à la main. Le seuil manuel a
+donc été retiré : le schéma ne porte plus que `similarity.calibration` (modèle, α, τ, provenance), `readInsights`
+en déduit un `ConformalSet`, et sans calibration il exige une similarité forte.
 
 Ce que l'application **dit**, et pourquoi elle ne dit pas plus : « *n* références au-dessus du seuil calibré
 τ = 0,75 ; seuil réglé pour une couverture visée de 90 % sur le jeu de calibration, non vérifié en conditions
@@ -840,7 +845,7 @@ moitié emballé — ce vecteur s'éloigne de celui de la fiche. DINOv2 produit 
 par image : on les utilise pour ré-ordonner les top-20 de la recherche globale.
 
 ```bash
-npm run evaluate -- --models dinov2-small --rerank --crops --topk 20
+npm run rerank -- --crops --topk 20                 # experiments/rerank.mjs, DINOv2-small
 ```
 
 `--crops` simule des fragments par recadrage centré (70 % et 50 % du côté, soit 49 % et 25 % de la
@@ -858,7 +863,7 @@ similarité dans le candidat — asymétrique, type ColBERT : un fragment est *c
 Lecture : sur l'image entière, rien à réordonner — le global a déjà raison. Sur un fragment à 50 %, le
 global perd 15,4 points ; MaxSim en récupère 10,2, **les deux tiers de la perte**, et ramène le fragment
 au niveau de l'image à 70 %. Le comptage de voisins mutuels ne sert à rien : symétrique, il fait matcher
-les patches de fond. Combiner global et MaxSim est moins bon que MaxSim seul sur les fragments, le global
+les patches de fond — il a été retiré du code, `experiments/rerank.mjs` ne garde que MaxSim. Combiner global et MaxSim est moins bon que MaxSim seul sur les fragments, le global
 tirant vers le bas. Coût : ~700 ms par requête pour 20 candidats en JavaScript naïf (des millisecondes en
 numpy ou ONNX). C'est la brique à placer **après** un index ANN, jamais à sa place.
 

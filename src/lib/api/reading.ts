@@ -64,9 +64,9 @@ export const RISK_ORIGIN_MIN_SHARE = 0.15;
 
 export function readInsights(insights: Insights, t: SimilarityThresholds): Reading {
   const best = insights.references[0]?.score ?? 0;
-  // Avec une calibration, le seuil de fiabilité est τ (garanti) plutôt que la valeur réglée à la main.
+  // Seuil de fiabilité : τ calibré quand il existe ; sinon on exige une similarité forte.
   const conformal = t.calibration ? conformalSet(insights.references, t.calibration.alpha, t.calibration.tau, insights.aboveTau) : undefined;
-  const reliable = best >= (t.calibration?.tau ?? t.reliable);
+  const reliable = best >= (t.calibration?.tau ?? t.strong);
   const origins = insights.origins.filter((o) => o.share >= 0.005);
   const topCategory = insights.categories[0];
   const topPeriod = insights.periods[0];

@@ -16,3 +16,4 @@ vite.config.ts.timestamp-*
 /service/.venv
 /service/archive
 __pycache__/
+/eval/heads

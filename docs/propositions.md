@@ -159,6 +159,21 @@ Traité :
 Reste, dans cet ordre et avant tout nouveau modèle : journal d'audit et identité d'opérateur côté service ;
 préfiltre indexé pour les attributs ; mesure du coût complet d'une requête (API + filtre + réseau).
 
+## Allègement (6 novembre 2026)
+
+Relecture critique de ce qui avait été ajouté : moins de code, mêmes performances mesurées.
+
+- La page Contrôle utilise `InsightsPanel` (mode empilé) au lieu de réafficher la lecture à sa façon :
+  −200 lignes, une seule source pour les textes de confiance. — fait
+- `scripts/lib/` (modèles, métriques, partition, corpus) partagé par les scripts ; `experiments/` sépare les
+  expériences (tête apprise, ré-ordonnancement) de l'opérationnel. — fait
+- Retirés après mesure : score « voisins mutuels », DINOv2 base, `eval/heads/` du suivi git. — fait
+- `items.json` (44 Ko) + `embeddings.bin` (Float32, 128 Ko) au lieu de 3 Mo de JSON ; vecteurs lus une fois
+  dans une `Map`, écart index/recalcul 0,0001. — fait
+- `schema.similarity.reliable` supprimé : τ fait foi ; sans calibration, seuil `strong`. — fait
+- `api/shared.ts` pour ce que les adapters local et distant dupliquaient. — fait
+- Préchargement du modèle au survol de la zone de dépôt ; Leaflet était déjà chargé à la demande. — fait
+
 ## Réserves
 
 Les gains cités viennent de benchmarks de monuments (Oxford, Paris), pas d'antiquités : ils se

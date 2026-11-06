@@ -4,101 +4,62 @@ import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { matchesFilters, matchesText, paginate } from './filtering';
 import { computeInsights, geoBuckets } from './insights';
-import { places } from '$lib/stores/places.svelte';
+import { loadPlaces, queryVector, withBase } from './shared';
 import { schema } from '$lib/config/schema';
 import { i18n } from '$lib/i18n/index.svelte';
 
 /**
- * Adapter local : jeu de données statique (static/data/items.json, produit par
- * scripts/build-data.mjs) et recherche par image calculée dans le navigateur.
- * Aucun serveur : convient à GitHub Pages et aux démonstrations hors ligne.
+ * Adapter local : métadonnées (static/data/items.json) et vecteurs (static/data/embeddings.bin,
+ * Float32 n × dim dans le même ordre), produits par scripts/build-data.mjs ; recherche par image
+ * calculée dans le navigateur. Aucun serveur : convient à GitHub Pages et aux démonstrations hors ligne.
  */
-interface DataItem extends CollectionItem {
-  embedding: number[];
-}
 interface Dataset {
   model: string;
+  dim: number;
   generatedAt: string;
   source: string;
-  items: DataItem[];
+  items: CollectionItem[];
+}
+interface Loaded {
+  items: CollectionItem[];
+  /** Vecteur de chaque objet, vue sur le tampon binaire : construit une fois, pas à chaque requête. */
+  vectorOf: Map<string, Float32Array>;
 }
 
-let dataset: Promise<Dataset> | null = null;
+let loaded: Promise<Loaded> | null = null;
 
-async function loadPlaces() {
-  try {
-    const r = await fetch(`${base}/data/places.json`);
-    if (r.ok) places.set((await r.json()).places ?? {});
-  } catch {
-    /* gazetier absent : les lieux s'affichent par identifiant */
-  }
+async function fetchOk(path: string): Promise<Response> {
+  const r = await fetch(`${base}/data/${path}`);
+  if (!r.ok) throw new Error(`${path} ${r.status}`);
+  return r;
 }
 
-function loadDataset(): Promise<Dataset> {
-  dataset ??= Promise.all([
-    fetch(`${base}/data/items.json`).then((r) => {
-      if (!r.ok) throw new Error(`items.json ${r.status}`);
-      return r.json() as Promise<Dataset>;
-    }),
-    loadPlaces()
-  ])
-    .then(([d]) => d)
-    .then((d) => ({
-      ...d,
-      items: d.items.map((it) => ({ ...it, thumbnailUrl: it.thumbnailUrl ? `${base}/${it.thumbnailUrl}` : it.thumbnailUrl }))
-    }))
+function load(): Promise<Loaded> {
+  loaded ??= Promise.all([fetchOk('items.json').then((r) => r.json() as Promise<Dataset>), fetchOk('embeddings.bin').then((r) => r.arrayBuffer()), loadPlaces()])
+    .then(([d, buf]) => {
+      const all = new Float32Array(buf);
+      if (all.length !== d.items.length * d.dim) throw new Error(`embeddings.bin : ${all.length} valeurs pour ${d.items.length} × ${d.dim}`);
+      const items = d.items.map(withBase);
+      return { items, vectorOf: new Map(items.map((it, i) => [it.id, all.subarray(i * d.dim, (i + 1) * d.dim)])) };
+    })
     .catch((e) => {
-      dataset = null;
+      loaded = null;
       throw e;
     });
-  return dataset;
-}
-
-/** Embedding de la photo envoyée, calculé une fois par fichier. */
-const queryCache = new WeakMap<File, Promise<Float32Array>>();
-async function queryEmbedding(file: File): Promise<Float32Array> {
-  let p = queryCache.get(file);
-  if (!p) {
-    p = import('$lib/ml/embedder').then(({ embedImage }) => embedImage(file));
-    queryCache.set(file, p);
-  }
-  return p;
-}
-
-/** Moyenne de vecteurs normalisés, renormalisée : une seule requête pour plusieurs vues. */
-function averageNormalized(vectors: Float32Array[]): Float32Array {
-  if (vectors.length === 1) return vectors[0];
-  const n = vectors[0].length;
-  const out = new Float32Array(n);
-  for (const v of vectors) for (let i = 0; i < n; i++) out[i] += v[i];
-  let norm = 0;
-  for (let i = 0; i < n; i++) norm += out[i] * out[i];
-  norm = Math.sqrt(norm) || 1;
-  for (let i = 0; i < n; i++) out[i] /= norm;
-  return out;
-}
-
-function strip({ embedding: _e, ...item }: DataItem): CollectionItem {
-  return item;
+  return loaded;
 }
 
 export const localAdapter: CollectionAdapter = {
   async search(query: SearchQuery): Promise<SearchResult> {
-    const { items } = await loadDataset();
+    const { items, vectorOf } = await load();
     const locale = i18n.locale;
-    let results: CollectionItem[] = items
-      .filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, locale))
-      .map(strip);
+    let results = items.filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, locale));
 
     let insights;
     if (query.image) {
-      const { cosine } = await import('$lib/ml/embedder');
-      const views = [query.image, ...(query.extraImages ?? [])];
-      const vectors = await Promise.all(views.map(queryEmbedding));
-      const q = averageNormalized(vectors);
-      const byId = new Map(items.map((it) => [it.id, it.embedding]));
+      const [{ cosine }, q] = await Promise.all([import('$lib/ml/embedder'), queryVector(query.image, query.extraImages)]);
       results = results
-        .map((it) => ({ ...it, score: Math.round(cosine(q, byId.get(it.id) ?? []) * 1000) / 1000 }))
+        .map((it) => ({ ...it, score: Math.round(cosine(q, vectorOf.get(it.id) ?? []) * 1000) / 1000 }))
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
       insights = computeInsights(results, schema.similarity.topK, schema.similarity.calibration?.tau);
     }
@@ -114,15 +75,15 @@ export const localAdapter: CollectionAdapter = {
   },
 
   async getItem(id: string): Promise<CollectionItem | null> {
-    const { items } = await loadDataset();
-    const it = items.find((x) => x.id === id);
-    return it ? strip(it) : null;
+    const { items } = await load();
+    return items.find((x) => x.id === id) ?? null;
   },
 
   async getFacets(): Promise<FacetValues> {
     return {};
   },
 
+  /** Sans serveur, rien n'est archivé : on rend un identifiant local et l'empreinte lue côté client. */
   async archiveImage(original: File, info?: ImageInfo): Promise<ArchiveReceipt> {
     return { id: `local-${Date.now().toString(36)}-${original.size.toString(36)}`, sha256: info?.sha256 };
   }

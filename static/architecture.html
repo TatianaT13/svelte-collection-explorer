@@ -97,7 +97,7 @@ const NODES = [
   // interface
   { id: 'layout', g: 'interface', label: 'Enveloppe', file: 'src/routes/+layout.svelte', desc: 'Navigation, logo, bascule de thème et de langue ; enveloppe toutes les routes. Prérendu statique (+layout.ts).' },
   { id: 'explorer', g: 'interface', label: 'Explorateur  /', file: 'src/routes/+page.svelte', desc: 'Recherche texte, filtres, recherche par image, carte, comparaison. Un $effect relance la recherche quand texte, image, filtres ou page changent ; l’état est sérialisé dans l’URL.' },
-  { id: 'controle', g: 'interface', label: 'Contrôle  /controle', file: 'src/routes/controle/+page.svelte', desc: 'Parcours de l’agent en trois étapes dans un cadre de téléphone : photo → lecture → décision, puis export du dossier.' },
+  { id: 'controle', g: 'interface', label: 'Contrôle  /controle', file: 'src/routes/controle/+page.svelte', desc: 'Parcours de l’agent en trois étapes dans un cadre de téléphone : photo → lecture → décision, puis export du dossier. La lecture est le même InsightsPanel que l’explorateur, en mode empilé.' },
   { id: 'compare', g: 'interface', label: 'Comparaison  /compare', file: 'src/routes/compare/+page.svelte', desc: 'Objets sélectionnés côte à côte : images et attributs, différences mises en évidence.' },
   { id: 'c-upload', g: 'interface', label: 'Prise de vue', file: 'ImageUpload · SampleImages · ExtraViews', desc: 'Import ou capture, images d’exemple (vues alternatives du Met), vues supplémentaires d’un même objet fusionnées dans la requête.' },
   { id: 'c-quality', g: 'interface', label: 'Qualité et métadonnées', file: 'PhotoQuality · ImageInfoPanel · ModelStatus', desc: 'Netteté, exposition, contraste, reflets ; EXIF/IPTC/XMP et empreinte ; progression du chargement du modèle.' },
@@ -117,7 +117,7 @@ const NODES = [
   // api
   { id: 'api-index', g: 'api', label: 'Point d’entrée', file: 'src/lib/api/index.ts', desc: 'Choisit l’adapter selon VITE_ADAPTER : local (défaut), mock, remote.' },
   { id: 'adapter', g: 'api', label: 'CollectionAdapter', file: 'src/lib/api/adapter.ts', desc: 'Le contrat : search(query), getItem(id), getFacets(), archiveImage(original, info). Le reste de l’application ne connaît que ça.' },
-  { id: 'local', g: 'api', label: 'Adapter local', file: 'src/lib/api/localAdapter.ts', desc: 'Charge items.json, embarque la photo via le worker, cosinus contre tous les embeddings, filtres, lecture agrégée, carte. Zéro serveur.' },
+  { id: 'local', g: 'api', label: 'Adapter local', file: 'src/lib/api/localAdapter.ts · shared.ts', desc: 'Charge items.json et embeddings.bin une fois (Map id → vecteur), embarque la photo via le worker, cosinus contre tous les vecteurs, filtres, lecture agrégée, carte. Zéro serveur.' },
   { id: 'remote', g: 'api', label: 'Adapter distant', file: 'src/lib/api/remoteAdapter.ts', desc: 'Même inférence dans le navigateur ; seul le vecteur part au service. Vérifie /meta (même modèle que l’index). Lecture agrégée calculée côté client sur les candidats.' },
   { id: 'mock', g: 'api', label: 'Adapter mock', file: 'src/lib/api/mockAdapter.ts', desc: 'Données générées, sans modèle : pour les tests et le développement d’interface.' },
   { id: 'filtering', g: 'api', label: 'Filtrage, texte', file: 'src/lib/api/filtering.ts', desc: 'matchesFilters (égalité, texte, nombre, hiérarchie de lieux), matchesText (titre, libellés traduits), paginate. Pur, testé.' },
@@ -129,7 +129,7 @@ const NODES = [
   { id: 'worker', g: 'ml', label: 'Worker CLIP', file: 'src/lib/ml/embed.worker.ts', desc: 'CLIP ViT-B/32, tour visuelle seule, int8 (~90 Mo), transformers.js sur ONNX Runtime Web ; vecteur 512-d normalisé, transféré sans copie.' },
   { id: 'mlstatus', g: 'ml', label: 'État du modèle', file: 'src/lib/ml/status.svelte.ts', desc: 'Progression du téléchargement par fichier, prêt, erreur.' },
   // data
-  { id: 'items', g: 'data', label: 'items.json', file: 'static/data/items.json', desc: '64 objets du Met (CC0) avec métadonnées au schéma et embedding 512-d ; champ model = identifiant du modèle qui a produit l’index.' },
+  { id: 'items', g: 'data', label: 'items.json · embeddings.bin', file: 'static/data/', desc: '64 objets du Met (CC0) : métadonnées au schéma dans items.json (44 Ko, champ model = modèle de l’index) ; vecteurs 512-d en Float32 dans embeddings.bin (128 Ko), même ordre.' },
   { id: 'places', g: 'data', label: 'places.json', file: 'static/data/places.json', desc: 'Gazetier Wikidata : libellés fr/en, parent administratif, pays ISO, coordonnées.' },
   { id: 'thumbs', g: 'data', label: 'Vignettes, exemples', file: 'static/data/thumbs · samples', desc: 'Vignettes 512 px (l’index est calculé sur elles), vues alternatives d’exemple.' },
   { id: 'build-data', g: 'data', label: 'Constitution des données', file: 'scripts/build-data.mjs', desc: 'API Open Access du Met + Wikidata → items.json, places.json, vignettes ; embeddings avec le même modèle que le navigateur.' },
@@ -140,9 +140,9 @@ const NODES = [
   { id: 'archive', g: 'service', label: 'Archive', file: 'service/archive/', desc: 'Original conservé tel quel + reçu JSON ; SHA-256 recalculé, refus en 409 si l’empreinte annoncée diffère. Intégrité du fichier, pas encore une chaîne de preuve (opérateur, droits, journal d’audit).' },
   { id: 'bench', g: 'service', label: 'Banc d’échelle', file: 'service/bench.py', desc: 'Force brute contre HNSW sur 1 000 → 100 000 vecteurs synthétiques bruités depuis les réels ; latence, recall@10.' },
   // eval
-  { id: 'evaluate', g: 'eval', label: 'Évaluation', file: 'scripts/evaluate.mjs', desc: 'Vues alternatives = vérité terrain. recall@k, MRR, catégorie/origine du top-1, distribution des scores ; --head, --rerank --crops (MaxSim sur patches).' },
+  { id: 'evaluate', g: 'eval', label: 'Évaluation', file: 'scripts/evaluate.mjs · scripts/lib/', desc: 'Vues alternatives = vérité terrain. recall@k, MRR, catégorie/origine du top-1, distribution des scores, cohérence embeddings.bin / modèle. Modèles et métriques partagés dans scripts/lib/.' },
   { id: 'pairs', g: 'eval', label: 'Paires du Met', file: 'scripts/build-pairs.mjs → eval/pairs', desc: '400 objets (principale, vue alternative) embarqués ; corpus de démo exclu.' },
-  { id: 'train', g: 'eval', label: 'Tête apprise', file: 'scripts/train-head.mjs → eval/heads', desc: 'Projection W (d × d) sur embeddings gelés, InfoNCE symétrique, rappel vers l’identité ; gradient vérifié.' },
+  { id: 'train', g: 'eval', label: 'Expériences', file: 'experiments/train-head.mjs · rerank.mjs', desc: 'Hors application. Tête apprise : projection W sur embeddings gelés (InfoNCE, gradient vérifié). Ré-ordonnancement MaxSim sur patches DINO, mesuré sur fragments.' },
   { id: 'calibrate', g: 'eval', label: 'Calibration conforme', file: 'scripts/calibrate.mjs → eval/calibration-*.json', desc: 'τ_α = quantile des similarités du bon objet ; couverture, taille des ensembles, rejet hors base (seuil absolu, marge).' },
   // platform
   { id: 'sw', g: 'platform', label: 'Service worker', file: 'src/service-worker.ts', desc: 'Cache de l’application, des données et des vignettes : fonctionne hors ligne.' },
@@ -155,7 +155,7 @@ const EDGES = [
   ['layout', 'i18n', 'langue'], ['layout', 'stores', 'thème'],
   ['explorer', 'c-upload', ''], ['explorer', 'c-results', ''], ['explorer', 'c-insights', ''], ['explorer', 'c-map', ''], ['explorer', 'c-detail', ''],
   ['explorer', 'urlstate', 'état ↔ URL'], ['explorer', 'api-index', 'api.search'],
-  ['controle', 'c-upload', ''], ['controle', 'c-quality', ''], ['controle', 'reading', 'readInsights'], ['controle', 'casefile', 'export JSON'], ['controle', 'api-index', 'search · archiveImage'],
+  ['controle', 'c-upload', ''], ['controle', 'c-quality', ''], ['controle', 'c-insights', 'InsightsPanel empilé'], ['controle', 'casefile', 'export JSON'], ['controle', 'api-index', 'search · archiveImage'],
   ['compare', 'c-detail', ''],
   ['c-upload', 'photoq', 'réduction'], ['c-quality', 'photoq', 'métriques'], ['c-quality', 'imageinfo', 'EXIF, SHA-256'], ['c-quality', 'mlstatus', 'progression'],
   ['c-insights', 'reading', 'readInsights'], ['c-insights', 'schema', 'seuils'], ['c-results', 'vocab', 'libellés'], ['c-results', 'schema', 'champs'],
@@ -181,7 +181,7 @@ const TOURS = [
     text: 'La photo est réduite, embarquée dans le worker (CLIP, 512-d), comparée par cosinus à tous les embeddings de items.json, filtrée, agrégée en parts pondérées, lue (fiabilité, risques, ensemble conforme), affichée avec la carte.' },
   { id: 'image-remote', label: 'Recherche par image · distant', steps: [['explorer', 'api-index'], ['api-index', 'adapter'], ['adapter', 'remote'], ['remote', 'embedder'], ['embedder', 'worker'], ['remote', 'svc'], ['svc', 'hnsw'], ['remote', 'insights'], ['explorer', 'c-insights'], ['c-insights', 'reading']],
     text: 'Même inférence dans le navigateur ; seuls 512 nombres partent. Le service vérifie le modèle, interroge l’index HNSW avec les filtres, renvoie la page et 200 candidats ; la lecture agrégée est calculée côté client.' },
-  { id: 'controle', label: 'Contrôle et dossier', steps: [['controle', 'c-upload'], ['controle', 'c-quality'], ['c-quality', 'photoq'], ['c-quality', 'imageinfo'], ['controle', 'api-index'], ['api-index', 'adapter'], ['adapter', 'local'], ['controle', 'reading'], ['reading', 'schema'], ['reading', 'risk'], ['controle', 'casefile'], ['stores', 'casefile'], ['risk', 'casefile']],
+  { id: 'controle', label: 'Contrôle et dossier', steps: [['controle', 'c-upload'], ['controle', 'c-quality'], ['c-quality', 'photoq'], ['c-quality', 'imageinfo'], ['controle', 'api-index'], ['api-index', 'adapter'], ['adapter', 'local'], ['controle', 'c-insights'], ['c-insights', 'reading'], ['reading', 'schema'], ['reading', 'risk'], ['controle', 'casefile'], ['stores', 'casefile'], ['risk', 'casefile']],
     text: 'Étape 1 : qualité et métadonnées de la photo. Étape 2 : lecture avec τ calibré et listes rouges. Étape 3 : décision de l’agent, export du dossier JSON ; en mode distant, archiveImage envoie l’original au service qui vérifie son SHA-256.' },
   { id: 'texte', label: 'Texte et filtres', steps: [['explorer', 'c-results'], ['c-results', 'schema'], ['explorer', 'urlstate'], ['explorer', 'api-index'], ['api-index', 'adapter'], ['adapter', 'local'], ['local', 'filtering'], ['filtering', 'vocab'], ['filtering', 'stores']],
     text: 'Les filtres viennent du schéma, l’état part dans l’URL, l’adapter filtre par égalité, texte, nombre ou hiérarchie de lieux, avec les libellés traduits.' },
