@@ -175,6 +175,30 @@ Relecture critique de ce qui avait été ajouté : moins de code, mêmes perform
 - `api/shared.ts` pour ce que les adapters local et distant dupliquaient. — fait
 - Préchargement du modèle au survol de la zone de dépôt ; Leaflet était déjà chargé à la demande. — fait
 
+## Automatisation (9 novembre 2026)
+
+Ce qui se faisait à la main et ne peut plus régresser en silence.
+
+- **Garde-fou sur la recherche** : `scripts/evaluate.mjs --check` compare au `eval/results.json` versionné sans
+  l'écraser et échoue au-delà d'un point de recall@1, recall@5, category@1, de 0,01 de MRR, ou de 0,001 d'écart
+  entre `embeddings.bin` et le modèle. Workflow `evaluation.yml` : à chaque changement du moteur, des données ou
+  des scripts, et chaque semaine. — fait
+- **τ lu, plus recopié** : le schéma importe `eval/calibration-clip.json` et prend la ligne α = 0,1 ; un test
+  vérifie que le modèle du fichier est celui du navigateur. — fait
+- **Révision du modèle épinglée** : `src/lib/ml/model.ts` fixe l'empreinte git des poids Hugging Face, utilisée
+  par le worker, le repli, `build-data.mjs` et `scripts/lib/models.mjs` ; un test vérifie que les quatre
+  concordent. Sans cela, une republication des poids ferait diverger requêtes et index sans erreur. — fait
+- **Tests du service en CI** : job Python parallèle au build ; le déploiement attend les deux. — fait
+- **Cohérence de la page d'architecture** : test qui résout chaque fichier cité et exige que tout `src/` y
+  figure (treize fichiers manquants ajoutés aux briques à cette occasion). — fait
+- **Rafraîchissement des données** : `data-refresh.yml` reconstruit mensuellement, vérifie l'absence de
+  régression, ouvre une pull request. — fait
+- **Hygiène** : ESLint sans formateur (le style du code reste tel quel), hook de pré-commit (lint + tests),
+  `npm audit --omit=dev` en CI, seuil de couverture à 55 % de lignes sur `src/lib` (60 % mesurés), Dependabot
+  hebdomadaire npm, pip et Actions. — fait
+- Non automatisé, à dessein : les états de ce document, et la mise à jour de `eval/results.json`, qui reste
+  un geste délibéré (`npm run evaluate`) après un changement voulu.
+
 ## Réserves
 
 Les gains cités viennent de benchmarks de monuments (Oxford, Paris), pas d'antiquités : ils se

@@ -47,7 +47,7 @@ flowchart LR
 
   MET --> BUILD --> DATA
   DATA --> EVAL
-  EVAL -. "τ recopié à la main" .-> CFG
+  EVAL -- "τ lu dans calibration-clip.json" --> CFG
 ```
 
 Le détail — 46 briques, 72 liens, fichier par fichier — est sur la page interactive
@@ -669,8 +669,19 @@ Conséquences dans ce projet :
 ## 14. Déploiement
 
 Le front est statique : `@sveltejs/adapter-static` pré-rend les deux pages en HTML, le mock tourne
-dans le navigateur. Le workflow `.github/workflows/deploy.yml` construit et publie sur **GitHub Pages**
-à chaque push sur `main`, après `npm run check`.
+dans le navigateur. Le workflow `.github/workflows/deploy.yml` publie sur **GitHub Pages** à chaque push sur
+`main`, après la chaîne complète : `npm audit --omit=dev`, lint, types, tests unitaires avec seuil de
+couverture, build, parcours de bout en bout, et les tests du service Python dans un job parallèle.
+
+Deux autres workflows tournent sans intervention :
+
+- `evaluation.yml` rejoue la mesure de recherche (`scripts/evaluate.mjs --check`) quand le moteur, les données
+  ou les scripts changent, et chaque lundi : il échoue si recall@1, recall@5 ou category@1 perdent plus d'un
+  point, si le MRR perd plus de 0,01, ou si `embeddings.bin` s'écarte de plus de 0,001 de ce que le modèle
+  épinglé produit. Le fichier `eval/results.json` versionné est la référence ; il n'est pas réécrit en CI.
+- `data-refresh.yml` reconstruit le jeu de démonstration depuis l'API du Met le premier du mois, vérifie
+  l'absence de régression et ouvre une pull request si les données ont changé.
+- `dependabot.yml` propose les mises à jour npm, pip et GitHub Actions chaque semaine.
 
 - `BASE_PATH` (`/svelte-collection-explorer`) est injecté au build ; en local il est vide.
 - Les liens internes passent par `base` de `$app/paths`, jamais par `/` en dur.
@@ -684,12 +695,18 @@ plateforme : le code applicatif ne change pas.
 
 ## 15. Tests
 
-Deux niveaux, tous deux exécutés par le workflow avant chaque déploiement :
+Trois niveaux, exécutés par le workflow avant chaque déploiement, plus la mesure de recherche à part :
 
+- `npm run lint` : ESLint (règles recommandées JavaScript, TypeScript, Svelte), sans formateur. Un hook de
+  pré-commit (`.githooks/`, installé par `npm install`) lance lint et tests unitaires avant chaque commit.
 - `npm test` : Vitest sur les modules purs (sérialisation d'URL, libellés, filtrage et recherche
-  texte, similarité, lecture agrégée et ensemble conforme, listes rouges, qualité photo).
-- `npm run evaluate`, `npm run calibrate` : mesures de la recherche par image (§ 16), hors CI — elles
-  téléchargent les modèles.
+  texte, similarité, lecture agrégée et ensemble conforme, listes rouges, qualité photo), plus deux tests de
+  cohérence : la révision du modèle est la même dans le navigateur, l'index et les scripts, et le seuil τ du
+  schéma vient bien du modèle du navigateur ; chaque fichier cité par `static/architecture.html` existe et
+  chaque fichier de `src/` y figure. `npm run test:coverage` applique un seuil de 55 % de lignes sur `src/lib`.
+- `npm run test:service` : 15 tests pytest du service (validation, recherche filtrée, archive, empreinte).
+- `npm run evaluate`, `npm run calibrate` : mesures de la recherche par image (§ 16). Elles téléchargent les
+  modèles, donc elles vivent dans leur propre workflow (`evaluation.yml`, § 14) et non dans le déploiement.
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
   (`e2e/`). Six parcours : filtres et URL partageable, recherche texte avec délai, attributs
   cochables, volet puis comparaison, bascule de langue, page de contrôle. La recherche par image n'est pas testée en

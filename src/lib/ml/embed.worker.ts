@@ -5,9 +5,9 @@
  */
 /// <reference lib="webworker" />
 import { AutoProcessor, CLIPVisionModelWithProjection, RawImage, env } from '@huggingface/transformers';
+import { MODEL_ID, MODEL_REVISION } from './model';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
-const MODEL_ID = 'Xenova/clip-vit-base-patch32';
 env.allowLocalModels = false;
 
 type Loaded = {
@@ -22,8 +22,8 @@ function load(): Promise<Loaded> {
     const progress_callback = (p: { status: string; file?: string; loaded?: number; total?: number }) => {
       if (p.status === 'progress') ctx.postMessage({ type: 'progress', file: p.file, loaded: p.loaded, total: p.total });
     };
-    const processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback });
-    const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL_ID, { dtype: 'q8', progress_callback });
+    const processor = await AutoProcessor.from_pretrained(MODEL_ID, { revision: MODEL_REVISION, progress_callback });
+    const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL_ID, { revision: MODEL_REVISION, dtype: 'q8', progress_callback });
     ctx.postMessage({ type: 'ready' });
     return { processor, vision };
   })().catch((e: unknown) => {

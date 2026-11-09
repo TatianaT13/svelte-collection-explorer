@@ -95,16 +95,16 @@ const GROUPS = {
 
 const NODES = [
   // interface
-  { id: 'layout', g: 'interface', label: 'Enveloppe', file: 'src/routes/+layout.svelte', desc: 'Navigation, logo, bascule de thème et de langue ; enveloppe toutes les routes. Prérendu statique (+layout.ts).' },
+  { id: 'layout', g: 'interface', label: 'Enveloppe', file: 'src/routes/+layout.svelte · +layout.ts · src/app.html · Logo · ThemeToggle · LanguageSwitch', desc: 'Navigation, logo, bascule de thème et de langue ; enveloppe toutes les routes. Prérendu statique (+layout.ts).' },
   { id: 'explorer', g: 'interface', label: 'Explorateur  /', file: 'src/routes/+page.svelte', desc: 'Recherche texte, filtres, recherche par image, carte, comparaison. Un $effect relance la recherche quand texte, image, filtres ou page changent ; l’état est sérialisé dans l’URL.' },
   { id: 'controle', g: 'interface', label: 'Contrôle  /controle', file: 'src/routes/controle/+page.svelte', desc: 'Parcours de l’agent en trois étapes dans un cadre de téléphone : photo → lecture → décision, puis export du dossier. La lecture est le même InsightsPanel que l’explorateur, en mode empilé.' },
   { id: 'compare', g: 'interface', label: 'Comparaison  /compare', file: 'src/routes/compare/+page.svelte', desc: 'Objets sélectionnés côte à côte : images et attributs, différences mises en évidence.' },
   { id: 'c-upload', g: 'interface', label: 'Prise de vue', file: 'ImageUpload · SampleImages · ExtraViews', desc: 'Import ou capture, images d’exemple (vues alternatives du Met), vues supplémentaires d’un même objet fusionnées dans la requête.' },
   { id: 'c-quality', g: 'interface', label: 'Qualité et métadonnées', file: 'PhotoQuality · ImageInfoPanel · ModelStatus', desc: 'Netteté, exposition, contraste, reflets ; EXIF/IPTC/XMP et empreinte ; progression du chargement du modèle.' },
-  { id: 'c-results', g: 'interface', label: 'Résultats et filtres', file: 'ResultCard · FilterPanel · FilterChips · MultiSelect', desc: 'Grille de cartes pilotée par le schéma, filtres à facettes, attributs cochables.' },
+  { id: 'c-results', g: 'interface', label: 'Résultats et filtres', file: 'ResultCard · ScoreRing · SkeletonCard · FilterPanel · FilterChips · MultiSelect · utils/imgFallback.ts', desc: 'Grille de cartes pilotée par le schéma (anneau de score, squelettes pendant le chargement, repli d’image), filtres à facettes, attributs cochables.' },
   { id: 'c-insights', g: 'interface', label: 'Lecture agrégée', file: 'InsightsPanel.svelte', desc: 'Identification et provenance probables, confiance, hésitations, signal Liste rouge, références au-dessus du seuil calibré τ ou « résultat non concluant ».' },
   { id: 'c-map', g: 'interface', label: 'Carte', file: 'MapView.svelte (Leaflet)', desc: 'Résultats regroupés par lieu, lieu de la photo à part ; coordonnées du gazetier.' },
-  { id: 'c-detail', g: 'interface', label: 'Détail et comparaison', file: 'ItemDrawer · CompareTray · ImageCompare · AttributeList', desc: 'Volet de détail, sélection pour comparaison persistée en session, comparateur d’images.' },
+  { id: 'c-detail', g: 'interface', label: 'Détail et comparaison', file: 'ItemDrawer · CompareTray · ImageCompare · AttributeList · MetadataValue · utils/labels.ts · flag.ts', desc: 'Volet de détail, sélection pour comparaison persistée en session, comparateur d’images ; valeurs de métadonnées rendues selon le schéma (libellés traduits, drapeaux).' },
   // state
   { id: 'schema', g: 'state', label: 'Schéma', file: 'src/lib/config/schema.ts', desc: 'Champs de métadonnées (pilotent l’UI), seuils de similarité, calibration τ (modèle, α, provenance), politique d’envoi et de qualité photo.' },
   { id: 'vocab', g: 'state', label: 'Vocabulaires, pays', file: 'config/vocabularies.ts · countries.ts', desc: 'Vocabulaires contrôlés (types, matériaux, techniques, périodes, sujets) et noms de pays localisés (Intl.DisplayNames).' },
@@ -116,7 +116,7 @@ const NODES = [
   { id: 'casefile', g: 'state', label: 'Dossier de contrôle', file: 'src/lib/utils/caseFile.ts', desc: 'Construit et télécharge le JSON : photo de référence, lecture, candidats, listes rouges, décision.' },
   // api
   { id: 'api-index', g: 'api', label: 'Point d’entrée', file: 'src/lib/api/index.ts', desc: 'Choisit l’adapter selon VITE_ADAPTER : local (défaut), mock, remote.' },
-  { id: 'adapter', g: 'api', label: 'CollectionAdapter', file: 'src/lib/api/adapter.ts', desc: 'Le contrat : search(query), getItem(id), getFacets(), archiveImage(original, info). Le reste de l’application ne connaît que ça.' },
+  { id: 'adapter', g: 'api', label: 'CollectionAdapter', file: 'src/lib/api/adapter.ts · types.ts', desc: 'Le contrat : search(query), getItem(id), getFacets(), archiveImage(original, info), et les types échangés (CollectionItem, SearchQuery, Insights). Le reste de l’application ne connaît que ça.' },
   { id: 'local', g: 'api', label: 'Adapter local', file: 'src/lib/api/localAdapter.ts · shared.ts', desc: 'Charge items.json et embeddings.bin une fois (Map id → vecteur), embarque la photo via le worker, cosinus contre tous les vecteurs, filtres, lecture agrégée, carte. Zéro serveur.' },
   { id: 'remote', g: 'api', label: 'Adapter distant', file: 'src/lib/api/remoteAdapter.ts', desc: 'Même inférence dans le navigateur ; seul le vecteur part au service. Vérifie /meta (même modèle que l’index). Lecture agrégée calculée côté client sur les candidats.' },
   { id: 'mock', g: 'api', label: 'Adapter mock', file: 'src/lib/api/mockAdapter.ts', desc: 'Données générées, sans modèle : pour les tests et le développement d’interface.' },
@@ -125,7 +125,7 @@ const NODES = [
   { id: 'reading', g: 'api', label: 'Lecture', file: 'src/lib/api/reading.ts', desc: 'readInsights : fiable (≥ τ), confiance, ambiguïtés, risques via les listes rouges, ensemble conforme compté sur le classement complet (aboveTau), « non concluant » si vide.' },
   { id: 'imageinfo', g: 'api', label: 'Métadonnées image', file: 'src/lib/api/imageInfo.ts', desc: 'EXIF / IPTC / XMP lus côté client, GPS retirable, empreinte SHA-256 de l’original.' },
   // ml
-  { id: 'embedder', g: 'ml', label: 'Client d’embedding', file: 'src/lib/ml/embedder.ts', desc: 'Crée le Web Worker, protocole de messages, repli sur le fil principal, cosine(). Exporte MODEL_ID.' },
+  { id: 'embedder', g: 'ml', label: 'Client d’embedding', file: 'src/lib/ml/embedder.ts · model.ts', desc: 'Crée le Web Worker, protocole de messages, repli sur le fil principal, cosine(). model.ts fixe l’identifiant du modèle et sa révision Hugging Face, les mêmes que l’index et les scripts (vérifié par un test).' },
   { id: 'worker', g: 'ml', label: 'Worker CLIP', file: 'src/lib/ml/embed.worker.ts', desc: 'CLIP ViT-B/32, tour visuelle seule, int8 (~90 Mo), transformers.js sur ONNX Runtime Web ; vecteur 512-d normalisé, transféré sans copie.' },
   { id: 'mlstatus', g: 'ml', label: 'État du modèle', file: 'src/lib/ml/status.svelte.ts', desc: 'Progression du téléchargement par fichier, prêt, erreur.' },
   // data
@@ -147,7 +147,7 @@ const NODES = [
   // platform
   { id: 'sw', g: 'platform', label: 'Service worker', file: 'src/service-worker.ts', desc: 'Cache de l’application, des données et des vignettes : fonctionne hors ligne.' },
   { id: 'tests', g: 'platform', label: 'Tests', file: 'vitest (9 fichiers) · e2e/explore.spec.ts', desc: '45 tests unitaires sur les modules purs ; 6 parcours Playwright sur le build statique.' },
-  { id: 'ci', g: 'platform', label: 'Déploiement', file: '.github/workflows · GitHub Pages', desc: 'Tests puis build statique prérendu, publié sur GitHub Pages à chaque push.' }
+  { id: 'ci', g: 'platform', label: 'Déploiement', file: '.github/workflows/deploy.yml · evaluation.yml · data-refresh.yml · dependabot.yml', desc: 'À chaque push : audit, lint, types, tests avec seuil de couverture, build, parcours de bout en bout, tests du service Python, puis publication sur GitHub Pages. evaluation.yml rejoue la mesure de recherche et échoue en cas de régression ; data-refresh.yml reconstruit les données chaque mois et ouvre une pull request ; Dependabot suit les dépendances.' }
 ];
 
 // [source, cible, étiquette]

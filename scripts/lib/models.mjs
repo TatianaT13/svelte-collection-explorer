@@ -41,9 +41,11 @@ export const MODELS = {
   /** Le modèle du navigateur et de l'index : tour visuelle seule, int8. */
   clip: {
     id: 'Xenova/clip-vit-base-patch32',
+    /** Révision épinglée, la même que src/lib/ml/model.ts (vérifié par un test). */
+    revision: '6b7c523703ae26e39be4b03774966f8571c7f523',
     async load() {
-      const processor = await AutoProcessor.from_pretrained(this.id);
-      const model = await CLIPVisionModelWithProjection.from_pretrained(this.id, { dtype: 'q8' });
+      const processor = await AutoProcessor.from_pretrained(this.id, { revision: this.revision });
+      const model = await CLIPVisionModelWithProjection.from_pretrained(this.id, { revision: this.revision, dtype: 'q8' });
       return async (img) => Float32Array.from((await model(await processor(img))).image_embeds.normalize(2, -1).data);
     }
   },

@@ -2,7 +2,7 @@
  * Prédiction conforme et rejet hors-base, sur les paires de build-pairs.mjs.
  *
  *   node scripts/calibrate.mjs                         # dinov2-small, embeddings bruts
- *   node scripts/calibrate.mjs --model clip            # le modèle du navigateur : τ à recopier dans schema.similarity.calibration
+ *   node scripts/calibrate.mjs --model clip            # le modèle du navigateur : le schéma lit τ dans eval/calibration-clip.json
  *   node scripts/calibrate.mjs --head eval/heads/dinov2-small.json
  *
  * Partition (scripts/lib/metrics.mjs) : lots 6–7 = calibration, 8–9 = test. Le corpus est fait des photos

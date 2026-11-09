@@ -1,0 +1,31 @@
+name: Évaluation de la recherche
+
+# Garde-fou : la qualité de recherche mesurée (eval/results.json) ne doit pas régresser, et embeddings.bin doit
+# rester ce que le modèle épinglé produit. Lancé quand le moteur, les données ou les scripts changent, et chaque semaine.
+on:
+  push:
+    branches: [main]
+    paths: [scripts/**, experiments/**, static/data/**, src/lib/ml/**, eval/queries.json, eval/results.json, .github/workflows/evaluation.yml]
+  pull_request:
+    paths: [scripts/**, static/data/**, src/lib/ml/**]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/@huggingface/transformers/.cache
+            eval/images
+          key: eval-${{ hashFiles('src/lib/ml/model.ts', 'eval/queries.json') }}
+      - run: node scripts/evaluate.mjs --check

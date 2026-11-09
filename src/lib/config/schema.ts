@@ -8,6 +8,7 @@
  * signes distinctifs, titre, sujet, date ou période, auteur.
  */
 import type { VocabularyId } from './vocabularies';
+import clipCalibration from '../../../eval/calibration-clip.json';
 import type { LocalizedLabel } from '$lib/i18n/index.svelte';
 
 export type FieldKind =
@@ -56,7 +57,8 @@ export interface UploadPolicy {
 /**
  * Seuil conforme : τ = quantile d'ordre α des similarités du bon objet sur un jeu de calibration
  * (vues alternatives d'objets connus, même modèle). Garantie : le bon objet est parmi les candidats de
- * similarité ≥ τ avec probabilité ≥ 1 − α, sur la distribution de calibration. Produit par scripts/calibrate.mjs.
+ * similarité ≥ τ avec probabilité ≥ 1 − α, sur la distribution de calibration. Produit par scripts/calibrate.mjs,
+ * lu directement dans son fichier de résultats : rien n'est recopié à la main.
  */
 export interface Calibration {
   /** Modèle pour lequel τ a été mesuré ; doit être celui du navigateur et de l'index. */
@@ -65,6 +67,14 @@ export interface Calibration {
   tau: number;
   /** Fichier de résultats d'où vient τ, pour la traçabilité. */
   source: string;
+}
+
+
+/** Extrait la ligne α d'un fichier produit par scripts/calibrate.mjs. */
+function calibrationFrom(report: { model: string; generatedAt: string; thresholds: { alpha: number; tau: number }[] }, alpha: number, source: string): Calibration {
+  const row = report.thresholds.find((t) => t.alpha === alpha);
+  if (!row) throw new Error(`${source} : pas de seuil pour α = ${alpha}`);
+  return { model: report.model, alpha, tau: row.tau, source: `${source} · ${report.generatedAt.slice(0, 10)}` };
 }
 
 export interface SimilarityThresholds {
@@ -128,10 +138,10 @@ export const schema: CollectionSchema = {
     strong: 0.8,
     medium: 0.65,
     topK: 12,
-    // τ mesuré par scripts/calibrate.mjs sur 400 paires (principale, vue alternative) du Met, 69 en calibration :
-    // le bon objet est à similarité ≥ 0,747 dans 90 % des cas sur ce jeu. Avant calibration, le seuil réglé à la
-    // main valait 0,75 (images sans rapport 0,63–0,72, vraies correspondances 0,93–0,97 avec CLIP ViT-B/32).
-    calibration: { model: 'Xenova/clip-vit-base-patch32', alpha: 0.1, tau: 0.747, source: 'eval/calibration-clip.json · 2026-11-04' }
+    // τ mesuré par `npm run calibrate -- --model clip` sur 400 paires (principale, vue alternative) du Met, 69 en
+    // calibration : le bon objet est à similarité ≥ τ dans 90 % des cas sur ce jeu (0,747 au 6 novembre 2026). Avant
+    // calibration, le seuil réglé à la main valait 0,75 (images sans rapport 0,63–0,72, vraies correspondances 0,93–0,97).
+    calibration: calibrationFrom(clipCalibration, 0.1, 'eval/calibration-clip.json')
   },
   upload: { maxPx: 1600, skipBelowBytes: 2 * 1024 * 1024, quality: 0.85 },
   // Calibré sur des photos de test : nette 0,08–0,16, floutée 0,001 ; contraste d'un tableau aux tons doux ≈ 20.

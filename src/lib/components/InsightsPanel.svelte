@@ -4,7 +4,7 @@
    * provenance probable, alerte Liste rouge, objets de référence et décision.
    * Tout vient de `result.insights` (calculé par l'adapter) et des règles de risque.
    */
-  import type { Insights, CollectionItem } from '$lib/api/types';
+  import type { Insights } from '$lib/api/types';
   import { schema } from '$lib/config/schema';
   import { countryName } from '$lib/config/countries';
   import { termLabel } from '$lib/config/vocabularies';

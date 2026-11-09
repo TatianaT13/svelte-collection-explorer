@@ -7,7 +7,9 @@ import { modelStatus } from './status.svelte';
  * Le modèle (~90 Mo quantifié) est téléchargé une fois puis mis en cache. Même modèle
  * que scripts/build-data.mjs.
  */
-export const MODEL_ID = 'Xenova/clip-vit-base-patch32';
+import { MODEL_ID, MODEL_REVISION } from './model';
+
+export { MODEL_ID };
 
 type Pending = { resolve: (v: Float32Array) => void; reject: (e: Error) => void };
 
@@ -74,8 +76,8 @@ async function embedInline(file: Blob): Promise<Float32Array> {
   const progress_callback = (p: { status: string; file?: string; loaded?: number; total?: number }) => {
     if (p.status === 'progress' && p.file) onProgress(p.file, p.loaded ?? 0, p.total ?? 0);
   };
-  const processor = await AutoProcessor.from_pretrained(MODEL_ID, { progress_callback });
-  const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL_ID, { dtype: 'q8', progress_callback });
+  const processor = await AutoProcessor.from_pretrained(MODEL_ID, { revision: MODEL_REVISION, progress_callback });
+  const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL_ID, { revision: MODEL_REVISION, dtype: 'q8', progress_callback });
   modelStatus.ready();
   const image = await RawImage.fromBlob(file);
   const inputs = await processor(image);

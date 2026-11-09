@@ -14,7 +14,6 @@
   import ScoreRing from '$lib/components/ScoreRing.svelte';
   import ImageCompare from '$lib/components/ImageCompare.svelte';
   import { lastQuery } from '$lib/stores/query.svelte';
-  import { schema } from '$lib/config/schema';
   import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
 
   const items = $derived(compare.items);

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Hook de pré-commit : lint et tests unitaires avant chaque commit (installé par `npm install` via le script prepare).
+npm run --silent lint && npm run --silent test

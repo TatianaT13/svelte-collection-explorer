@@ -23,7 +23,7 @@ est de l'arithmétique sur des tableaux de 512 nombres.
 | A1 | Thèmes de recherche (une vingtaine) | Appel à l'API du Met `v1.1/search`, garde domaine public + image | Liste d'identifiants | `scripts/build-data.mjs` |
 | A2 | Fiche JSON du Met (titre, `medium`, `objectDate`, tags, `culture`, `country`) | Règles de mots-clés → codes du schéma : type, pays ISO, matériaux, techniques, période, sujet | Métadonnées normalisées, ~700 octets par objet | `build-data.mjs` (`toPeriod`, tables de correspondance) |
 | A3 | `primaryImageSmall` du Met (JPEG, 1 000 à 2 000 px) | Réduction au côté max 512 px, enregistrement JPEG | `static/data/thumbs/<id>.jpg`, ~33 Ko chacune, 2,1 Mo pour 64 | `build-data.mjs:427-429` |
-| A4 | **La vignette telle que stockée** (relue depuis le disque) | Prétraitement CLIP puis modèle, voir B5 | Vecteur Float32 × 512, norme 1 | `build-data.mjs:433-436` |
+| A4 | **La vignette telle que stockée** (relue depuis le disque) | Prétraitement CLIP puis modèle (révision Hugging Face épinglée, la même que le navigateur), voir B5 | Vecteur Float32 × 512, norme 1 | `build-data.mjs:433-436` |
 | A5 | 64 vecteurs | Concaténation dans l'ordre des objets | `static/data/embeddings.bin` : 64 × 512 × 4 octets = **131 072 octets** | `build-data.mjs:473` |
 | A6 | Métadonnées + `model` + `dim` | JSON | `static/data/items.json`, 45 Ko | `build-data.mjs:468-469` |
 | A7 | Codes ISO des pays, identifiants de lieux | Une requête SPARQL Wikidata | `static/data/places.json`, 6 Ko (gazetier : libellés, coordonnées, parents) | `build-data.mjs:408` |
@@ -185,7 +185,7 @@ en attente dans `propositions.md`.
 | C1 | 39 vues alternatives des objets du corpus (`eval/queries.json`) | Même chaîne que B5 sur chaque vue, cosinus contre `embeddings.bin` | recall@1 64,1 %, recall@5 89,7 %, MRR 0,765, category@1 82,1 %, origin@1 71,8 % | `scripts/evaluate.mjs`, `eval/results.json` |
 | C2 | 400 objets du Met à deux vues | Vecteur de la vue principale et de la vue alternative | `eval/pairs/<modèle>.json` (ignoré par git) | `scripts/build-pairs.mjs` |
 | C3 | Paires, partition par hachage de l'identifiant (lots 6–7 = calibration, 8–9 = test) | τ_α = ⌊α(n+1)⌋-ième plus petite similarité du bon objet sur la calibration | `eval/calibration-clip.json` : τ = 0,747 pour α = 0,1 | `scripts/calibrate.mjs`, `scripts/lib/metrics.mjs` |
-| C4 | τ | **Recopié à la main** dans `schema.similarity.calibration` avec sa source et sa date | Le seuil que B8 utilise | `src/lib/config/schema.ts:134` |
+| C4 | `eval/calibration-clip.json` | Importé par le schéma, qui prend la ligne α = 0,1 ; un test vérifie que le modèle du fichier est celui du navigateur | `schema.similarity.calibration` : le seuil que B8 utilise | `src/lib/config/schema.ts` (`calibrationFrom`) |
 | C5 (expérience) | Paires d'entraînement (lots 0–5) | Projection W 512 × 512 apprise par InfoNCE, rappelée vers l'identité | recall inchangé, marge +63 % ; non intégrée | `experiments/train-head.mjs` |
 
 Le contrôle de dérive de C1 (écart entre `embeddings.bin` et un recalcul : 0,0001) est ce qui garantit que

@@ -1,0 +1,38 @@
+name: Rafraîchissement des données
+
+# Reconstruit le jeu de démonstration depuis l'API du Met (vignettes, métadonnées, embeddings, gazetier), vérifie que
+# la recherche ne régresse pas, puis ouvre une pull request avec les changements. Mensuel, ou à la demande.
+on:
+  schedule:
+    - cron: '0 5 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run data
+      - run: node scripts/evaluate.mjs --check
+      - name: Pull request si les données ont changé
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- static/data; then echo "données inchangées"; exit 0; fi
+          branch="data/refresh-$(date -u +%Y-%m-%d)"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git checkout -b "$branch"
+          git add static/data
+          git commit -m "Données : reconstruction depuis l'API du Met du $(date -u +%Y-%m-%d), recherche sans régression"
+          git push origin "$branch"
+          gh pr create --fill --body "Reconstruction automatique du jeu de démonstration. L'évaluation (\`scripts/evaluate.mjs --check\`) n'a signalé aucune régression. Relire les métadonnées modifiées avant de fusionner."

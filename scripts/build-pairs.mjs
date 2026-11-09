@@ -66,7 +66,7 @@ async function main() {
   for (const q of QUERIES) {
     if (objects.length >= MAX) break;
     await sleep(600);
-    let ids = [];
+    let ids;
     try {
       ids = (await getJson(`${API}.1/search?hasImages=true&isPublicDomain=true&limit=60&q=${encodeURIComponent(q)}`)).objectIDs ?? [];
     } catch (e) {

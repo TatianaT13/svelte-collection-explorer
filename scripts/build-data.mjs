@@ -20,6 +20,8 @@ import { AutoProcessor, CLIPVisionModelWithProjection, RawImage, env } from '@hu
 
 const API = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const MODEL = 'Xenova/clip-vit-base-patch32';
+/** Révision épinglée : la même que src/lib/ml/model.ts (vérifié par un test). */
+const REVISION = '6b7c523703ae26e39be4b03774966f8571c7f523';
 const MAX = Number(process.argv[process.argv.indexOf('--max') + 1]) || 64;
 const REUSE = process.argv.includes('--reuse');
 const PER_QUERY = 4;
@@ -352,7 +354,7 @@ async function collect() {
   for (const q of QUERIES) {
     if (objects.length >= MAX) break;
     await sleep(800);
-    let ids = [];
+    let ids;
     try {
       const r = await getJson(`${API}.1/search?hasImages=true&isPublicDomain=true&limit=40&q=${encodeURIComponent(q)}`);
       ids = r.objectIDs || [];
@@ -410,8 +412,8 @@ async function main() {
 
   env.allowLocalModels = false;
   console.log('chargement du modèle', MODEL);
-  const processor = await AutoProcessor.from_pretrained(MODEL);
-  const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { dtype: 'q8' });
+  const processor = await AutoProcessor.from_pretrained(MODEL, { revision: REVISION });
+  const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { revision: REVISION, dtype: 'q8' });
 
   const items = [];
   const vectors = [];

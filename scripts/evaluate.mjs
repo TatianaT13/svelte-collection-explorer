@@ -6,6 +6,9 @@
  *   node scripts/evaluate.mjs --build               # constitue d'abord eval/queries.json : une vue alternative par objet qui en a une
  *   node scripts/evaluate.mjs --models clip,dinov2-small
  *   node scripts/evaluate.mjs --models dinov2-small --head eval/heads/dinov2-small.json   # tête apprise (experiments/)
+ *   node scripts/evaluate.mjs --check                # garde-fou (CI) : compare au eval/results.json versionné sans l'écraser,
+ *                                                     échoue si recall@1, recall@5, category@1 baissent de plus d'un point,
+ *                                                     le MRR de plus de 0,01, ou si embeddings.bin dérive du modèle de plus de 0,001
  *
  * Mesures par modèle : recall@1/5/10, MRR, rang médian, catégorie et origine du top-1,
  * et la distribution du score de la bonne réponse (pour situer τ). Produit eval/results.json.
@@ -19,6 +22,10 @@ import { argValue, cosine, loadCorpus, median, pct, projector, round3 } from './
 const API = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const PX = 1024;
 const BUILD = process.argv.includes('--build');
+const CHECK = process.argv.includes('--check');
+/** Baisse tolérée entre deux mesures (points de pourcentage, ou absolu pour le MRR) : au-delà, --check échoue. */
+const TOLERANCE = { 'recall@1': 1, 'recall@5': 1, 'category@1': 1, mrr: 0.01 };
+const MAX_DRIFT = 0.001;
 const MODELS = argValue('--models', 'clip').split(',');
 const HEAD = argValue('--head', null);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -68,9 +75,23 @@ async function buildQueries(items) {
   return queries;
 }
 
+/** Les images de requête ne sont pas versionnées : on les retélécharge depuis leur source (Met) si elles manquent. */
+async function ensureImages(queries) {
+  await mkdir('eval/images', { recursive: true });
+  for (const q of queries) {
+    if (await exists(q.file)) continue;
+    const img = await RawImage.read(q.source);
+    const scale = Math.min(1, PX / Math.max(img.width, img.height));
+    await (scale < 1 ? await img.resize(Math.round(img.width * scale), Math.round(img.height * scale)) : img).save(q.file);
+    process.stdout.write(`\r  image téléchargée : ${q.file}   `);
+    await sleep(120);
+  }
+  return queries;
+}
+
 export async function loadQueries(items) {
   if (BUILD) return buildQueries(items);
-  if (await exists('eval/queries.json')) return JSON.parse(await readFile('eval/queries.json', 'utf8')).queries;
+  if (await exists('eval/queries.json')) return ensureImages(JSON.parse(await readFile('eval/queries.json', 'utf8')).queries);
   console.log('eval/queries.json absent : repli sur static/data/samples.json (lancer --build pour un jeu plus large)');
   const { samples } = JSON.parse(await readFile('static/data/samples.json', 'utf8'));
   return samples.map((s) => ({ ...s, file: `static/${s.file}` }));
@@ -105,6 +126,16 @@ async function loadHead(modelId) {
   return head;
 }
 
+const failures = [];
+
+/** Compare une synthèse à la précédente : une baisse au-delà de la tolérance est une régression. */
+function compare(key, summary, previous) {
+  if (!previous) return;
+  for (const [k, tol] of Object.entries(TOLERANCE)) {
+    if (summary[k] < previous[k] - tol) failures.push(`${key} ${k} : ${previous[k]} → ${summary[k]} (tolérance ${tol})`);
+  }
+}
+
 async function evaluate(key, corpusData, queries) {
   const def = getModel(key);
   console.log(`\n== ${key} (${def.id})`);
@@ -117,8 +148,9 @@ async function evaluate(key, corpusData, queries) {
 
   // Cohérence index / requête : embeddings.bin doit être ce que le modèle du navigateur produit sur les vignettes.
   if (def.id === corpusData.model && !head) {
-    const drift = items.map((_, i) => 1 - cosine(corpusData.vectors[i], corpus[i]));
-    console.log(`  écart max entre embeddings.bin et recalcul : ${Math.max(...drift).toFixed(4)} (0 = même modèle, même image)`);
+    const drift = Math.max(...items.map((_, i) => 1 - cosine(corpusData.vectors[i], corpus[i])));
+    console.log(`  écart max entre embeddings.bin et recalcul : ${drift.toFixed(4)} (0 = même modèle, même image)`);
+    if (CHECK && drift > MAX_DRIFT) failures.push(`embeddings.bin dérive de ${drift.toFixed(4)} par rapport au modèle (max ${MAX_DRIFT}) : relancer npm run data`);
   }
 
   const rows = [];
@@ -171,9 +203,20 @@ async function main() {
   console.log(`${corpusData.items.length} objets de référence, ${queries.length} requêtes (vues alternatives)`);
   const results = {};
   for (const key of MODELS) results[key] = await evaluate(key, corpusData, queries);
+  console.log(`\n${table(results)}\n\nrecall@k : part des requêtes dont le bon objet est dans les k premiers · MRR : moyenne de 1/rang\ncategory@1, origin@1 : le premier résultat a la même catégorie / origine que le bon objet\ntruth>=0.75 : part des bonnes réponses au-dessus de ce seuil · margin : score du bon objet − meilleur autre`);
+  if (CHECK) {
+    const previous = (await exists('eval/results.json')) ? JSON.parse(await readFile('eval/results.json', 'utf8')) : { results: {} };
+    for (const key of MODELS) compare(key, results[key].summary, previous.results[key]?.summary);
+    if (failures.length) {
+      console.error(`\nRÉGRESSION par rapport à eval/results.json (${previous.generatedAt ?? 'absent'}) :\n - ${failures.join('\n - ')}`);
+      process.exit(1);
+    }
+    console.log(`\naucune régression par rapport à eval/results.json (${previous.generatedAt ?? 'absent'}) ; fichier non modifié`);
+    return;
+  }
   await mkdir('eval', { recursive: true });
   await writeFile('eval/results.json', JSON.stringify({ generatedAt: new Date().toISOString(), corpus: corpusData.items.length, queries: queries.length, head: HEAD, results }, null, 2));
-  console.log(`\n${table(results)}\n\nrecall@k : part des requêtes dont le bon objet est dans les k premiers · MRR : moyenne de 1/rang\ncategory@1, origin@1 : le premier résultat a la même catégorie / origine que le bon objet\ntruth>=0.75 : part des bonnes réponses au-dessus de ce seuil · margin : score du bon objet − meilleur autre\nécrit eval/results.json`);
+  console.log('écrit eval/results.json');
 }
 
 if (process.argv[1]?.endsWith('evaluate.mjs')) main().catch((e) => {
