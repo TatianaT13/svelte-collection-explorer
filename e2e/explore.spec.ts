@@ -83,6 +83,9 @@ test.describe('Explorer', () => {
 
   test('bascule de langue persistante', async ({ page }) => {
     await page.goto('./');
+    // Les cartes n'existent qu'après hydratation : sans cette attente, le changement de langue peut tomber sur la
+    // page prérendue, avant que le code client ne soit attaché (observé dans WebKit en CI).
+    await expect(page.locator('article.card').first()).toBeVisible();
     const explore = page.locator('nav .links a[aria-current="page"]');
     await page.locator('nav .lang select').selectOption('en');
     await expect(explore).toHaveText('Explore');
