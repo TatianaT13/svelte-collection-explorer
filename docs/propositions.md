@@ -180,9 +180,11 @@ Relecture critique de ce qui avait été ajouté : moins de code, mêmes perform
 Ce qui se faisait à la main et ne peut plus régresser en silence.
 
 - **Garde-fou sur la recherche** : `scripts/evaluate.mjs --check` compare au `eval/results.json` versionné sans
-  l'écraser et échoue au-delà d'un point de recall@1, recall@5, category@1, de 0,01 de MRR, ou de 0,001 d'écart
-  entre `embeddings.bin` et le modèle. Workflow `evaluation.yml` : à chaque changement du moteur, des données ou
-  des scripts, et chaque semaine. — fait
+  l'écraser et échoue si recall@1, recall@5, category@1 ou le MRR perdent plus que l'effet d'une requête, ou si
+  `embeddings.bin` s'écarte de plus de 0,02 du modèle. Workflow `evaluation.yml` : à chaque changement du moteur,
+  des données ou des scripts, et chaque semaine. Premier passage utile dès le jour même : il a montré que le même
+  modèle épinglé donne des vecteurs à 0,013 près entre macOS et Linux, et qu'une requête sur 39 change de catégorie
+  selon la machine ; les seuils tiennent compte de ce bruit de plateforme. — fait
 - **τ lu, plus recopié** : le schéma importe `eval/calibration-clip.json` et prend la ligne α = 0,1 ; un test
   vérifie que le modèle du fichier est celui du navigateur. — fait
 - **Révision du modèle épinglée** : `src/lib/ml/model.ts` fixe l'empreinte git des poids Hugging Face, utilisée

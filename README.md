@@ -676,9 +676,11 @@ couverture, build, parcours de bout en bout, et les tests du service Python dans
 Deux autres workflows tournent sans intervention :
 
 - `evaluation.yml` rejoue la mesure de recherche (`scripts/evaluate.mjs --check`) quand le moteur, les données
-  ou les scripts changent, et chaque lundi : il échoue si recall@1, recall@5 ou category@1 perdent plus d'un
-  point, si le MRR perd plus de 0,01, ou si `embeddings.bin` s'écarte de plus de 0,001 de ce que le modèle
-  épinglé produit. Le fichier `eval/results.json` versionné est la référence ; il n'est pas réécrit en CI.
+  ou les scripts changent, et chaque lundi : il échoue si recall@1, recall@5, category@1 ou le MRR perdent plus
+  que ce qu'une seule requête sur 39 peut expliquer, ou si `embeddings.bin` s'écarte de plus de 0,02 de ce que le
+  modèle épinglé produit (un autre modèle donne au moins 0,1 ; d'une machine à l'autre, décodage JPEG et exécution
+  ONNX font ~0,01, mesuré 0,013 entre macOS et Linux). Le fichier `eval/results.json` versionné est la référence ;
+  il n'est pas réécrit en CI.
 - `data-refresh.yml` reconstruit le jeu de démonstration depuis l'API du Met le premier du mois, vérifie
   l'absence de régression et ouvre une pull request si les données ont changé.
 - `dependabot.yml` propose les mises à jour npm, pip et GitHub Actions chaque semaine.

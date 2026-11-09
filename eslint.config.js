@@ -5,7 +5,7 @@ import ts from 'typescript-eslint';
 
 /** Lint : règles recommandées de JavaScript, TypeScript et Svelte ; pas de formateur, le style reste celui du code. */
 export default ts.config(
-  { ignores: ['build/', '.svelte-kit/', 'node_modules/', 'static/', 'eval/', 'service/.venv/', 'playwright-report/', 'test-results/'] },
+  { ignores: ['build/', '.svelte-kit/', 'node_modules/', 'static/', 'eval/', 'service/.venv/', 'playwright-report/', 'test-results/', 'coverage/'] },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...svelte.configs['flat/recommended'],

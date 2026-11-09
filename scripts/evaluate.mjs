@@ -7,8 +7,8 @@
  *   node scripts/evaluate.mjs --models clip,dinov2-small
  *   node scripts/evaluate.mjs --models dinov2-small --head eval/heads/dinov2-small.json   # tête apprise (experiments/)
  *   node scripts/evaluate.mjs --check                # garde-fou (CI) : compare au eval/results.json versionné sans l'écraser,
- *                                                     échoue si recall@1, recall@5, category@1 baissent de plus d'un point,
- *                                                     le MRR de plus de 0,01, ou si embeddings.bin dérive du modèle de plus de 0,001
+ *                                                     échoue si recall@1, recall@5, category@1 ou le MRR perdent plus que ce
+ *                                                     qu'une seule requête peut expliquer, ou si embeddings.bin ne vient pas du modèle
  *
  * Mesures par modèle : recall@1/5/10, MRR, rang médian, catégorie et origine du top-1,
  * et la distribution du score de la bonne réponse (pour situer τ). Produit eval/results.json.
@@ -23,9 +23,15 @@ const API = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const PX = 1024;
 const BUILD = process.argv.includes('--build');
 const CHECK = process.argv.includes('--check');
-/** Baisse tolérée entre deux mesures (points de pourcentage, ou absolu pour le MRR) : au-delà, --check échoue. */
-const TOLERANCE = { 'recall@1': 1, 'recall@5': 1, 'category@1': 1, mrr: 0.01 };
-const MAX_DRIFT = 0.001;
+/**
+ * Tolérances de --check. D'une machine à l'autre (décodage JPEG, exécution ONNX), le même modèle épinglé donne des
+ * vecteurs qui s'écartent de ~0,01 en cosinus (mesuré : 0,0001 sur la machine qui a produit l'index, 0,013 macOS → Linux)
+ * et une requête sur 39 peut changer de rang. On tolère donc l'effet d'une seule requête ; au-delà, c'est une régression.
+ * Un autre modèle, ou un autre ordre d'objets, donne un écart d'au moins 0,1 : MAX_DRIFT le détecte sans ambiguïté.
+ */
+const TOLERATED_FLIPS = 1;
+const MAX_DRIFT = 0.02;
+const tolerance = (n) => ({ 'recall@1': (100 * (TOLERATED_FLIPS + 0.5)) / n, 'recall@5': (100 * (TOLERATED_FLIPS + 0.5)) / n, 'category@1': (100 * (TOLERATED_FLIPS + 0.5)) / n, mrr: (0.5 * (TOLERATED_FLIPS + 0.5)) / n });
 const MODELS = argValue('--models', 'clip').split(',');
 const HEAD = argValue('--head', null);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -131,8 +137,8 @@ const failures = [];
 /** Compare une synthèse à la précédente : une baisse au-delà de la tolérance est une régression. */
 function compare(key, summary, previous) {
   if (!previous) return;
-  for (const [k, tol] of Object.entries(TOLERANCE)) {
-    if (summary[k] < previous[k] - tol) failures.push(`${key} ${k} : ${previous[k]} → ${summary[k]} (tolérance ${tol})`);
+  for (const [k, tol] of Object.entries(tolerance(summary.queries))) {
+    if (summary[k] < previous[k] - tol) failures.push(`${key} ${k} : ${previous[k]} → ${summary[k]} (tolérance ${round3(tol)}, soit ${TOLERATED_FLIPS} requête sur ${summary.queries})`);
   }
 }
 
