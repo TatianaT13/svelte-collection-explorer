@@ -1,11 +1,12 @@
 # Propositions d'avancement
 
-Synthèse de tout ce qui a été proposé pour le prototype, après l'entretien technique du 4 novembre 2026
-et la lecture du SOW (Department of State, Cultural Heritage Center). Chaque ligne dit ce que ça
+Synthèse de tout ce qui a été proposé pour le prototype, à partir des retours d'usage et des exigences
+habituelles d'un outil d'identification de biens culturels (fiabilité mesurée, traçabilité, passage à
+l'échelle, robustesse sur le terrain). Chaque ligne dit ce que ça
 apporte, ce que ça coûte, et si c'est mesurable avec `npm run evaluate`.
 
 Ordre de réalisation choisi : **1 → 2** (ce document, puis le code), ensuite 3, 5, 6, le remote adapter,
-et les points SOW.
+et les exigences transverses.
 
 ## État
 
@@ -53,7 +54,7 @@ des paires studio / photos de terrain, et exporter en ONNX int8 pour le navigate
 (0,75 / 0,8) sont propres à CLIP. La prédiction conforme (RCIR, AAAI 2025) donne, pour chaque
 requête, un **ensemble de candidats de taille adaptative** qui contient le bon objet avec une probabilité
 garantie 1 − α, sans réentraînement et pour n'importe quel encodeur. Quand l'ensemble explose, c'est
-le signal « objet absent de la base ». C'est le *trustworthy AI* que le SOW demande, et la
+le signal « objet absent de la base ». C'est une IA dont on peut dire ce qu'elle garantit, et la
 traçabilité du doute pour l'agent.
 
 **Ce qu'on fait.** `scripts/calibrate.mjs` :
@@ -107,8 +108,8 @@ Garder DINOv3 pour l'appariement d'instance (choix de l'équipe, confirmé par n
 
 Générer flou, sous-exposition, reflets, rotation, fond encombré, cadrage partiel à partir des vues
 alternatives ; mesurer la chute de recall par condition et par modèle ; montrer la parade (plusieurs
-variantes de la requête moyennées — `averageNormalized` existe déjà). C'est le *simulated field testing*
-du SOW en miniature.
+variantes de la requête moyennées — `averageNormalized` existe déjà). C'est un test de terrain simulé,
+en miniature.
 
 ## 7. Recherche filtrée
 
@@ -123,7 +124,7 @@ Section README « Passage à l'échelle » (HNSW, DiskANN, Milvus).
 
 ---
 
-## Points liés au SOW
+## Exigences transverses
 
 - **Traçabilité du dossier** : ajouter au JSON exporté l'identifiant du modèle, la date du jeu de données,
   les seuils (ou τ conformes) et les scores du top-k, pour qu'un résultat soit reproductible.
@@ -138,11 +139,11 @@ Section README « Passage à l'échelle » (HNSW, DiskANN, Milvus).
 - **Interface `Embedder`** : `{ id, dim, embed(blob) }` dans `embedder.ts`, DINOv2 dans le navigateur,
   refus de requête si `dataset.model ≠ embedder.id`.
 - **Licence** : DINOv3 est sous licence Meta sur mesure (commercial permis, mention « Built with DINOv3 »,
-  exclusions ITAR / militaire) ; à concilier avec les *Government Purpose Rights* du §10.2.
+  exclusions ITAR / militaire) ; à vérifier avant toute utilisation par une administration.
 
-## Consolidation après relecture (4 novembre 2026)
+## Consolidation (4 novembre 2026)
 
-Une relecture extérieure du dépôt a pointé des formulations trop affirmatives et des limites non dites.
+Une relecture du dépôt a pointé des formulations trop affirmatives et des limites non dites.
 Traité :
 
 - **Formulations de confiance** : « garanti à 90 % » → « couverture visée de 90 % sur le jeu de calibration,
@@ -179,5 +180,5 @@ Relecture critique de ce qui avait été ajouté : moins de code, mêmes perform
 Les gains cités viennent de benchmarks de monuments (Oxford, Paris), pas d'antiquités : ils se
 vérifient sur nos données ou ne valent rien. 39 requêtes orientent, ne tranchent pas. La prédiction
 conforme garantit la couverture **sur la distribution de calibration** : calibrer sur des vues de studio
-ne garantit rien sur des photos de comptoir — d'où l'importance du Task 6 du SOW pour obtenir des
-photos de terrain annotées.
+ne garantit rien sur des photos de comptoir — d'où l'importance d'une collecte de photos de terrain
+annotées avant toute mise en service.
