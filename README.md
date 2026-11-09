@@ -732,8 +732,8 @@ Trois niveaux, exécutés par le workflow avant chaque déploiement, plus la mes
 - `npm run evaluate`, `npm run calibrate`, `npm run robustness` : mesures de la recherche par image (§ 16). Elles téléchargent les
   modèles, donc elles vivent dans leur propre workflow (`evaluation.yml`, § 14) et non dans le déploiement.
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
-  (`e2e/`). Neuf parcours : filtres et URL partageable, recherche texte avec délai, attributs
-  cochables, volet puis comparaison, bascule de langue, page de contrôle, **deux recherches par image réelles** (le
+  (`e2e/`, Chromium, et WebKit pour les parcours d'interface afin de couvrir Safari). Dix parcours : filtres et URL partageable, recherche texte avec délai, attributs
+  cochables, volet puis comparaison, volet au-dessus de la carte (contexte d'empilement de Leaflet), bascule de langue, page de contrôle, **deux recherches par image réelles** (le
   modèle CLIP est chargé dans le worker du navigateur, une vue alternative d'un objet du corpus est vectorisée, et
   l'objet doit sortir en premier avec le panneau de lecture affiché et aucune erreur de console) et **une recherche par
   description** (« manuscrit enluminé » doit rendre le lectionnaire en premier). Les poids

@@ -108,6 +108,11 @@
 
 <style>
   .map {
+    /* Contexte d'empilement : Leaflet pose ses couches à z-index 400 et ses contrôles à 1000 ; sans ceci elles
+       passeraient par-dessus le volet de détail (z-index 41) et tout ce qui est sous 400. */
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;

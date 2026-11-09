@@ -63,6 +63,24 @@ test.describe('Explorer', () => {
     await expect(page.locator('tbody tr.diff').first()).toBeVisible();
   });
 
+  test('le volet de détail passe devant la carte', async ({ page }) => {
+    await page.goto('./');
+    await expect(page.locator('article.card').first()).toBeVisible();
+    await page.locator('.map-toggle').click();
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await page.locator('article.card .title').first().click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // Un point commun au volet et à la carte : l'élément visible au-dessus doit appartenir au volet.
+    const d = (await dialog.boundingBox())!;
+    const m = (await page.locator('.leaflet-container').boundingBox())!;
+    const x = Math.max(d.x, m.x) + 10;
+    const y = Math.max(d.y, m.y) + 10;
+    expect(x).toBeLessThan(Math.min(d.x + d.width, m.x + m.width)); // les deux se chevauchent bien dans ce test
+    const onTop = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('[role=dialog]') !== null, [x, y]);
+    expect(onTop).toBe(true);
+  });
+
   test('bascule de langue persistante', async ({ page }) => {
     await page.goto('./');
     const explore = page.locator('nav .links a[aria-current="page"]');
