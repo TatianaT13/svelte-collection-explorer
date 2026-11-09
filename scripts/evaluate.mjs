@@ -15,7 +15,7 @@
  * Les embeddings du corpus sont recalculés par modèle depuis static/data/thumbs et mis en cache dans eval/cache/.
  */
 import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
-import { RawImage } from '@huggingface/transformers';
+import { RawImage, env } from '@huggingface/transformers';
 import { getModel } from './lib/models.mjs';
 import { argValue, cosine, loadCorpus, median, pct, projector, round3 } from './lib/metrics.mjs';
 
@@ -107,9 +107,15 @@ export async function loadQueries(items) {
 export async function corpusEmbeddings(key, embed, items) {
   await mkdir('eval/cache', { recursive: true });
   const cache = `eval/cache/${key}.json`;
+  const def = getModel(key);
+  // Le cache ne vaut que pour le même modèle (révision épinglée), la même bibliothèque et les mêmes objets :
+  // un changement de transformers.js ou de poids doit se voir dans la mesure, pas être masqué par le cache.
+  const stamp = { model: def.id, revision: def.revision ?? null, runtime: `transformers.js ${env.version}` };
   if (await exists(cache)) {
     const c = JSON.parse(await readFile(cache, 'utf8'));
-    if (c.ids.length === items.length && c.ids.every((id, i) => id === items[i].id)) return c.vectors.map((v) => Float32Array.from(v));
+    const same = c.model === stamp.model && (c.revision ?? null) === stamp.revision && c.runtime === stamp.runtime;
+    if (same && c.ids.length === items.length && c.ids.every((id, i) => id === items[i].id)) return c.vectors.map((v) => Float32Array.from(v));
+    console.log(`  cache ${cache} ignoré (${c.runtime ?? 'sans version'}, ${c.revision ? c.revision.slice(0, 7) : 'sans révision'}) : recalcul`);
   }
   const vectors = [];
   for (const it of items) {
@@ -117,7 +123,7 @@ export async function corpusEmbeddings(key, embed, items) {
     process.stdout.write(`\r  corpus ${vectors.length}/${items.length}`);
   }
   console.log();
-  await writeFile(cache, JSON.stringify({ model: getModel(key).id, ids: items.map((it) => it.id), vectors: vectors.map((v) => [...v].map((x) => Math.round(x * 10000) / 10000)) }));
+  await writeFile(cache, JSON.stringify({ ...stamp, ids: items.map((it) => it.id), vectors: vectors.map((v) => [...v].map((x) => Math.round(x * 10000) / 10000)) }));
   return vectors;
 }
 

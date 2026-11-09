@@ -214,8 +214,12 @@ Faites une à la fois, chaîne complète entre chaque étape (types, lint, tests
   (`$app/manifest` + portée d'enregistrement pour le chemin de base), configuration SvelteKit déplacée dans
   `vite.config.ts`. Vitest 5 compte désormais tous les fichiers de `src/lib`, importés ou non : la couverture
   réelle est 36 %, le seuil passe à 30 %. — fait
-- **transformers.js 4** : à mesurer avec `evaluate --check` avant de l'accepter, les vecteurs de l'index en
-  dépendent. — en cours
+- **transformers.js 4.3** (onnxruntime 1.30, sharp 0.35) : mesuré avant d'être accepté. Côté Node, les vecteurs du
+  corpus s'écartent de 0,013 de `embeddings.bin` (le même ordre que l'écart entre deux machines), recall@1 64,1 → 66,7,
+  origin@1 71,8 → 74,4, category@1 82,1 → 79,5 (une requête) : pas de régression, index conservé. Côté navigateur,
+  inférence réelle vérifiée sur le build (Playwright : premier résultat correct, service worker enregistré, aucune
+  erreur de console). Le cache de l'évaluation porte désormais la version de la bibliothèque et la révision du
+  modèle : un changement de l'un ou l'autre force le recalcul au lieu de comparer des vecteurs d'origines différentes. — fait
 
 ## Réserves
 
