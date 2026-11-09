@@ -196,7 +196,7 @@ Ce qui se faisait à la main et ne peut plus régresser en silence.
 - **Rafraîchissement des données** : `data-refresh.yml` reconstruit mensuellement, vérifie l'absence de
   régression, ouvre une pull request. — fait
 - **Hygiène** : ESLint sans formateur (le style du code reste tel quel), hook de pré-commit (lint + tests),
-  `npm audit --omit=dev` en CI, seuil de couverture à 30 % de lignes sur tout `src/lib` (36 % mesurés, fichiers non importés compris), Dependabot
+  `npm audit --omit=dev` en CI, seuil de couverture à 50 % de lignes sur tout `src/lib` (56 % mesurés, fichiers non importés compris), Dependabot
   hebdomadaire npm, pip et Actions. — fait
 - Non automatisé, à dessein : les états de ce document, et la mise à jour de `eval/results.json`, qui reste
   un geste délibéré (`npm run evaluate`) après un changement voulu.
@@ -213,13 +213,33 @@ Faites une à la fois, chaîne complète entre chaque étape (types, lint, tests
   `replaceState` → `goto(url, { shallow: true, replace: true })`, service worker dans son propre projet TypeScript
   (`$app/manifest` + portée d'enregistrement pour le chemin de base), configuration SvelteKit déplacée dans
   `vite.config.ts`. Vitest 5 compte désormais tous les fichiers de `src/lib`, importés ou non : la couverture
-  réelle est 36 %, le seuil passe à 30 %. — fait
+  réelle était 36 % ; après les tests des adapters, des stores et du dossier (ci-dessous), 56 %, seuil à 50 %. — fait
 - **transformers.js 4.3** (onnxruntime 1.30, sharp 0.35) : mesuré avant d'être accepté. Côté Node, les vecteurs du
   corpus s'écartent de 0,013 de `embeddings.bin` (le même ordre que l'écart entre deux machines), recall@1 64,1 → 66,7,
   origin@1 71,8 → 74,4, category@1 82,1 → 79,5 (une requête) : pas de régression, index conservé. Côté navigateur,
   inférence réelle vérifiée sur le build (Playwright : premier résultat correct, service worker enregistré, aucune
   erreur de console). Le cache de l'évaluation porte désormais la version de la bibliothèque et la révision du
   modèle : un changement de l'un ou l'autre force le recalcul au lieu de comparer des vecteurs d'origines différentes. — fait
+
+## Tests qui portent le risque (9 novembre 2026)
+
+- **Recherche par image de bout en bout, en CI** : deux parcours Playwright chargent le modèle CLIP dans le worker du
+  navigateur sur le build, vectorisent une vue alternative d'un objet du corpus et exigent cet objet en premier, le
+  panneau de lecture affiché et aucune erreur de console. Les 90 Mo de poids sont servis depuis le cache de
+  transformers.js par un petit serveur local avec redirection (les servir directement par `route.fulfill` ferme la
+  page dans Chromium) ; en CI, le cache du workflow d'évaluation est restauré avant les parcours. 4 s par parcours
+  avec le cache. C'est le test qui attraperait un changement silencieux de prétraitement. — fait
+- **Adapters avec `fetch` et embedder simulés** : chargement unique des données, refus d'un `embeddings.bin` de mauvaise
+  taille, classement par cosinus et arrondi, filtres et texte avant le tri, pagination ; côté distant, refus d'un index
+  calculé avec un autre modèle, requête `POST /search` envoyée avec le vecteur et jamais l'image, lecture agrégée sur
+  les candidats, `/meta` interrogé une fois, 404 → null, archivage multipart avec empreinte et métadonnées. — fait
+- **Stores de session et dossier exporté** : photo de référence sans l'image, décision horodatée et annulable, relecture
+  au rechargement, sélection pour comparaison plafonnée à quatre, forme du dossier (listes rouges par candidat, nom
+  horodaté). — fait
+- Piège rencontré avec Vitest 5 : une fonction rendue par `beforeEach` est appelée comme nettoyage ; `beforeEach(() =>
+  spy.mockClear())` appelait donc l'embedder simulé sans argument. Accolades partout.
+- Non testé à dessein : thème, drapeaux, repli d'image, redimensionnement canvas. Ça ferait monter le chiffre sans
+  protéger quoi que ce soit.
 
 ## Réserves
 

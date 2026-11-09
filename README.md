@@ -702,17 +702,23 @@ Trois niveaux, exécutés par le workflow avant chaque déploiement, plus la mes
 - `npm run lint` : ESLint (règles recommandées JavaScript, TypeScript, Svelte), sans formateur. Un hook de
   pré-commit (`.githooks/`, installé par `npm install`) lance lint et tests unitaires avant chaque commit.
 - `npm test` : Vitest sur les modules purs (sérialisation d'URL, libellés, filtrage et recherche
-  texte, similarité, lecture agrégée et ensemble conforme, listes rouges, qualité photo), plus deux tests de
-  cohérence : la révision du modèle est la même dans le navigateur, l'index et les scripts, et le seuil τ du
+  texte, similarité, lecture agrégée et ensemble conforme, listes rouges, qualité photo), sur les deux adapters
+  avec un `fetch` et un embedder simulés (chargement unique des données, refus d'un `embeddings.bin` de mauvaise
+  taille, classement par cosinus, filtres avant tri, refus d'un index calculé avec un autre modèle, requête envoyée
+  sans l'image, archivage multipart avec empreinte), sur les stores de session (photo de référence et décision,
+  sélection pour comparaison) et sur le dossier exporté, plus deux tests de cohérence : la révision du modèle est la même dans le navigateur, l'index et les scripts, et le seuil τ du
   schéma vient bien du modèle du navigateur ; chaque fichier cité par `static/architecture.html` existe et
-  chaque fichier de `src/` y figure. `npm run test:coverage` applique un seuil de 30 % de lignes sur l'ensemble de `src/lib`, fichiers jamais importés par un test compris (36 % mesurés : les adapters, les stores et le client d'embedding ne sont couverts que par les parcours de bout en bout).
+  chaque fichier de `src/` y figure. `npm run test:coverage` applique un seuil de 50 % de lignes sur l'ensemble de `src/lib`, fichiers jamais importés par un test compris (56 % mesurés ; le reste est du code de navigateur, canvas, worker, thème, couvert par les parcours de bout en bout).
 - `npm run test:service` : 15 tests pytest du service (validation, recherche filtrée, archive, empreinte).
 - `npm run evaluate`, `npm run calibrate` : mesures de la recherche par image (§ 16). Elles téléchargent les
   modèles, donc elles vivent dans leur propre workflow (`evaluation.yml`, § 14) et non dans le déploiement.
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
-  (`e2e/`). Six parcours : filtres et URL partageable, recherche texte avec délai, attributs
-  cochables, volet puis comparaison, bascule de langue, page de contrôle. La recherche par image n'est pas testée en
-  CI pour éviter de télécharger le modèle à chaque exécution.
+  (`e2e/`). Huit parcours : filtres et URL partageable, recherche texte avec délai, attributs
+  cochables, volet puis comparaison, bascule de langue, page de contrôle, et **deux recherches par image réelles** :
+  le modèle CLIP est chargé dans le worker du navigateur, une vue alternative d'un objet du corpus est vectorisée,
+  et l'objet doit sortir en premier avec le panneau de lecture affiché et aucune erreur de console. Les poids
+  (90 Mo) sont servis depuis le cache local de transformers.js quand il existe (en CI, celui du workflow
+  d'évaluation, restauré avant les parcours), sinon depuis le Hub.
 
 ---
 

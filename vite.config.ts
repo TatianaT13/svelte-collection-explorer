@@ -21,6 +21,6 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     environment: 'node',
     // Couverture : seuil plancher sur toute la logique de src/lib (fichiers jamais importés compris), relevé à mesure que les tests s'ajoutent.
-    coverage: { include: ['src/lib/**/*.ts'], exclude: ['src/lib/**/*.test.ts', 'src/lib/ml/embed.worker.ts'], thresholds: { lines: 30 } }
+    coverage: { include: ['src/lib/**/*.ts'], exclude: ['src/lib/**/*.test.ts', 'src/lib/ml/embed.worker.ts'], thresholds: { lines: 50 } }
   }
 });

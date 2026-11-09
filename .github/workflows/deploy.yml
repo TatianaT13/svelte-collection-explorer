@@ -34,6 +34,12 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}
       - run: npx playwright install --with-deps chromium
+      # Le parcours « recherche par image » sert les poids du modèle depuis ce cache (celui du workflow d'évaluation)
+      # au lieu de les télécharger ; sans cache, il les prend sur le Hub.
+      - uses: actions/cache/restore@v6
+        with:
+          path: node_modules/@huggingface/transformers/.cache
+          key: eval-${{ hashFiles('src/lib/ml/model.ts', 'eval/queries.json') }}
       - run: npm run test:e2e
         env:
           CI: true
