@@ -1,8 +1,10 @@
 name: Déploiement GitHub Pages
 
+# Sur une pull request (Dependabot compris), la chaîne de vérification tourne sans publier.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,7 +13,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -52,6 +54,7 @@ jobs:
       - run: python -m pytest service -q
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: [build, service]
     runs-on: ubuntu-latest
     environment:
