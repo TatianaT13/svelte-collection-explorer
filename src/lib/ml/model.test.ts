@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { MODEL_ID, MODEL_REVISION } from './model';
-import { schema } from '$lib/config/schema';
+import { schema } from '#lib/config/schema.ts';
 
 /** Le navigateur, l'index et les scripts doivent charger exactement les mêmes poids, et τ doit avoir été mesuré avec eux. */
 describe('révision du modèle', () => {

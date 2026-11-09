@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatValue, labelOf, fieldLabel } from './labels';
-import { schema } from '$lib/config/schema';
-import { i18n } from '$lib/i18n/index.svelte';
+import { schema } from '#lib/config/schema.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
 
 const field = (key: string) => schema.fields.find((f) => f.key === key)!;
 

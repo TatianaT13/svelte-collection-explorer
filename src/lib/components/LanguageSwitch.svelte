@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Sélecteur de langue : écrit dans le store i18n, mémorisé en localStorage. */
   import { onMount } from 'svelte';
-  import { i18n, type Locale } from '$lib/i18n/index.svelte';
+  import { i18n, type Locale } from '#lib/i18n/index.svelte.ts';
 
   // Valeur résolue après montage pour que le HTML serveur et le premier rendu client coïncident.
   let value = $state<Locale>('fr');

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { ActiveFilters, CollectionItem } from '$lib/api/types';
-  import { cardFields } from '$lib/config/schema';
-  import { compare } from '$lib/stores/compare.svelte';
+  import type { ActiveFilters, CollectionItem } from '#lib/api/types.ts';
+  import { cardFields } from '#lib/config/schema.ts';
+  import { compare } from '#lib/stores/compare.svelte.ts';
   import AttributeList from './AttributeList.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { riskFor } from '$lib/config/risk';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { riskFor } from '#lib/config/risk.ts';
   import ScoreRing from './ScoreRing.svelte';
 
   let {

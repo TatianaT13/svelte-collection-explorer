@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { places } from './places.svelte';
-import { matchesFilters } from '$lib/api/filtering';
-import type { CollectionItem } from '$lib/api/types';
+import { matchesFilters } from '#lib/api/filtering.ts';
+import type { CollectionItem } from '#lib/api/types.ts';
 
 beforeAll(() => {
   places.set({

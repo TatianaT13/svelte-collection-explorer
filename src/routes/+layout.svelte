@@ -1,18 +1,18 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { base } from '$app/paths';
-  import { compare } from '$lib/stores/compare.svelte';
-  import { schema } from '$lib/config/schema';
-  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-  import CompareTray from '$lib/components/CompareTray.svelte';
-  import LanguageSwitch from '$lib/components/LanguageSwitch.svelte';
-  import Logo from '$lib/components/Logo.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import { resolve } from '$app/paths';
+  import { compare } from '#lib/stores/compare.svelte.ts';
+  import { schema } from '#lib/config/schema.ts';
+  import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+  import CompareTray from '#lib/components/CompareTray.svelte';
+  import LanguageSwitch from '#lib/components/LanguageSwitch.svelte';
+  import Logo from '#lib/components/Logo.svelte';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let { children } = $props();
-  const onCompare = $derived(page.url.pathname.startsWith(`${base}/compare`));
-  const onControl = $derived(page.url.pathname.startsWith(`${base}/controle`));
-  const onExplore = $derived(page.url.pathname === `${base}/` || page.url.pathname === base);
+  const onCompare = $derived(page.route.id === '/compare');
+  const onControl = $derived(page.route.id === '/controle');
+  const onExplore = $derived(page.route.id === '/');
 </script>
 
 <svelte:head>
@@ -22,16 +22,16 @@
 <a class="skip" href="#main">{i18n.t('nav.skip')}</a>
 
 <nav>
-  <a href="{base}/" class="brand" aria-label={i18n.l(schema.name)}>
+  <a href={resolve('/')} class="brand" aria-label={i18n.l(schema.name)}>
     <Logo size={28} wordmark={i18n.l(schema.name)} />
   </a>
   <div class="links">
-    <a href="{base}/" aria-current={onExplore ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
-    <a href="{base}/compare/" aria-current={onCompare ? 'page' : undefined}>
+    <a href={resolve('/')} aria-current={onExplore ? 'page' : undefined}>{i18n.t('nav.explore')}</a>
+    <a href={resolve('compare/')} aria-current={onCompare ? 'page' : undefined}>
       {i18n.t('nav.compare')}
       {#if compare.count}<span class="badge cmp">{compare.count}</span>{/if}
     </a>
-    <a href="{base}/controle/" aria-current={onControl ? 'page' : undefined}>{i18n.t('nav.control')}</a>
+    <a href={resolve('controle/')} aria-current={onControl ? 'page' : undefined}>{i18n.t('nav.control')}</a>
     <LanguageSwitch />
     <ThemeToggle />
   </div>

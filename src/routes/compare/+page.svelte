@@ -3,18 +3,18 @@
    * Page Comparer : objets sélectionnés côte à côte, champs groupés,
    * différences surlignées, option "différences seulement", copie du tableau.
    */
-  import { compare } from '$lib/stores/compare.svelte';
-  import { fieldGroups } from '$lib/config/schema';
-  import { formatValue, fieldLabel } from '$lib/utils/labels';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { fallbackToThumb } from '$lib/utils/imgFallback';
-  import { base } from '$app/paths';
-  import { flagEmoji } from '$lib/utils/flag';
-  import MetadataValue from '$lib/components/MetadataValue.svelte';
-  import ScoreRing from '$lib/components/ScoreRing.svelte';
-  import ImageCompare from '$lib/components/ImageCompare.svelte';
-  import { lastQuery } from '$lib/stores/query.svelte';
-  import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
+  import { compare } from '#lib/stores/compare.svelte.ts';
+  import { fieldGroups } from '#lib/config/schema.ts';
+  import { formatValue, fieldLabel } from '#lib/utils/labels.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { fallbackToThumb } from '#lib/utils/imgFallback.ts';
+  import { resolve } from '$app/paths';
+  import { flagEmoji } from '#lib/utils/flag.ts';
+  import MetadataValue from '#lib/components/MetadataValue.svelte';
+  import ScoreRing from '#lib/components/ScoreRing.svelte';
+  import ImageCompare from '#lib/components/ImageCompare.svelte';
+  import { lastQuery } from '#lib/stores/query.svelte.ts';
+  import { buildCaseFile, caseFileName, downloadJson } from '#lib/utils/caseFile.ts';
 
   const items = $derived(compare.items);
   let onlyDiff = $state(false);
@@ -88,11 +88,11 @@
   <div class="empty">
     <p><strong>{i18n.t('compare.empty')}</strong></p>
     <p class="muted">{i18n.t('compare.emptyHint', { max: compare.max })}</p>
-    <a class="btn" href="{base}/">{i18n.t('compare.goExplore')}</a>
+    <a class="btn" href={resolve('/')}>{i18n.t('compare.goExplore')}</a>
   </div>
 {:else}
   {#if items.length === 1}
-    <p class="hint">{i18n.t('compare.oneHint')} <a href="{base}/">{i18n.t('compare.back')}</a></p>
+    <p class="hint">{i18n.t('compare.oneHint')} <a href={resolve('/')}>{i18n.t('compare.back')}</a></p>
   {/if}
   {#if lastQuery.record}
     <p class="query">

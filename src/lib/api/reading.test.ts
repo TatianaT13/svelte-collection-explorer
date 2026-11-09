@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { conformalSet, isAmbiguous, readInsights } from './reading';
 import type { Insights } from './types';
-import { schema } from '$lib/config/schema';
+import { schema } from '#lib/config/schema.ts';
 
 const base = (over: Partial<Insights>): Insights => ({
   topK: 12, origins: [], places: [], categories: [], materials: [], techniques: [], subjects: [], periods: [], references: [{ id: 'a', title: 'a', score: 0.9 }], ...over

@@ -1,4 +1,3 @@
-/// <reference types="@sveltejs/kit" />
 /// <reference no-default-lib="true"/>
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
@@ -9,13 +8,21 @@
  * Le modèle de reconnaissance est mis en cache par transformers.js lui-même.
  * Les images grand format du musée restent en réseau seul (repli sur la vignette).
  */
-import { build, files, prerendered, version, base } from '$service-worker';
+import { version } from '$app/env';
+import { assets, immutable, prerendered } from '$app/manifest';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
+/** Chemin de base de l'application (GitHub Pages) : la portée d'enregistrement du service worker. */
+const base = new URL(sw.registration.scope).pathname.replace(/\/$/, '');
+const withBase = (p: string) => (p.startsWith(`${base}/`) || p === base ? p : `${base}/${p.replace(/^\//, '')}`);
+const build = immutable.map((f) => withBase(f.path));
+const pages = prerendered.map((f) => withBase(f.path));
+const files = assets.map((f) => withBase(f.path));
+
 const CACHE = `app-${version}`;
 // Scripts et styles, pages pré-rendues (HTML), fichiers statiques.
 // Pas de fichiers cachés (.nojekyll…) : un seul 404 ferait échouer l'installation du cache.
-const ASSETS = [...build, ...prerendered, ...files.filter((f) => !f.split('/').some((seg) => seg.startsWith('.')))];
+const ASSETS = [...build, ...pages, ...files.filter((f) => !f.split('/').some((seg) => seg.startsWith('.')))];
 
 sw.addEventListener('install', (event) => {
   event.waitUntil(

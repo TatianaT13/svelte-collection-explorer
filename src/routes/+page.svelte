@@ -7,7 +7,7 @@
    */
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { replaceState } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { fade } from 'svelte/transition';
   import {
     api,
@@ -18,26 +18,26 @@
     type FacetValues,
     type ImageInfo,
     type SearchResult
-  } from '$lib/api';
-  import { schema } from '$lib/config/schema';
-  import { readSearchState, writeSearchState } from '$lib/utils/urlState';
-  import { resizeImage, type ResizeResult } from '$lib/utils/resizeImage';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import ImageUpload from '$lib/components/ImageUpload.svelte';
-  import FilterPanel from '$lib/components/FilterPanel.svelte';
-  import FilterChips from '$lib/components/FilterChips.svelte';
-  import ResultCard from '$lib/components/ResultCard.svelte';
-  import SkeletonCard from '$lib/components/SkeletonCard.svelte';
-  import ImageInfoPanel from '$lib/components/ImageInfoPanel.svelte';
-  import ItemDrawer from '$lib/components/ItemDrawer.svelte';
-  import ModelStatus from '$lib/components/ModelStatus.svelte';
-  import InsightsPanel from '$lib/components/InsightsPanel.svelte';
-  import MapView from '$lib/components/MapView.svelte';
-  import PhotoQuality from '$lib/components/PhotoQuality.svelte';
-  import SampleImages from '$lib/components/SampleImages.svelte';
-  import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
-  import { riskFor, riskRules } from '$lib/config/risk';
-  import { lastQuery } from '$lib/stores/query.svelte';
+  } from '#lib/api/index.ts';
+  import { schema } from '#lib/config/schema.ts';
+  import { readSearchState, writeSearchState } from '#lib/utils/urlState.ts';
+  import { resizeImage, type ResizeResult } from '#lib/utils/resizeImage.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import ImageUpload from '#lib/components/ImageUpload.svelte';
+  import FilterPanel from '#lib/components/FilterPanel.svelte';
+  import FilterChips from '#lib/components/FilterChips.svelte';
+  import ResultCard from '#lib/components/ResultCard.svelte';
+  import SkeletonCard from '#lib/components/SkeletonCard.svelte';
+  import ImageInfoPanel from '#lib/components/ImageInfoPanel.svelte';
+  import ItemDrawer from '#lib/components/ItemDrawer.svelte';
+  import ModelStatus from '#lib/components/ModelStatus.svelte';
+  import InsightsPanel from '#lib/components/InsightsPanel.svelte';
+  import MapView from '#lib/components/MapView.svelte';
+  import PhotoQuality from '#lib/components/PhotoQuality.svelte';
+  import SampleImages from '#lib/components/SampleImages.svelte';
+  import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '#lib/utils/photoQuality.ts';
+  import { riskFor, riskRules } from '#lib/config/risk.ts';
+  import { lastQuery } from '#lib/stores/query.svelte.ts';
 
   // Pré-rendu statique : l'URL n'est connue que dans le navigateur.
   // L'état part vide, puis est lu depuis l'URL au montage ; les effets attendent `ready`.
@@ -157,7 +157,7 @@
   $effect(() => {
     if (!ready) return;
     const url = writeSearchState(new URL(location.href), { text: query, filters, page: pageNo });
-    if (url.href !== location.href) replaceState(url, {});
+    if (url.href !== location.href) goto(url, { shallow: true, replace: true, reset: false });
   });
 
   // Lit les métadonnées dès qu'une image est choisie, et lance le chargement du modèle.
@@ -167,7 +167,7 @@
       imageInfo = null;
       return;
     }
-    import('$lib/ml/embedder').then(({ preloadModel }) => preloadModel());
+    import('#lib/ml/embedder.ts').then(({ preloadModel }) => preloadModel());
     let cancelled = false;
     extractImageInfo(f).then((info) => {
       if (!cancelled) imageInfo = info;
@@ -178,7 +178,7 @@
   });
 
   onMount(async () => {
-    const initial = readSearchState(page.url.searchParams);
+    const initial = readSearchState(new URLSearchParams(page.url.search));
     text = initial.text;
     query = initial.text;
     filters = initial.filters;

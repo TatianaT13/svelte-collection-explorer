@@ -1,8 +1,8 @@
-import type { CollectionItem, Insights } from '$lib/api/types';
-import { riskFor } from '$lib/config/risk';
-import { schema } from '$lib/config/schema';
-import { i18n } from '$lib/i18n/index.svelte';
-import { lastQuery } from '$lib/stores/query.svelte';
+import type { CollectionItem, Insights } from '#lib/api/types.ts';
+import { riskFor } from '#lib/config/risk.ts';
+import { schema } from '#lib/config/schema.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
+import { lastQuery } from '#lib/stores/query.svelte.ts';
 
 /** Dossier de contrôle : photo de référence (sans l'image), lecture, candidats, décision. */
 export function buildCaseFile(items: CollectionItem[], insights?: Insights | null) {

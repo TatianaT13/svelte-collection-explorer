@@ -1,6 +1,6 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { untrack } from 'svelte';
-import type { ImageInfo } from '$lib/api/imageInfo';
+import type { ImageInfo } from '#lib/api/imageInfo.ts';
 
 /**
  * Dernière recherche par image, conservée en session pour figurer dans
@@ -41,7 +41,7 @@ function createQueryStore() {
     if (!browser) return null;
     try {
       const raw = sessionStorage.getItem(KEY);
-      return raw ? (JSON.parse(raw) as QueryRecord) : null;
+      return raw ? JSON.parse(raw) as QueryRecord : null;
     } catch {
       return null;
     }

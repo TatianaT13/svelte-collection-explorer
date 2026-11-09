@@ -1,10 +1,10 @@
 import type { ArchiveReceipt, CollectionAdapter } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
-import { countryName } from '$lib/config/countries';
-import { schema } from '$lib/config/schema';
-import { termLabel, vocabCodes } from '$lib/config/vocabularies';
-import { i18n } from '$lib/i18n/index.svelte';
+import { countryName } from '#lib/config/countries.ts';
+import { schema } from '#lib/config/schema.ts';
+import { termLabel, vocabCodes } from '#lib/config/vocabularies.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
 import { matchesFilters, matchesText, paginate } from './filtering';
 import { computeInsights, geoBuckets } from './insights';
 

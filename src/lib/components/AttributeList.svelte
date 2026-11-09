@@ -3,11 +3,11 @@
    * Liste d'attributs d'un objet : [case] Attribut  Valeur, une ligne par valeur.
    * Si le champ est filtrable, la case ajoute / retire cette valeur du filtre.
    */
-  import type { FieldSchema } from '$lib/config/schema';
-  import type { ActiveFilters, CollectionItem, MetadataValue as MetadataValueType } from '$lib/api/types';
-  import { labelOf, formatValue, fieldLabel } from '$lib/utils/labels';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { flagEmoji } from '$lib/utils/flag';
+  import type { FieldSchema } from '#lib/config/schema.ts';
+  import type { ActiveFilters, CollectionItem, MetadataValue as MetadataValueType } from '#lib/api/types.ts';
+  import { labelOf, formatValue, fieldLabel } from '#lib/utils/labels.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { flagEmoji } from '#lib/utils/flag.ts';
   import MetadataValue from './MetadataValue.svelte';
 
   let {

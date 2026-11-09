@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Progression du chargement du modèle de reconnaissance (affiché quand une image est envoyée). */
-  import { modelStatus } from '$lib/ml/status.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import { modelStatus } from '#lib/ml/status.svelte.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   const pct = $derived(Math.round(modelStatus.progress * 100));
 </script>

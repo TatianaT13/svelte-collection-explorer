@@ -6,10 +6,10 @@
    * Leaflet est chargé à la demande ; fond de carte OpenStreetMap (réseau).
    */
   import { onMount } from 'svelte';
-  import type { GeoBucket } from '$lib/api/types';
-  import { places } from '$lib/stores/places.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { schema } from '$lib/config/schema';
+  import type { GeoBucket } from '#lib/api/types.ts';
+  import { places } from '#lib/stores/places.svelte.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { schema } from '#lib/config/schema.ts';
 
   let {
     buckets,

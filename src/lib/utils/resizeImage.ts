@@ -1,4 +1,4 @@
-import type { UploadPolicy } from '$lib/config/schema';
+import type { UploadPolicy } from '#lib/config/schema.ts';
 
 /**
  * Réduit une image côté client avant envoi (photo de téléphone : 4 à 8 Mo → ~200 Ko).

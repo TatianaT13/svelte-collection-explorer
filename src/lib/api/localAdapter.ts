@@ -1,12 +1,13 @@
-import { base } from '$app/paths';
+import { asset } from '$app/paths';
+import type { AssetPath } from '$app/types';
 import type { ArchiveReceipt, CollectionAdapter } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { matchesFilters, matchesText, paginate } from './filtering';
 import { computeInsights, geoBuckets } from './insights';
 import { loadPlaces, queryVector, withBase } from './shared';
-import { schema } from '$lib/config/schema';
-import { i18n } from '$lib/i18n/index.svelte';
+import { schema } from '#lib/config/schema.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
 
 /**
  * Adapter local : métadonnées (static/data/items.json) et vecteurs (static/data/embeddings.bin,
@@ -29,7 +30,7 @@ interface Loaded {
 let loaded: Promise<Loaded> | null = null;
 
 async function fetchOk(path: string): Promise<Response> {
-  const r = await fetch(`${base}/data/${path}`);
+  const r = await fetch(asset(`data/${path}` as AssetPath));
   if (!r.ok) throw new Error(`${path} ${r.status}`);
   return r;
 }
@@ -57,7 +58,7 @@ export const localAdapter: CollectionAdapter = {
 
     let insights;
     if (query.image) {
-      const [{ cosine }, q] = await Promise.all([import('$lib/ml/embedder'), queryVector(query.image, query.extraImages)]);
+      const [{ cosine }, q] = await Promise.all([import('#lib/ml/embedder.ts'), queryVector(query.image, query.extraImages)]);
       results = results
         .map((it) => ({ ...it, score: Math.round(cosine(q, vectorOf.get(it.id) ?? []) * 1000) / 1000 }))
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));

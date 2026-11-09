@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Score de similarité 0..1 : anneau + pourcentage + libellé (jamais la couleur seule). */
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { schema } from '$lib/config/schema';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { schema } from '#lib/config/schema.ts';
 
   let { score, size = 44 }: { score: number; size?: number } = $props();
 

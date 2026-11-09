@@ -3,8 +3,8 @@
    * Affiche les métadonnées lues dans l'image envoyée.
    * Permet d'exclure la position GPS avant l'envoi au backend.
    */
-  import type { ImageInfo } from '$lib/api/imageInfo';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import type { ImageInfo } from '#lib/api/imageInfo.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let {
     info,

@@ -4,9 +4,9 @@
    * appliqués à toutes les images en même temps. Avec deux objets, un mode
    * superposition avec curseur d'opacité.
    */
-  import type { CollectionItem } from '$lib/api/types';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { fallbackToThumb } from '$lib/utils/imgFallback';
+  import type { CollectionItem } from '#lib/api/types.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { fallbackToThumb } from '#lib/utils/imgFallback.ts';
 
   let { items }: { items: CollectionItem[] } = $props();
 

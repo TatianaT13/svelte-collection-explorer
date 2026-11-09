@@ -1,5 +1,5 @@
-import type { LocalizedLabel } from '$lib/i18n/index.svelte';
-import type { CollectionItem } from '$lib/api/types';
+import type { LocalizedLabel } from '#lib/i18n/index.svelte.ts';
+import type { CollectionItem } from '#lib/api/types.ts';
 
 /**
  * Référentiels de risque : les Listes rouges de l'ICOM recensent, par pays, les catégories

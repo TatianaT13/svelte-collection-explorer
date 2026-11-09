@@ -1,9 +1,9 @@
 <script lang="ts">
   /** Filtres actifs sous forme de puces supprimables, une puce par valeur. */
-  import { filterFields } from '$lib/config/schema';
-  import { labelOf } from '$lib/utils/labels';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import type { ActiveFilters } from '$lib/api/types';
+  import { filterFields } from '#lib/config/schema.ts';
+  import { labelOf } from '#lib/utils/labels.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import type { ActiveFilters } from '#lib/api/types.ts';
 
   let {
     filters,

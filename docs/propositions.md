@@ -196,10 +196,26 @@ Ce qui se faisait à la main et ne peut plus régresser en silence.
 - **Rafraîchissement des données** : `data-refresh.yml` reconstruit mensuellement, vérifie l'absence de
   régression, ouvre une pull request. — fait
 - **Hygiène** : ESLint sans formateur (le style du code reste tel quel), hook de pré-commit (lint + tests),
-  `npm audit --omit=dev` en CI, seuil de couverture à 55 % de lignes sur `src/lib` (60 % mesurés), Dependabot
+  `npm audit --omit=dev` en CI, seuil de couverture à 30 % de lignes sur tout `src/lib` (36 % mesurés, fichiers non importés compris), Dependabot
   hebdomadaire npm, pip et Actions. — fait
 - Non automatisé, à dessein : les états de ce document, et la mise à jour de `eval/results.json`, qui reste
   un geste délibéré (`npm run evaluate`) après un changement voulu.
+
+## Migrations majeures (9 novembre 2026)
+
+Faites une à la fois, chaîne complète entre chaque étape (types, lint, tests, build, parcours de bout en bout).
+
+- **Playwright 1.65, types Leaflet** : sans changement de code. — fait
+- **SvelteKit 3, Vite 8 (rolldown), vite-plugin-svelte 7, TypeScript 6, Vitest 5, Node ≥ 22.17** : migration
+  automatique (`npx sv migrate sveltekit-3`) limitée aux tâches de renommage (`$lib` → `#lib` avec extensions,
+  `$app/environment` → `$app/env`), le reste à la main pour ne pas reformater 45 fichiers : `base` remplacé par
+  `asset()` pour les fichiers statiques et `resolve()` pour les routes, état de navigation lu sur `page.route.id`,
+  `replaceState` → `goto(url, { shallow: true, replace: true })`, service worker dans son propre projet TypeScript
+  (`$app/manifest` + portée d'enregistrement pour le chemin de base), configuration SvelteKit déplacée dans
+  `vite.config.ts`. Vitest 5 compte désormais tous les fichiers de `src/lib`, importés ou non : la couverture
+  réelle est 36 %, le seuil passe à 30 %. — fait
+- **transformers.js 4** : à mesurer avec `evaluate --check` avant de l'accepter, les vecteurs de l'index en
+  dépendent. — en cours
 
 ## Réserves
 

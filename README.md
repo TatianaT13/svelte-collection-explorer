@@ -1,7 +1,7 @@
 # svelte-collection-explorer
 
 Front d'exploration de collections (recherche texte, recherche par image, filtres, comparaison),
-écrit avec **Svelte 5**, **SvelteKit 2** et **TypeScript**. Le code est volontairement compact :
+écrit avec **Svelte 5**, **SvelteKit 3** et **TypeScript**. Le code est volontairement compact :
 chaque fichier illustre un mécanisme de Svelte. Ce README le parcourt comme un tutoriel.
 
 ## Vue d'ensemble
@@ -112,7 +112,7 @@ static/architecture.html       # schéma interactif des briques : survol → lie
 e2e/explore.spec.ts            # parcours Playwright sur le build statique
 src/
   app.html                     # squelette HTML, SvelteKit injecte %sveltekit.head% et %sveltekit.body%
-  service-worker.ts            # hors ligne : application, données et vignettes en cache
+  service-worker/index.ts      # hors ligne : application, données et vignettes en cache (projet TypeScript à part)
   routes/
     +layout.ts                 # prerender = true, trailingSlash = 'always' (build statique)
     +layout.svelte             # enveloppe toutes les pages (nav, thème)
@@ -424,7 +424,7 @@ La quatrième méthode, `archiveImage(original, info)`, reçoit l'image **non r�
 travaille sur une version légère, l'archivage d'un cas garde la pièce originale. Le mock renvoie un
 accusé factice.
 
-Les pages importent `api` depuis `$lib/api` et ne voient que cette interface. `mockAdapter.ts`
+Les pages importent `api` depuis `#lib/api` et ne voient que cette interface. `mockAdapter.ts`
 fournit 48 objets en mémoire avec une latence simulée. Pour brancher une vraie API :
 
 1. Créer `src/lib/api/httpAdapter.ts` qui implémente `CollectionAdapter` avec `fetch`.
@@ -613,13 +613,13 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | Délai sur la saisie (250 ms) | `+page.svelte` | `$effect` avec `setTimeout` et nettoyage : `text` (saisie) alimente `query` (recherche) |
 | Export du dossier et impression | `compare/+page.svelte` | JSON avec photo de référence (empreinte, pas l'image), candidats et scores ; feuille de style `@media print` pour un PDF propre |
 | Piège de focus dans le volet | `ItemDrawer.svelte` | Tab et Maj+Tab restent dans le dialogue, le focus revient à l'élément d'origine à la fermeture |
-| Hors ligne | `service-worker.ts` | application, données et vignettes en cache à l'installation ; le modèle est mis en cache par transformers.js ; l'image grand format retombe sur la vignette |
+| Hors ligne | `service-worker/index.ts` | application, données et vignettes en cache à l'installation ; le modèle est mis en cache par transformers.js ; l'image grand format retombe sur la vignette |
 | Prendre une photo sur mobile | `ImageUpload.svelte` | second `<input type="file" capture="environment">`, bouton visible seulement sur écran tactile |
 | Image réduite avant envoi | `utils/resizeImage.ts`, `schema.upload` | politique configurable : `maxPx` (1600), `skipBelowBytes` (2 Mo, en dessous rien n'est touché), `quality` ; l'original reste côté client pour l'aperçu, les métadonnées et `adapter.archiveImage` |
 | Déposer une image **n'importe où** sur la page | `+page.svelte` | `<svelte:window ondragenter ondrop …>` + compteur de profondeur pour l'overlay |
 | Coller une image (⌘/Ctrl + V) | `+page.svelte` | `onpaste` sur `window`, lecture de `clipboardData.items` |
 | `/` pour aller à la recherche, Échap pour effacer / fermer | `+page.svelte` | `onkeydown` global, ignoré quand on tape déjà dans un champ |
-| URL partageable (`?q=…&origin=UA,RU&p=2`) | `utils/urlState.ts` | lecture de `page.url` à l'init, `replaceState` dans un `$effect` |
+| URL partageable (`?q=…&origin=UA,RU&p=2`) | `utils/urlState.ts` | lecture de `page.url` à l'init, `goto(url, { shallow: true, replace: true })` dans un `$effect` |
 | Filtres à sélection multiple avec recherche interne | `MultiSelect.svelte` | accordéon, cases à cocher natives, puces des valeurs cochées, Échap referme |
 | Case à cocher à côté de chaque attribut d'une carte ou du volet : « objets semblables » | `AttributeList.svelte` | liste [case] attribut valeur, une ligne par valeur ; le composant reçoit `filters` et un callback ; cocher ajoute la valeur au filtre, décocher la retire |
 | Puces de filtres actifs, une par valeur, supprimables | `FilterChips.svelte` | `$derived` sur `filters`, libellés via le schéma |
@@ -705,7 +705,7 @@ Trois niveaux, exécutés par le workflow avant chaque déploiement, plus la mes
   texte, similarité, lecture agrégée et ensemble conforme, listes rouges, qualité photo), plus deux tests de
   cohérence : la révision du modèle est la même dans le navigateur, l'index et les scripts, et le seuil τ du
   schéma vient bien du modèle du navigateur ; chaque fichier cité par `static/architecture.html` existe et
-  chaque fichier de `src/` y figure. `npm run test:coverage` applique un seuil de 55 % de lignes sur `src/lib`.
+  chaque fichier de `src/` y figure. `npm run test:coverage` applique un seuil de 30 % de lignes sur l'ensemble de `src/lib`, fichiers jamais importés par un test compris (36 % mesurés : les adapters, les stores et le client d'embedding ne sont couverts que par les parcours de bout en bout).
 - `npm run test:service` : 15 tests pytest du service (validation, recherche filtrée, archive, empreinte).
 - `npm run evaluate`, `npm run calibrate` : mesures de la recherche par image (§ 16). Elles téléchargent les
   modèles, donc elles vivent dans leur propre workflow (`evaluation.yml`, § 14) et non dans le déploiement.

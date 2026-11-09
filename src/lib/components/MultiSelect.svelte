@@ -3,8 +3,8 @@
    * Sélecteur multiple en accordéon : recherche interne, cases à cocher,
    * valeurs choisies rappelées en puces supprimables. Logique "OU" entre les valeurs.
    */
-  import type { TermOption } from '$lib/config/vocabularies';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import type { TermOption } from '#lib/config/vocabularies.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let {
     label,

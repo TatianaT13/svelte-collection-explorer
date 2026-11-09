@@ -4,7 +4,7 @@
    * tracer un cadre sur l'aperçu limite la recherche à cette zone.
    * `file` est toujours l'original ; `oncrop` reçoit la zone découpée (ou null).
    */
-  import { i18n } from '$lib/i18n/index.svelte';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let {
     file = $bindable<File | null>(null),
@@ -17,7 +17,7 @@
   function preload() {
     if (preloaded) return;
     preloaded = true;
-    import('$lib/ml/embedder').then(({ preloadModel }) => preloadModel());
+    import('#lib/ml/embedder.ts').then(({ preloadModel }) => preloadModel());
   }
 
   let dragging = $state(false);

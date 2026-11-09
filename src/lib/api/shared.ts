@@ -1,12 +1,13 @@
-import { base } from '$app/paths';
+import { asset } from '$app/paths';
+import type { AssetPath } from '$app/types';
 import type { CollectionItem } from './types';
-import { places } from '$lib/stores/places.svelte';
+import { places } from '#lib/stores/places.svelte.ts';
 
 /** Ce que les adapters local et distant ont en commun : gazetier, vignettes, vecteur de requête. */
 
 export async function loadPlaces(): Promise<void> {
   try {
-    const r = await fetch(`${base}/data/places.json`);
+    const r = await fetch(asset('data/places.json'));
     if (r.ok) places.set((await r.json()).places ?? {});
   } catch {
     /* gazetier absent : les lieux s'affichent par identifiant */
@@ -15,7 +16,7 @@ export async function loadPlaces(): Promise<void> {
 
 /** Les vignettes sont servies sous le chemin de base de l'application (GitHub Pages). */
 export function withBase(it: CollectionItem): CollectionItem {
-  return { ...it, thumbnailUrl: it.thumbnailUrl ? `${base}/${it.thumbnailUrl}` : it.thumbnailUrl };
+  return { ...it, thumbnailUrl: it.thumbnailUrl ? asset(it.thumbnailUrl as AssetPath) : it.thumbnailUrl };
 }
 
 /** Moyenne de vecteurs normalisés, renormalisée : une seule requête pour plusieurs vues du même objet. */
@@ -35,7 +36,7 @@ const queryCache = new WeakMap<File, Promise<Float32Array>>();
 export function queryEmbedding(file: File): Promise<Float32Array> {
   let p = queryCache.get(file);
   if (!p) {
-    p = import('$lib/ml/embedder').then(({ embedImage }) => embedImage(file));
+    p = import('#lib/ml/embedder.ts').then(({ embedImage }) => embedImage(file));
     queryCache.set(file, p);
   }
   return p;

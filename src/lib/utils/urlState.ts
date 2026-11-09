@@ -1,5 +1,5 @@
-import { filterFields } from '$lib/config/schema';
-import type { ActiveFilters } from '$lib/api/types';
+import { filterFields } from '#lib/config/schema.ts';
+import type { ActiveFilters } from '#lib/api/types.ts';
 
 /**
  * Sérialise l'état de recherche dans l'URL (?q=…&origin=UA,RU&material=gold&p=2)

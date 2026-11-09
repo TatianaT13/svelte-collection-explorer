@@ -1,9 +1,9 @@
-import type { FieldSchema } from '$lib/config/schema';
-import { countryName } from '$lib/config/countries';
-import { termLabel } from '$lib/config/vocabularies';
-import { i18n } from '$lib/i18n/index.svelte';
-import { places } from '$lib/stores/places.svelte';
-import type { MetadataValue } from '$lib/api/types';
+import type { FieldSchema } from '#lib/config/schema.ts';
+import { countryName } from '#lib/config/countries.ts';
+import { termLabel } from '#lib/config/vocabularies.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
+import { places } from '#lib/stores/places.svelte.ts';
+import type { MetadataValue } from '#lib/api/types.ts';
 
 /** Libellé lisible d'une valeur scalaire selon le type de champ, dans la langue courante. */
 export function labelOf(field: FieldSchema, v: string | number | boolean): string {

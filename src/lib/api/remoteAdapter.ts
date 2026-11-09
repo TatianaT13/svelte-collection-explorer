@@ -3,7 +3,7 @@ import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { computeInsights, geoBuckets } from './insights';
 import { loadPlaces, queryVector, withBase } from './shared';
-import { schema } from '$lib/config/schema';
+import { schema } from '#lib/config/schema.ts';
 
 /**
  * Adapter distant : l'index des vecteurs vit dans un service séparé (service/main.py, HNSW), le
@@ -29,7 +29,7 @@ let meta: Promise<Meta> | null = null;
 /** L'index et le navigateur doivent utiliser le même modèle : un vecteur CLIP contre un index DINO ne renvoie que du bruit. */
 async function checkMeta(): Promise<Meta> {
   meta ??= (async () => {
-    const [m, { MODEL_ID }] = await Promise.all([getJson<Meta>(`${API}/meta`), import('$lib/ml/embedder')]);
+    const [m, { MODEL_ID }] = await Promise.all([getJson<Meta>(`${API}/meta`), import('#lib/ml/embedder.ts')]);
     if (m.model !== MODEL_ID) throw new Error(`index calculé avec ${m.model}, navigateur avec ${MODEL_ID}`);
     loadPlaces();
     return m;

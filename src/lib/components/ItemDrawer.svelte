@@ -1,14 +1,14 @@
 <script lang="ts">
   /** Volet latéral de détail : toutes les métadonnées, sans quitter la page. */
   import { fade, fly } from 'svelte/transition';
-  import { fieldGroups } from '$lib/config/schema';
-  import { compare } from '$lib/stores/compare.svelte';
-  import { flagEmoji } from '$lib/utils/flag';
-  import type { ActiveFilters, CollectionItem } from '$lib/api/types';
+  import { fieldGroups } from '#lib/config/schema.ts';
+  import { compare } from '#lib/stores/compare.svelte.ts';
+  import { flagEmoji } from '#lib/utils/flag.ts';
+  import type { ActiveFilters, CollectionItem } from '#lib/api/types.ts';
   import AttributeList from './AttributeList.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { fallbackToThumb } from '$lib/utils/imgFallback';
-  import { riskFor } from '$lib/config/risk';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { fallbackToThumb } from '#lib/utils/imgFallback.ts';
+  import { riskFor } from '#lib/config/risk.ts';
   import ScoreRing from './ScoreRing.svelte';
 
   let {

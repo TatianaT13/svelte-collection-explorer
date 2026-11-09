@@ -6,12 +6,12 @@
    * - 'number' : minimum.
    * Les filtres sont combinés en ET.
    */
-  import { filterFields, type FieldSchema } from '$lib/config/schema';
-  import { countryOptions } from '$lib/config/countries';
-  import { vocabOptions, type TermOption } from '$lib/config/vocabularies';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { places } from '$lib/stores/places.svelte';
-  import type { ActiveFilters, FacetValues, MetadataValue } from '$lib/api/types';
+  import { filterFields, type FieldSchema } from '#lib/config/schema.ts';
+  import { countryOptions } from '#lib/config/countries.ts';
+  import { vocabOptions, type TermOption } from '#lib/config/vocabularies.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { places } from '#lib/stores/places.svelte.ts';
+  import type { ActiveFilters, FacetValues, MetadataValue } from '#lib/api/types.ts';
   import MultiSelect from './MultiSelect.svelte';
 
   let {

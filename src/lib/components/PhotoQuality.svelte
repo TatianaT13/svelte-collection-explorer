@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Verdict du contrôle qualité de la photo : exploitable, ou liste de défauts avec un conseil chacun. */
-  import type { PhotoMetrics, QualityIssue } from '$lib/utils/photoQuality';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import type { PhotoMetrics, QualityIssue } from '#lib/utils/photoQuality.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let { metrics, issues, compact = false }: { metrics: PhotoMetrics | null; issues: QualityIssue[]; compact?: boolean } = $props();
 </script>

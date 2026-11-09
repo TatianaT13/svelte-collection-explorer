@@ -1,5 +1,5 @@
-import { browser } from '$app/environment';
-import type { CollectionItem } from '$lib/api/types';
+import { browser } from '$app/env';
+import type { CollectionItem } from '#lib/api/types.ts';
 
 /**
  * État partagé de la sélection pour comparaison.
@@ -14,7 +14,7 @@ function load(): CollectionItem[] {
   if (!browser) return [];
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as CollectionItem[]) : [];
+    return raw ? JSON.parse(raw) as CollectionItem[] : [];
   } catch {
     return [];
   }

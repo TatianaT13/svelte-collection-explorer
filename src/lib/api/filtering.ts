@@ -1,8 +1,8 @@
 import type { CollectionItem, SearchQuery } from './types';
-import { schema } from '$lib/config/schema';
-import { countryName } from '$lib/config/countries';
-import { termLabel } from '$lib/config/vocabularies';
-import { places } from '$lib/stores/places.svelte';
+import { schema } from '#lib/config/schema.ts';
+import { countryName } from '#lib/config/countries.ts';
+import { termLabel } from '#lib/config/vocabularies.ts';
+import { places } from '#lib/stores/places.svelte.ts';
 
 /**
  * Filtrage et recherche texte côté client, partagés par les adapters locaux.

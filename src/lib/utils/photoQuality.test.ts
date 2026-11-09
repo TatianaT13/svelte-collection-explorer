@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assessPhoto, type PhotoMetrics } from './photoQuality';
-import { schema } from '$lib/config/schema';
+import { schema } from '#lib/config/schema.ts';
 
 const good: PhotoMetrics = { width: 1600, height: 1200, mean: 120, std: 55, clipped: 0.01, sharpness: 0.09 };
 const P = schema.photoQuality;

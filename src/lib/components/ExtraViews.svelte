@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Vues supplémentaires du même objet (dos, marque, détail), fusionnées avec la photo principale. */
-  import { i18n } from '$lib/i18n/index.svelte';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let { views = $bindable<File[]>([]), max = 3 }: { views?: File[]; max?: number } = $props();
   let inputEl: HTMLInputElement;

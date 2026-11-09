@@ -1,6 +1,6 @@
 import type { Insights, Reference, Share } from './types';
-import type { SimilarityThresholds } from '$lib/config/schema';
-import { riskForCodes, type RiskRule } from '$lib/config/risk';
+import type { SimilarityThresholds } from '#lib/config/schema.ts';
+import { riskForCodes, type RiskRule } from '#lib/config/risk.ts';
 
 /**
  * Lecture d'un `Insights` : fiabilité, confiance, hésitations et signaux de risque.

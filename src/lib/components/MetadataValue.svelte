@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { FieldSchema } from '$lib/config/schema';
-  import type { MetadataValue } from '$lib/api/types';
-  import { formatValue } from '$lib/utils/labels';
+  import type { FieldSchema } from '#lib/config/schema.ts';
+  import type { MetadataValue } from '#lib/api/types.ts';
+  import { formatValue } from '#lib/utils/labels.ts';
 
   let { field, value }: { field: FieldSchema; value: MetadataValue | undefined } = $props();
   const display = $derived(formatValue(field, value));

@@ -4,8 +4,9 @@
    * Le visiteur découvre la recherche visuelle sans préparer de photo.
    */
   import { onMount } from 'svelte';
-  import { base } from '$app/paths';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import { asset } from '$app/paths';
+  import type { AssetPath } from '$app/types';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   let { onpick }: { onpick: (file: File) => void } = $props();
 
@@ -15,7 +16,7 @@
 
   onMount(async () => {
     try {
-      const r = await fetch(`${base}/data/samples.json`);
+      const r = await fetch(asset('data/samples.json'));
       if (r.ok) samples = (await r.json()).samples ?? [];
     } catch {
       /* pas d'exemples */
@@ -25,7 +26,7 @@
   async function pick(s: Sample) {
     busy = s.objectId;
     try {
-      const r = await fetch(`${base}/${s.file}`);
+      const r = await fetch(asset(s.file as AssetPath));
       const blob = await r.blob();
       onpick(new File([blob], `exemple-${s.objectId}.jpg`, { type: blob.type || 'image/jpeg' }));
     } finally {
@@ -41,7 +42,7 @@
       {#each samples as s (s.objectId)}
         <li>
           <button type="button" onclick={() => pick(s)} disabled={busy !== null} title={s.title} aria-label="{i18n.t('samples.try')} : {s.title}">
-            <img src="{base}/{s.file}" alt="" loading="lazy" />
+            <img src={asset(s.file as AssetPath)} alt="" loading="lazy" />
             {#if busy === s.objectId}<span class="spin" aria-hidden="true"></span>{/if}
           </button>
         </li>

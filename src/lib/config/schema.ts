@@ -9,7 +9,7 @@
  */
 import type { VocabularyId } from './vocabularies';
 import clipCalibration from '../../../eval/calibration-clip.json';
-import type { LocalizedLabel } from '$lib/i18n/index.svelte';
+import type { LocalizedLabel } from '#lib/i18n/index.svelte.ts';
 
 export type FieldKind =
   | 'text'

@@ -4,16 +4,16 @@
    * provenance probable, alerte Liste rouge, objets de référence et décision.
    * Tout vient de `result.insights` (calculé par l'adapter) et des règles de risque.
    */
-  import type { Insights } from '$lib/api/types';
-  import { schema } from '$lib/config/schema';
-  import { countryName } from '$lib/config/countries';
-  import { termLabel } from '$lib/config/vocabularies';
-  import { readInsights } from '$lib/api/reading';
-  import { flagEmoji } from '$lib/utils/flag';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { lastQuery, type Decision } from '$lib/stores/query.svelte';
-  import { fallbackToThumb } from '$lib/utils/imgFallback';
-  import { places } from '$lib/stores/places.svelte';
+  import type { Insights } from '#lib/api/types.ts';
+  import { schema } from '#lib/config/schema.ts';
+  import { countryName } from '#lib/config/countries.ts';
+  import { termLabel } from '#lib/config/vocabularies.ts';
+  import { readInsights } from '#lib/api/reading.ts';
+  import { flagEmoji } from '#lib/utils/flag.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { lastQuery, type Decision } from '#lib/stores/query.svelte.ts';
+  import { fallbackToThumb } from '#lib/utils/imgFallback.ts';
+  import { places } from '#lib/stores/places.svelte.ts';
 
   let {
     insights,

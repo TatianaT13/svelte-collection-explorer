@@ -53,9 +53,9 @@ describe('architecture.html', () => {
   it('ne cite que des fichiers qui existent', () => {
     expect(unresolved).toEqual([]);
   });
-  it('cite chaque fichier de src/ (hors tests et déclarations de types)', () => {
+  it('cite chaque fichier de src/ (hors tests, déclarations de types et configuration)', () => {
     const missing = walk('src')
-      .filter((f) => !/\.test\.ts$|\.d\.ts$/.test(f))
+      .filter((f) => !/\.test\.ts$|\.d\.ts$|\.json$/.test(f))
       .filter((f) => !cited.has(f) && ![...cited].some((c) => f.startsWith(c + '/')));
     expect(missing).toEqual([]);
   });

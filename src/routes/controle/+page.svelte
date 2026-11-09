@@ -6,20 +6,20 @@
    * un seul composant pour une seule logique.
    */
   import { onMount } from 'svelte';
-  import { api, extractImageInfo, withoutGps, type CollectionItem, type ImageInfo, type SearchResult } from '$lib/api';
-  import { schema } from '$lib/config/schema';
-  import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '$lib/utils/photoQuality';
-  import PhotoQuality from '$lib/components/PhotoQuality.svelte';
-  import SampleImages from '$lib/components/SampleImages.svelte';
-  import { resizeImage, type ResizeResult } from '$lib/utils/resizeImage';
-  import { buildCaseFile, caseFileName, downloadJson } from '$lib/utils/caseFile';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { lastQuery } from '$lib/stores/query.svelte';
-  import ImageUpload from '$lib/components/ImageUpload.svelte';
-  import ExtraViews from '$lib/components/ExtraViews.svelte';
-  import ModelStatus from '$lib/components/ModelStatus.svelte';
-  import InsightsPanel from '$lib/components/InsightsPanel.svelte';
-  import ItemDrawer from '$lib/components/ItemDrawer.svelte';
+  import { api, extractImageInfo, withoutGps, type CollectionItem, type ImageInfo, type SearchResult } from '#lib/api/index.ts';
+  import { schema } from '#lib/config/schema.ts';
+  import { measurePhoto, assessPhoto, type PhotoMetrics, type QualityIssue } from '#lib/utils/photoQuality.ts';
+  import PhotoQuality from '#lib/components/PhotoQuality.svelte';
+  import SampleImages from '#lib/components/SampleImages.svelte';
+  import { resizeImage, type ResizeResult } from '#lib/utils/resizeImage.ts';
+  import { buildCaseFile, caseFileName, downloadJson } from '#lib/utils/caseFile.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { lastQuery } from '#lib/stores/query.svelte.ts';
+  import ImageUpload from '#lib/components/ImageUpload.svelte';
+  import ExtraViews from '#lib/components/ExtraViews.svelte';
+  import ModelStatus from '#lib/components/ModelStatus.svelte';
+  import InsightsPanel from '#lib/components/InsightsPanel.svelte';
+  import ItemDrawer from '#lib/components/ItemDrawer.svelte';
 
   type Step = 1 | 2 | 3;
   let step = $state<Step>(1);
@@ -86,7 +86,7 @@
       imageInfo = null;
       return;
     }
-    import('$lib/ml/embedder').then(({ preloadModel }) => preloadModel());
+    import('#lib/ml/embedder.ts').then(({ preloadModel }) => preloadModel());
     let cancelled = false;
     extractImageInfo(f).then((info) => {
       if (!cancelled) imageInfo = info;

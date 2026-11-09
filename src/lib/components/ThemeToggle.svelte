@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { theme } from '$lib/stores/theme.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
+  import { theme } from '#lib/stores/theme.svelte.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
 
   // Résolu après montage pour éviter un écart SSR / client.
   let dark = $state(false);

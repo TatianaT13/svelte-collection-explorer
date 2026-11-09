@@ -1,9 +1,9 @@
 <script lang="ts">
   /** Barre flottante : objets sélectionnés pour comparaison, accès direct à la page Comparer. */
   import { fly } from 'svelte/transition';
-  import { compare } from '$lib/stores/compare.svelte';
-  import { i18n } from '$lib/i18n/index.svelte';
-  import { base } from '$app/paths';
+  import { compare } from '#lib/stores/compare.svelte.ts';
+  import { i18n } from '#lib/i18n/index.svelte.ts';
+  import { resolve } from '$app/paths';
 </script>
 
 {#if compare.count > 0}
@@ -22,7 +22,7 @@
     <div class="actions">
       <span class="count">{compare.count} / {compare.max}</span>
       <button type="button" class="ghost" onclick={() => compare.clear()}>{i18n.t('tray.clear')}</button>
-      <a class="primary" href="{base}/compare/" aria-disabled={compare.count < 2} class:disabled={compare.count < 2}>
+      <a class="primary" href={resolve('compare/')} aria-disabled={compare.count < 2} class:disabled={compare.count < 2}>
         {i18n.t('tray.compare')}
       </a>
     </div>
