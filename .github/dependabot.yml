@@ -5,6 +5,11 @@ updates:
     schedule: { interval: weekly }
     groups:
       dev: { dependency-type: development }
+    # Les versions majeures (SvelteKit, Vite, transformers.js…) sont des migrations décidées à la main, une à la fois,
+    # avec l'évaluation de recherche pour vérifier que les vecteurs n'ont pas bougé.
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: pip
     directory: /service
     schedule: { interval: weekly }
