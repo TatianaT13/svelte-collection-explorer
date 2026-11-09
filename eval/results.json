@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T07:59:51.401Z",
+  "generatedAt": "2026-11-09T10:02:00.338Z",
   "corpus": 64,
   "queries": 39,
   "head": null,
@@ -9,423 +9,423 @@
         "model": "Xenova/clip-vit-base-patch32",
         "dim": 512,
         "queries": 39,
-        "recall@1": 64.1,
+        "recall@1": 66.7,
         "recall@5": 89.7,
-        "recall@10": 94.9,
-        "mrr": 0.765,
+        "recall@10": 92.3,
+        "mrr": 0.775,
         "medianRank": 1,
-        "category@1": 82.1,
+        "category@1": 79.5,
         "origin@1": 71.8,
-        "medianTruthScore": 0.855,
+        "medianTruthScore": 0.853,
         "truth>=0.75": 84.6,
         "truth>=0.8": 71.8,
-        "medianMargin": 0.051,
-        "medianMs": 33
+        "medianMargin": 0.044,
+        "medianMs": 39
       },
       "rows": [
         {
           "objectId": "26485",
           "title": "Icon Fragment",
           "rank": 1,
-          "truthScore": 0.9439286672268199,
+          "truthScore": 0.9389199553817126,
           "top1": "26485",
-          "marginVsBestOther": 0.13435077508014304,
+          "marginVsBestOther": 0.14051530511603905,
           "categoryHit": true,
           "originHit": true,
-          "ms": 50
+          "ms": 70
         },
         {
           "objectId": "465941",
           "title": "Devotional Icon",
           "rank": 1,
-          "truthScore": 0.819126561443118,
+          "truthScore": 0.8240652819876666,
           "top1": "465941",
-          "marginVsBestOther": 0.09709684471772861,
+          "marginVsBestOther": 0.09432653326281615,
           "categoryHit": true,
           "originHit": true,
-          "ms": 27
+          "ms": 49
         },
         {
           "objectId": "317829",
           "title": "Double Diptych Icon Pendant",
           "rank": 1,
-          "truthScore": 0.9285128028302483,
+          "truthScore": 0.9331921631233874,
           "top1": "317829",
-          "marginVsBestOther": 0.15060045525737498,
+          "marginVsBestOther": 0.15467521166139742,
           "categoryHit": true,
           "originHit": true,
-          "ms": 38
+          "ms": 57
         },
         {
           "objectId": "466046",
           "title": "Icon with Christ Pantokrator",
-          "rank": 21,
-          "truthScore": 0.6312802869706527,
+          "rank": 22,
+          "truthScore": 0.6315705243953047,
           "top1": "437554",
-          "marginVsBestOther": -0.10432968179618285,
+          "marginVsBestOther": -0.09725586938168207,
           "categoryHit": false,
           "originHit": false,
-          "ms": 69
+          "ms": 41
         },
         {
           "objectId": "464554",
           "title": "Temple Pendant with Two Sirens Flanking a Tree of Life (front) and Confronted Birds (back)",
           "rank": 1,
-          "truthScore": 0.9212890547862858,
+          "truthScore": 0.9225066806220343,
           "top1": "464554",
-          "marginVsBestOther": 0.0539395625837541,
+          "marginVsBestOther": 0.056689952943835054,
           "categoryHit": true,
           "originHit": true,
-          "ms": 42
+          "ms": 45
         },
         {
           "objectId": "464577",
           "title": "One of a Pair of Temple Pendants, with Confronted Birds (front) and Human Heads (back)",
           "rank": 1,
-          "truthScore": 0.8570141826636106,
+          "truthScore": 0.8620218915794312,
           "top1": "464577",
-          "marginVsBestOther": 0.05153201029196619,
+          "marginVsBestOther": 0.05109393472348167,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 51
         },
         {
           "objectId": "464552",
           "title": "Temple Pendant with Two Birds Flanking a Tree of Life (front) and Geometric Lead Motifs (back)",
           "rank": 2,
-          "truthScore": 0.887849591602811,
+          "truthScore": 0.8887578688056564,
           "top1": "464554",
-          "marginVsBestOther": -0.013746129923091988,
+          "marginVsBestOther": -0.023682301586717802,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 39
         },
         {
           "objectId": "464555",
           "title": "Chain with Birds and Geometric Motifs",
-          "rank": 3,
-          "truthScore": 0.8036012906066553,
+          "rank": 2,
+          "truthScore": 0.8117522229848763,
           "top1": "16818",
-          "marginVsBestOther": -0.030665451801666133,
+          "marginVsBestOther": -0.012443208648437398,
           "categoryHit": false,
           "originHit": false,
-          "ms": 34
+          "ms": 35
         },
         {
           "objectId": "209287",
           "title": "Christ Preaching",
           "rank": 3,
-          "truthScore": 0.6276028409667559,
-          "top1": "450083",
-          "marginVsBestOther": -0.005358266588893712,
+          "truthScore": 0.6362606823160278,
+          "top1": "455295",
+          "marginVsBestOther": -0.021775540640010416,
           "categoryHit": false,
           "originHit": false,
-          "ms": 35
+          "ms": 42
         },
         {
           "objectId": "831188",
           "title": "Icon of the Virgin and Child, Hodegetria variant",
           "rank": 19,
-          "truthScore": 0.5799905866617434,
-          "top1": "437555",
-          "marginVsBestOther": -0.06527748882424611,
-          "categoryHit": true,
+          "truthScore": 0.6061462483142828,
+          "top1": "448620",
+          "marginVsBestOther": -0.08261856653544042,
+          "categoryHit": false,
           "originHit": false,
-          "ms": 39
+          "ms": 36
         },
         {
           "objectId": "477499",
           "title": "Jaharis Byzantine Lectionary",
           "rank": 1,
-          "truthScore": 0.8443000801958064,
+          "truthScore": 0.8499821999736782,
           "top1": "477499",
-          "marginVsBestOther": 0.09228368691589484,
+          "marginVsBestOther": 0.09138788888045002,
           "categoryHit": true,
-          "originHit": true,
-          "ms": 34
+          "originHit": false,
+          "ms": 46
         },
         {
           "objectId": "253384",
           "title": "Faience aryballos (perfume vase)",
           "rank": 1,
-          "truthScore": 0.9383288323216048,
+          "truthScore": 0.9377801965557061,
           "top1": "253384",
-          "marginVsBestOther": 0.06572308114393344,
+          "marginVsBestOther": 0.06471517630540247,
           "categoryHit": true,
           "originHit": true,
-          "ms": 35
+          "ms": 38
         },
         {
           "objectId": "1029",
           "title": "The Bryant Vase",
-          "rank": 8,
-          "truthScore": 0.5802778737062272,
+          "rank": 4,
+          "truthScore": 0.6111212274190785,
           "top1": "16818",
-          "marginVsBestOther": -0.07660830836332067,
+          "marginVsBestOther": -0.041900261919914916,
           "categoryHit": false,
           "originHit": true,
-          "ms": 34
+          "ms": 36
         },
         {
           "objectId": "825933",
           "title": "Egyptian Goddess",
           "rank": 1,
-          "truthScore": 0.9120342693644367,
+          "truthScore": 0.8988693651183146,
           "top1": "825933",
-          "marginVsBestOther": 0.12345656839030539,
+          "marginVsBestOther": 0.11540544818962661,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 41
         },
         {
           "objectId": "825935",
           "title": "Egyptian God",
           "rank": 2,
-          "truthScore": 0.8552947549019879,
+          "truthScore": 0.8499668933246957,
           "top1": "825933",
-          "marginVsBestOther": -0.06532185208219843,
+          "marginVsBestOther": -0.06741079234782987,
           "categoryHit": true,
           "originHit": true,
-          "ms": 34
+          "ms": 39
         },
         {
           "objectId": "682823",
           "title": "Egyptian Revival demi-parure",
           "rank": 1,
-          "truthScore": 0.8960398371907716,
+          "truthScore": 0.885849405629542,
           "top1": "682823",
-          "marginVsBestOther": 0.10422822688448508,
+          "marginVsBestOther": 0.08106305837208494,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 47
         },
         {
           "objectId": "11860",
           "title": "The Broncho Buster",
-          "rank": 2,
-          "truthScore": 0.8478121139564914,
-          "top1": "11868",
-          "marginVsBestOther": -0.024801086826086616,
+          "rank": 1,
+          "truthScore": 0.8694121098907367,
+          "top1": "11860",
+          "marginVsBestOther": 0.013844560225605429,
           "categoryHit": true,
           "originHit": true,
-          "ms": 31
+          "ms": 36
         },
         {
           "objectId": "11863",
           "title": "Coming Through the Rye",
           "rank": 2,
-          "truthScore": 0.7855680989337128,
+          "truthScore": 0.765407313315982,
           "top1": "11860",
-          "marginVsBestOther": -0.04741631061826801,
+          "marginVsBestOther": -0.05189422833412316,
           "categoryHit": true,
           "originHit": true,
-          "ms": 35
+          "ms": 38
         },
         {
           "objectId": "251088",
           "title": "Terracotta kantharos (drinking cup with high handles)",
           "rank": 1,
-          "truthScore": 0.8989696169732614,
+          "truthScore": 0.898216468074062,
           "top1": "251088",
-          "marginVsBestOther": 0.048113571010962364,
+          "marginVsBestOther": 0.043523901441350876,
           "categoryHit": true,
           "originHit": true,
-          "ms": 31
+          "ms": 42
         },
         {
           "objectId": "443197",
           "title": "Anthology of Persian Poetry",
-          "rank": 8,
-          "truthScore": 0.7388215873514242,
+          "rank": 14,
+          "truthScore": 0.7186651663138384,
           "top1": "455295",
-          "marginVsBestOther": -0.03500901845635729,
+          "marginVsBestOther": -0.04783520020218213,
           "categoryHit": false,
           "originHit": false,
-          "ms": 32
+          "ms": 44
         },
         {
           "objectId": "934487",
           "title": "Persian Dragon-Handled Ewer",
           "rank": 1,
-          "truthScore": 0.863698774662471,
+          "truthScore": 0.8562821681491434,
           "top1": "934487",
-          "marginVsBestOther": 0.009776978163814398,
+          "marginVsBestOther": 0.011147900534083321,
           "categoryHit": true,
           "originHit": true,
-          "ms": 33
+          "ms": 34
         },
         {
           "objectId": "452079",
           "title": "Bowl with Persian Inscription",
           "rank": 1,
-          "truthScore": 0.9076216127338331,
+          "truthScore": 0.9114715168497465,
           "top1": "452079",
-          "marginVsBestOther": 0.056301026637770146,
+          "marginVsBestOther": 0.060207707318330916,
           "categoryHit": true,
           "originHit": true,
-          "ms": 33
+          "ms": 38
         },
         {
           "objectId": "451833",
           "title": "Footed Dish with Foliate Rim in Imitation of Chinese Porcelain",
           "rank": 1,
-          "truthScore": 0.9219964558755416,
+          "truthScore": 0.9089679087368634,
           "top1": "451833",
-          "marginVsBestOther": 0.026980887888014782,
+          "marginVsBestOther": 0.008792474139104667,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 39
         },
         {
           "objectId": "460669",
           "title": "Small wine pot or teapot",
           "rank": 1,
-          "truthScore": 0.8089493781622366,
+          "truthScore": 0.808708197486902,
           "top1": "460669",
-          "marginVsBestOther": 0.012831925221356011,
+          "marginVsBestOther": 0.021369994455952,
           "categoryHit": true,
           "originHit": true,
-          "ms": 30
+          "ms": 35
         },
         {
           "objectId": "65014",
           "title": "One of a pair of medallions with portrait busts",
           "rank": 1,
-          "truthScore": 0.8784061739928876,
+          "truthScore": 0.8534768578555888,
           "top1": "65014",
-          "marginVsBestOther": 0.08323020034981998,
+          "marginVsBestOther": 0.046086536921031374,
           "categoryHit": true,
           "originHit": true,
-          "ms": 33
+          "ms": 38
         },
         {
           "objectId": "207886",
           "title": "Dish with stenciled decoration",
-          "rank": 3,
-          "truthScore": 0.7704500285766132,
+          "rank": 8,
+          "truthScore": 0.7627176312870574,
           "top1": "452079",
-          "marginVsBestOther": -0.0813001524068746,
+          "marginVsBestOther": -0.07770612016646283,
           "categoryHit": false,
           "originHit": false,
-          "ms": 34
+          "ms": 37
         },
         {
           "objectId": "448620",
           "title": "Tiraz Textile Fragment",
           "rank": 2,
-          "truthScore": 0.7643326865784095,
+          "truthScore": 0.7645344489397486,
           "top1": "448298",
-          "marginVsBestOther": -0.0011252333930327207,
+          "marginVsBestOther": -0.004914861395902803,
           "categoryHit": true,
           "originHit": false,
-          "ms": 31
+          "ms": 56
         },
         {
           "objectId": "455295",
           "title": "Tiraz Textile Fragment",
           "rank": 1,
-          "truthScore": 0.8416065810280381,
+          "truthScore": 0.8505873456427604,
           "top1": "455295",
-          "marginVsBestOther": 0.07807647533066697,
+          "marginVsBestOther": 0.09220741037438018,
           "categoryHit": true,
           "originHit": true,
-          "ms": 31
+          "ms": 41
         },
         {
           "objectId": "37631",
           "title": "Textile Panel with Scenes from the Ramayana",
           "rank": 1,
-          "truthScore": 0.8448829611862906,
+          "truthScore": 0.8251109035636691,
           "top1": "37631",
-          "marginVsBestOther": 0.11002751252005905,
+          "marginVsBestOther": 0.10044855116958928,
           "categoryHit": true,
           "originHit": false,
-          "ms": 36
+          "ms": 39
         },
         {
           "objectId": "448298",
           "title": "Textile Fragment",
           "rank": 1,
-          "truthScore": 0.858203336429375,
+          "truthScore": 0.867492215046295,
           "top1": "448298",
-          "marginVsBestOther": 0.10533689821723413,
+          "marginVsBestOther": 0.10932949138083303,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 33
         },
         {
           "objectId": "16818",
           "title": "Belt Buckle",
-          "rank": 2,
-          "truthScore": 0.7720009584938532,
-          "top1": "464577",
-          "marginVsBestOther": -0.013424244773343252,
-          "categoryHit": false,
-          "originHit": false,
+          "rank": 1,
+          "truthScore": 0.7803452144246598,
+          "top1": "16818",
+          "marginVsBestOther": 0.0003194325064671544,
+          "categoryHit": true,
+          "originHit": true,
           "ms": 34
         },
         {
           "objectId": "450083",
           "title": "Jewelry",
           "rank": 1,
-          "truthScore": 0.8841829534553491,
+          "truthScore": 0.8703777975837015,
           "top1": "450083",
-          "marginVsBestOther": 0.05813384806731359,
+          "marginVsBestOther": 0.05030482734269248,
           "categoryHit": true,
           "originHit": true,
-          "ms": 32
+          "ms": 36
         },
         {
           "objectId": "454608",
           "title": "Book of Prayers, Surat al-Yasin and Surat al-Fath",
           "rank": 1,
-          "truthScore": 0.8487988890492763,
+          "truthScore": 0.8365220976780438,
           "top1": "454608",
-          "marginVsBestOther": 0.05138216611219293,
+          "marginVsBestOther": 0.042925560133503904,
           "categoryHit": true,
           "originHit": true,
-          "ms": 34
+          "ms": 41
         },
         {
           "objectId": "58449",
           "title": "Krishna Dancing: Page from the Dispersed \"Boston\" Rasikapriya (Lover's Breviary)",
           "rank": 1,
-          "truthScore": 0.9197665081978162,
+          "truthScore": 0.9210772672095864,
           "top1": "58449",
-          "marginVsBestOther": 0.178959050714545,
+          "marginVsBestOther": 0.18290723497146233,
           "categoryHit": true,
           "originHit": true,
-          "ms": 33
+          "ms": 38
         },
         {
           "objectId": "467704",
           "title": "Pricket Candlestick with a Naked Youth Fighting a Dragon",
           "rank": 1,
-          "truthScore": 0.903183139537783,
+          "truthScore": 0.9118491769499691,
           "top1": "467704",
-          "marginVsBestOther": 0.09525762139300442,
+          "marginVsBestOther": 0.1085572864893467,
           "categoryHit": true,
           "originHit": true,
-          "ms": 33
+          "ms": 35
         },
         {
           "objectId": "22739",
           "title": "Mask",
           "rank": 2,
-          "truthScore": 0.7374212861621992,
+          "truthScore": 0.7410653943859086,
           "top1": "22469",
-          "marginVsBestOther": -0.05295285157763219,
+          "marginVsBestOther": -0.043661912431467886,
           "categoryHit": true,
           "originHit": true,
-          "ms": 31
+          "ms": 33
         },
         {
           "objectId": "310350",
           "title": "Mask",
           "rank": 1,
-          "truthScore": 0.9457126811353993,
+          "truthScore": 0.9463978551296459,
           "top1": "310350",
-          "marginVsBestOther": 0.134361341376954,
+          "marginVsBestOther": 0.12748380381317814,
           "categoryHit": true,
           "originHit": false,
           "ms": 34
@@ -433,26 +433,487 @@
         {
           "objectId": "708744",
           "title": "Mask",
-          "rank": 1,
-          "truthScore": 0.7984952028393123,
-          "top1": "708744",
-          "marginVsBestOther": 0.0025419950762444188,
-          "categoryHit": true,
+          "rank": 3,
+          "truthScore": 0.7829075299538821,
+          "top1": "450084",
+          "marginVsBestOther": -0.01796460582975079,
+          "categoryHit": false,
           "originHit": false,
-          "ms": 33
+          "ms": 36
         },
         {
           "objectId": "22469",
           "title": "Mask",
           "rank": 1,
-          "truthScore": 0.9193913282761796,
+          "truthScore": 0.9149503281302512,
           "top1": "22469",
-          "marginVsBestOther": 0.07551721341812556,
+          "marginVsBestOther": 0.07220764967474269,
           "categoryHit": true,
           "originHit": true,
-          "ms": 29
+          "ms": 43
         }
-      ]
+      ],
+      "text": {
+        "summary": {
+          "queries": 64,
+          "recall@1": 53.1,
+          "recall@5": 87.5,
+          "recall@10": 93.8,
+          "mrr": 0.663,
+          "medianTruthScore": 0.288,
+          "medianBestScore": 0.309
+        },
+        "rows": [
+          {
+            "objectId": "26485",
+            "title": "Icon Fragment",
+            "rank": 12,
+            "bestScore": 0.327,
+            "truthScore": 0.275
+          },
+          {
+            "objectId": "465941",
+            "title": "Devotional Icon",
+            "rank": 3,
+            "bestScore": 0.301,
+            "truthScore": 0.284
+          },
+          {
+            "objectId": "317829",
+            "title": "Double Diptych Icon Pendant",
+            "rank": 2,
+            "bestScore": 0.314,
+            "truthScore": 0.298
+          },
+          {
+            "objectId": "466046",
+            "title": "Icon with Christ Pantokrator",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.319
+          },
+          {
+            "objectId": "435570",
+            "title": "A Ship in a Stormy Sea",
+            "rank": 1,
+            "bestScore": 0.298,
+            "truthScore": 0.298
+          },
+          {
+            "objectId": "437979",
+            "title": "Ship by Moonlight",
+            "rank": 1,
+            "bestScore": 0.31,
+            "truthScore": 0.31
+          },
+          {
+            "objectId": "436833",
+            "title": "Red Sunset",
+            "rank": 1,
+            "bestScore": 0.262,
+            "truthScore": 0.262
+          },
+          {
+            "objectId": "500938",
+            "title": "Torban",
+            "rank": 3,
+            "bestScore": 0.25,
+            "truthScore": 0.237
+          },
+          {
+            "objectId": "464554",
+            "title": "Temple Pendant with Two Sirens Flanking a Tree of Life (front) and Confronted Birds (back)",
+            "rank": 2,
+            "bestScore": 0.351,
+            "truthScore": 0.331
+          },
+          {
+            "objectId": "464577",
+            "title": "One of a Pair of Temple Pendants, with Confronted Birds (front) and Human Heads (back)",
+            "rank": 7,
+            "bestScore": 0.337,
+            "truthScore": 0.288
+          },
+          {
+            "objectId": "464552",
+            "title": "Temple Pendant with Two Birds Flanking a Tree of Life (front) and Geometric Lead Motifs (back)",
+            "rank": 3,
+            "bestScore": 0.353,
+            "truthScore": 0.333
+          },
+          {
+            "objectId": "464555",
+            "title": "Chain with Birds and Geometric Motifs",
+            "rank": 1,
+            "bestScore": 0.335,
+            "truthScore": 0.335
+          },
+          {
+            "objectId": "209287",
+            "title": "Christ Preaching",
+            "rank": 7,
+            "bestScore": 0.255,
+            "truthScore": 0.213
+          },
+          {
+            "objectId": "437552",
+            "title": "The Protection of the Mother of God",
+            "rank": 7,
+            "bestScore": 0.306,
+            "truthScore": 0.255
+          },
+          {
+            "objectId": "437554",
+            "title": "The Annunciation",
+            "rank": 4,
+            "bestScore": 0.284,
+            "truthScore": 0.25
+          },
+          {
+            "objectId": "437555",
+            "title": "The Congregation of the Mother of God",
+            "rank": 12,
+            "bestScore": 0.286,
+            "truthScore": 0.233
+          },
+          {
+            "objectId": "435828",
+            "title": "The Presentation in the Temple",
+            "rank": 3,
+            "bestScore": 0.282,
+            "truthScore": 0.258
+          },
+          {
+            "objectId": "831188",
+            "title": "Icon of the Virgin and Child, Hodegetria variant",
+            "rank": 1,
+            "bestScore": 0.33,
+            "truthScore": 0.33
+          },
+          {
+            "objectId": "477499",
+            "title": "Jaharis Byzantine Lectionary",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.319
+          },
+          {
+            "objectId": "243328",
+            "title": "Earring, crescent-shaped, Byzantine style",
+            "rank": 1,
+            "bestScore": 0.34,
+            "truthScore": 0.34
+          },
+          {
+            "objectId": "255624",
+            "title": "Terracotta lid",
+            "rank": 5,
+            "bestScore": 0.32,
+            "truthScore": 0.3
+          },
+          {
+            "objectId": "240281",
+            "title": "Amphora",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.317
+          },
+          {
+            "objectId": "240111",
+            "title": "Amphora",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.319
+          },
+          {
+            "objectId": "240311",
+            "title": "Amphora",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.309
+          },
+          {
+            "objectId": "253384",
+            "title": "Faience aryballos (perfume vase)",
+            "rank": 1,
+            "bestScore": 0.325,
+            "truthScore": 0.325
+          },
+          {
+            "objectId": "254369",
+            "title": "Terracotta vase in the form of two cockle shells",
+            "rank": 3,
+            "bestScore": 0.33,
+            "truthScore": 0.313
+          },
+          {
+            "objectId": "1029",
+            "title": "The Bryant Vase",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.319
+          },
+          {
+            "objectId": "208199",
+            "title": "Flower vase",
+            "rank": 10,
+            "bestScore": 0.285,
+            "truthScore": 0.231
+          },
+          {
+            "objectId": "825933",
+            "title": "Egyptian Goddess",
+            "rank": 3,
+            "bestScore": 0.284,
+            "truthScore": 0.252
+          },
+          {
+            "objectId": "825935",
+            "title": "Egyptian God",
+            "rank": 1,
+            "bestScore": 0.271,
+            "truthScore": 0.271
+          },
+          {
+            "objectId": "12072",
+            "title": "Egyptian Woman",
+            "rank": 1,
+            "bestScore": 0.284,
+            "truthScore": 0.284
+          },
+          {
+            "objectId": "682823",
+            "title": "Egyptian Revival demi-parure",
+            "rank": 1,
+            "bestScore": 0.323,
+            "truthScore": 0.323
+          },
+          {
+            "objectId": "11868",
+            "title": "The Outlaw",
+            "rank": 1,
+            "bestScore": 0.23,
+            "truthScore": 0.23
+          },
+          {
+            "objectId": "11871",
+            "title": "The Scalp",
+            "rank": 59,
+            "bestScore": 0.216,
+            "truthScore": 0.155
+          },
+          {
+            "objectId": "11860",
+            "title": "The Broncho Buster",
+            "rank": 2,
+            "bestScore": 0.248,
+            "truthScore": 0.237
+          },
+          {
+            "objectId": "11863",
+            "title": "Coming Through the Rye",
+            "rank": 15,
+            "bestScore": 0.218,
+            "truthScore": 0.185
+          },
+          {
+            "objectId": "251088",
+            "title": "Terracotta kantharos (drinking cup with high handles)",
+            "rank": 4,
+            "bestScore": 0.341,
+            "truthScore": 0.324
+          },
+          {
+            "objectId": "443197",
+            "title": "Anthology of Persian Poetry",
+            "rank": 3,
+            "bestScore": 0.307,
+            "truthScore": 0.295
+          },
+          {
+            "objectId": "934487",
+            "title": "Persian Dragon-Handled Ewer",
+            "rank": 1,
+            "bestScore": 0.335,
+            "truthScore": 0.335
+          },
+          {
+            "objectId": "452079",
+            "title": "Bowl with Persian Inscription",
+            "rank": 1,
+            "bestScore": 0.319,
+            "truthScore": 0.319
+          },
+          {
+            "objectId": "451833",
+            "title": "Footed Dish with Foliate Rim in Imitation of Chinese Porcelain",
+            "rank": 2,
+            "bestScore": 0.341,
+            "truthScore": 0.341
+          },
+          {
+            "objectId": "460669",
+            "title": "Small wine pot or teapot",
+            "rank": 2,
+            "bestScore": 0.346,
+            "truthScore": 0.309
+          },
+          {
+            "objectId": "65014",
+            "title": "One of a pair of medallions with portrait busts",
+            "rank": 2,
+            "bestScore": 0.28,
+            "truthScore": 0.279
+          },
+          {
+            "objectId": "207886",
+            "title": "Dish with stenciled decoration",
+            "rank": 1,
+            "bestScore": 0.323,
+            "truthScore": 0.323
+          },
+          {
+            "objectId": "448620",
+            "title": "Tiraz Textile Fragment",
+            "rank": 1,
+            "bestScore": 0.317,
+            "truthScore": 0.317
+          },
+          {
+            "objectId": "455295",
+            "title": "Tiraz Textile Fragment",
+            "rank": 1,
+            "bestScore": 0.317,
+            "truthScore": 0.312
+          },
+          {
+            "objectId": "37631",
+            "title": "Textile Panel with Scenes from the Ramayana",
+            "rank": 2,
+            "bestScore": 0.324,
+            "truthScore": 0.288
+          },
+          {
+            "objectId": "448298",
+            "title": "Textile Fragment",
+            "rank": 5,
+            "bestScore": 0.29,
+            "truthScore": 0.272
+          },
+          {
+            "objectId": "243088",
+            "title": "Gold coin",
+            "rank": 1,
+            "bestScore": 0.286,
+            "truthScore": 0.284
+          },
+          {
+            "objectId": "243087",
+            "title": "Gold coin",
+            "rank": 1,
+            "bestScore": 0.286,
+            "truthScore": 0.283
+          },
+          {
+            "objectId": "243089",
+            "title": "Gold coin",
+            "rank": 1,
+            "bestScore": 0.286,
+            "truthScore": 0.284
+          },
+          {
+            "objectId": "243086",
+            "title": "Gold coin",
+            "rank": 1,
+            "bestScore": 0.286,
+            "truthScore": 0.286
+          },
+          {
+            "objectId": "16818",
+            "title": "Belt Buckle",
+            "rank": 3,
+            "bestScore": 0.291,
+            "truthScore": 0.266
+          },
+          {
+            "objectId": "450083",
+            "title": "Jewelry",
+            "rank": 5,
+            "bestScore": 0.29,
+            "truthScore": 0.244
+          },
+          {
+            "objectId": "450084",
+            "title": "Jewelry",
+            "rank": 5,
+            "bestScore": 0.29,
+            "truthScore": 0.247
+          },
+          {
+            "objectId": "454408",
+            "title": "Jewelry",
+            "rank": 5,
+            "bestScore": 0.29,
+            "truthScore": 0.266
+          },
+          {
+            "objectId": "454608",
+            "title": "Book of Prayers, Surat al-Yasin and Surat al-Fath",
+            "rank": 1,
+            "bestScore": 0.329,
+            "truthScore": 0.329
+          },
+          {
+            "objectId": "919132",
+            "title": "An Illuminated Manuscript of Poetry in Nasta'liq",
+            "rank": 1,
+            "bestScore": 0.337,
+            "truthScore": 0.337
+          },
+          {
+            "objectId": "58449",
+            "title": "Krishna Dancing: Page from the Dispersed \"Boston\" Rasikapriya (Lover's Breviary)",
+            "rank": 1,
+            "bestScore": 0.325,
+            "truthScore": 0.325
+          },
+          {
+            "objectId": "467704",
+            "title": "Pricket Candlestick with a Naked Youth Fighting a Dragon",
+            "rank": 1,
+            "bestScore": 0.321,
+            "truthScore": 0.321
+          },
+          {
+            "objectId": "22739",
+            "title": "Mask",
+            "rank": 1,
+            "bestScore": 0.284,
+            "truthScore": 0.264
+          },
+          {
+            "objectId": "310350",
+            "title": "Mask",
+            "rank": 1,
+            "bestScore": 0.284,
+            "truthScore": 0.251
+          },
+          {
+            "objectId": "708744",
+            "title": "Mask",
+            "rank": 1,
+            "bestScore": 0.284,
+            "truthScore": 0.244
+          },
+          {
+            "objectId": "22469",
+            "title": "Mask",
+            "rank": 1,
+            "bestScore": 0.284,
+            "truthScore": 0.284
+          }
+        ]
+      }
     }
   }
 }

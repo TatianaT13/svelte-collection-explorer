@@ -20,7 +20,7 @@ et les exigences transverses.
 | 2b | Seuils conformes dans l'application (`schema.similarity.calibration`, `reading.ts`, panneau et page Contrôle) | **fait** — τ CLIP = 0,747 à α = 0,1 (400 paires), à 0,003 du seuil manuel ; 5 tests |
 | 4 | DBA / diffusion hors ligne sur l'index | à faire |
 | 5 | SigLIP 2 ou Perception Encoder pour catégorie / pays, à la place de CLIP B/32 | à faire |
-| 6 | Augmentations terrain + TTA + évaluation par condition | à faire |
+| 6 | Augmentations terrain + TTA + évaluation par condition | **mesure par condition faite** (`scripts/robustness.mjs`, README § 16) ; augmentation à l'entraînement et TTA non faits, la prise de vue guidée est le meilleur levier d'après la mesure |
 | 7 | Recherche filtrée par métadonnées prédites | à faire (côté index) |
 | 8 | Inférence sur le poste, index sur le serveur : `remoteAdapter` + service HNSW | **fait** — `service/main.py` (FastAPI + hnswlib, recherche filtrée, facettes, archive SHA-256 vérifié), `remoteAdapter.ts`, banc : ×8,8 à 100 000 vecteurs, recall 99,4 % |
 
@@ -126,14 +126,16 @@ Section README « Passage à l'échelle » (HNSW, DiskANN, Milvus).
 
 ## Exigences transverses
 
-- **Traçabilité du dossier** : ajouter au JSON exporté l'identifiant du modèle, la date du jeu de données,
-  les seuils (ou τ conformes) et les scores du top-k, pour qu'un résultat soit reproductible.
+- **Traçabilité du dossier** : le JSON exporté porte le modèle et sa révision, la base interrogée
+  (`adapter.info()` : modèle, dimension, taille, date, moteur), les seuils en vigueur (τ, α, source), le meilleur
+  score, la fiabilité, l'ensemble conforme et les scores de chaque candidat. — **fait** (9 novembre 2026)
 - **Couverture de test ≥ 90 %** : 41,5 % aujourd'hui sur `src/lib` ; tests de composants Svelte, seuil en
   CI, `npm audit --omit=dev` en CI.
 - **Bouchons** : `getFacets()` et `archiveImage` implémentés dans le remote adapter, avec vérification
   SHA-256 côté serveur. — **fait** (service/main.py : facettes réelles, archive refusée en 409 si l'empreinte diffère).
-- **Origines** : n'utiliser que le pays enregistré par le musée, marquer « inféré » sinon ; supprimer
-  `byzantine → TR` et `tibet → CN` de `build-data.mjs`.
+- **Origines** : pays enregistré par le musée (`origin_basis: recorded`), sinon déduit et marqué
+  (`inferred`), sinon vide ; `byzantine → TR` et `tibet → CN` supprimés. 22 enregistrées, 32 déduites, 10 vides ;
+  `--metadata-only` refait les règles sans toucher aux vignettes ni aux vecteurs. — **fait** (9 novembre 2026)
 - **Découpler `items.json`** : métadonnées d'un côté, embeddings de l'autre ; en mode remote le client
   n'a plus besoin des vecteurs.
 - **Interface `Embedder`** : `{ id, dim, embed(blob) }` dans `embedder.ts`, DINOv2 dans le navigateur,
@@ -240,6 +242,24 @@ Faites une à la fois, chaîne complète entre chaque étape (types, lint, tests
   spy.mockClear())` appelait donc l'embedder simulé sans argument. Accolades partout.
 - Non testé à dessein : thème, drapeaux, repli d'image, redimensionnement canvas. Ça ferait monter le chiffre sans
   protéger quoi que ce soit.
+
+## Recherche par description (9 novembre 2026)
+
+Tour texte de CLIP dans le worker (`embedText`, 64 Mo int8, chargée à la demande) ; le bouton « Par description » de
+l'explorateur transforme la barre de recherche en requête visuelle : le texte est vectorisé et comparé aux images au lieu
+de filtrer les métadonnées, moyenné avec la photo s'il y en a une. Pas de lecture agrégée ni de τ dans ce mode (calibrés
+image contre image). Mesure `evaluate --text` : le titre du musée retrouve l'image de l'objet au premier rang dans 53 %
+des cas, dans les 5 premiers dans 88 %, les 10 premiers dans 94 % (MRR 0,66). Les deux adapters le supportent (le service
+reçoit le vecteur et un texte vide). — fait
+
+## Robustesse au terrain, mesurée (9 novembre 2026)
+
+`scripts/robustness.mjs` dégrade les 39 requêtes (flou, sous-exposition, rotation 15°, recadrage 60 %, JPEG 25, 320 px,
+flou + sombre) et les rejoue contre l'index. Compression et basse résolution : aucun coût. Flou : classement intact
+mais 8 % de « non concluant » en plus. Sous-exposition : −8 points de recall@1. Rotation : −13. Cadrage partiel : −18 et
+15 % de « non concluant ». La limite « calibré sur des vues de studio » a maintenant des chiffres, et ils désignent la
+prise de vue guidée comme prochain gain, avant tout changement de modèle. Table dans le README § 16, données dans
+`eval/robustness.json`. — fait
 
 ## Réserves
 

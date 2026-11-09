@@ -1,6 +1,6 @@
 import { asset } from '$app/paths';
 import type { AssetPath } from '$app/types';
-import type { ArchiveReceipt, CollectionAdapter } from './adapter';
+import type { ArchiveReceipt, CollectionAdapter, CollectionInfo } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { matchesFilters, matchesText, paginate } from './filtering';
@@ -22,6 +22,7 @@ interface Dataset {
   items: CollectionItem[];
 }
 interface Loaded {
+  dataset: Omit<Dataset, 'items'>;
   items: CollectionItem[];
   /** Vecteur de chaque objet, vue sur le tampon binaire : construit une fois, pas à chaque requête. */
   vectorOf: Map<string, Float32Array>;
@@ -41,7 +42,8 @@ function load(): Promise<Loaded> {
       const all = new Float32Array(buf);
       if (all.length !== d.items.length * d.dim) throw new Error(`embeddings.bin : ${all.length} valeurs pour ${d.items.length} × ${d.dim}`);
       const items = d.items.map(withBase);
-      return { items, vectorOf: new Map(items.map((it, i) => [it.id, all.subarray(i * d.dim, (i + 1) * d.dim)])) };
+      const { items: _items, ...dataset } = d;
+      return { dataset, items, vectorOf: new Map(items.map((it, i) => [it.id, all.subarray(i * d.dim, (i + 1) * d.dim)])) };
     })
     .catch((e) => {
       loaded = null;
@@ -54,15 +56,18 @@ export const localAdapter: CollectionAdapter = {
   async search(query: SearchQuery): Promise<SearchResult> {
     const { items, vectorOf } = await load();
     const locale = i18n.locale;
-    let results = items.filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, locale));
+    // « Par description » : le texte devient un vecteur comparé aux images, il ne filtre plus les métadonnées.
+    const semantic = !!query.semantic && !!query.text?.trim();
+    let results = items.filter((it) => matchesFilters(it, query.filters) && (semantic || matchesText(it, query.text, locale)));
 
     let insights;
-    if (query.image) {
-      const [{ cosine }, q] = await Promise.all([import('#lib/ml/embedder.ts'), queryVector(query.image, query.extraImages)]);
+    if (query.image || semantic) {
+      const [{ cosine }, q] = await Promise.all([import('#lib/ml/embedder.ts'), queryVector(query.image, query.extraImages, semantic ? query.text : undefined)]);
       results = results
         .map((it) => ({ ...it, score: Math.round(cosine(q, vectorOf.get(it.id) ?? []) * 1000) / 1000 }))
         .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-      insights = computeInsights(results, schema.similarity.topK, schema.similarity.calibration?.tau);
+      // La lecture agrégée et τ sont calibrés image contre image : pas de lecture quand une description entre dans le vecteur.
+      if (query.image && !semantic) insights = computeInsights(results, schema.similarity.topK, schema.similarity.calibration?.tau);
     }
 
     return {
@@ -82,6 +87,11 @@ export const localAdapter: CollectionAdapter = {
 
   async getFacets(): Promise<FacetValues> {
     return {};
+  },
+
+  async info(): Promise<CollectionInfo> {
+    const { dataset, items } = await load();
+    return { model: dataset.model, dim: dataset.dim, count: items.length, generatedAt: dataset.generatedAt, source: dataset.source, engine: 'browser' };
   },
 
   /** Sans serveur, rien n'est archivé : on rend un identifiant local et l'empreinte lue côté client. */

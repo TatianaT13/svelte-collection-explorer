@@ -1,4 +1,4 @@
-import type { ArchiveReceipt, CollectionAdapter } from './adapter';
+import type { ArchiveReceipt, CollectionAdapter, CollectionInfo } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { computeInsights, geoBuckets } from './insights';
@@ -23,6 +23,7 @@ interface Meta {
   dim: number;
   count: number;
   generatedAt: string;
+  index?: string;
 }
 
 let meta: Promise<Meta> | null = null;
@@ -57,11 +58,13 @@ interface RemoteSearch {
 export const remoteAdapter: CollectionAdapter = {
   async search(query: SearchQuery): Promise<SearchResult> {
     await checkMeta();
-    const vector = query.image ? [...(await queryVector(query.image, query.extraImages))] : undefined;
+    const semantic = !!query.semantic && !!query.text?.trim();
+    const vector = query.image || semantic ? [...(await queryVector(query.image, query.extraImages, semantic ? query.text : undefined))] : undefined;
     const r = await getJson<RemoteSearch>(`${API}/search`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: query.text ?? '', filters: query.filters, vector, page: query.page, pageSize: query.pageSize, candidates: CANDIDATES })
+      // En mode « par description », le texte est déjà dans le vecteur : le service ne doit pas le prendre comme filtre.
+      body: JSON.stringify({ text: semantic ? '' : (query.text ?? ''), filters: query.filters, vector, page: query.page, pageSize: query.pageSize, candidates: CANDIDATES })
     });
     const candidates = r.candidates.map(withBase);
     return {
@@ -69,7 +72,7 @@ export const remoteAdapter: CollectionAdapter = {
       total: r.total,
       page: r.page,
       pageSize: r.pageSize,
-      insights: vector ? computeInsights(candidates, schema.similarity.topK, schema.similarity.calibration?.tau) : undefined,
+      insights: vector && query.image && !semantic ? computeInsights(candidates, schema.similarity.topK, schema.similarity.calibration?.tau) : undefined,
       geo: geoBuckets(candidates)
     };
   },
@@ -85,6 +88,11 @@ export const remoteAdapter: CollectionAdapter = {
   async getFacets(): Promise<FacetValues> {
     await checkMeta();
     return getJson<FacetValues>(`${API}/facets`);
+  },
+
+  async info(): Promise<CollectionInfo> {
+    const m = await checkMeta();
+    return { model: m.model, dim: m.dim, count: m.count, generatedAt: m.generatedAt, engine: 'service', index: m.index };
   },
 
   /** L'original part tel quel ; le service recalcule l'empreinte et refuse si elle ne correspond pas. */

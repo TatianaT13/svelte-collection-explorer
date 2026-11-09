@@ -4,12 +4,13 @@ vi.mock('$app/paths', () => ({ asset: (p: string) => `/app/${p}`, resolve: (p: s
 vi.mock('#lib/ml/embedder.ts', () => ({
   MODEL_ID: 'Xenova/clip-vit-base-patch32',
   embedImage: vi.fn(async (file: Blob) => (file.size % 2 ? new Float32Array([1, 0]) : new Float32Array([0, 1]))),
+  embedText: vi.fn(async () => new Float32Array([0, 1])),
   cosine: (a: ArrayLike<number>, b: ArrayLike<number>) => a[0] * b[0] + a[1] * b[1]
 }));
 
 import { averageNormalized, queryEmbedding, queryVector, withBase, loadPlaces } from './shared';
 import { places } from '#lib/stores/places.svelte.ts';
-import { embedImage } from '#lib/ml/embedder.ts';
+import { embedImage, embedText } from '#lib/ml/embedder.ts';
 
 const file = (size: number) => new File([new Uint8Array(size)], `f${size}.jpg`, { type: 'image/jpeg' });
 
@@ -46,6 +47,16 @@ describe('shared : ce que les deux adapters partagent', () => {
     const v = await queryVector(file(7), [file(8)]);
     expect(v[0]).toBeCloseTo(Math.SQRT1_2, 5);
     expect(v[1]).toBeCloseTo(Math.SQRT1_2, 5);
+  });
+
+  it('queryVector accepte une description seule, la mémorise, et refuse une requête vide', async () => {
+    const v = await queryVector(null, [], 'icône dorée');
+    expect([...v]).toEqual([0, 1]);
+    await queryVector(null, [], '  Icône dorée ');
+    expect(embedText).toHaveBeenCalledTimes(1); // même phrase à la casse et aux espaces près : un seul calcul
+    const both = await queryVector(file(7), [], 'icône dorée'); // image [1,0] + texte [0,1]
+    expect(both[0]).toBeCloseTo(Math.SQRT1_2, 5);
+    await expect(queryVector(null, [], '')).rejects.toThrow(/requête vide/);
   });
 
   it('loadPlaces charge le gazetier et tolère son absence', async () => {

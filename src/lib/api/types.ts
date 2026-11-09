@@ -24,6 +24,12 @@ export type ActiveFilters = Record<string, MetadataValue>;
 
 export interface SearchQuery {
   text?: string;
+  /**
+   * Le texte décrit l'objet (« vase à figures rouges, deux anses ») : il est vectorisé par la tour texte de CLIP
+   * et comparé aux images, au lieu de filtrer les métadonnées. Sans image, la lecture agrégée et le seuil τ
+   * (calibrés image contre image) ne s'appliquent pas : seuls le classement et les scores sont rendus.
+   */
+  semantic?: boolean;
   filters: ActiveFilters;
   /** Image envoyée pour une recherche visuelle. */
   image?: File;

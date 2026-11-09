@@ -42,7 +42,23 @@ export function queryEmbedding(file: File): Promise<Float32Array> {
   return p;
 }
 
-/** Vecteur de requête pour une image principale et ses vues supplémentaires. */
-export async function queryVector(image: File, extra: File[] = []): Promise<Float32Array> {
-  return averageNormalized(await Promise.all([image, ...extra].map(queryEmbedding)));
+/** Embedding d'une description, mémorisé par texte (le mode « par description » renvoie la même phrase à chaque frappe). */
+const textCache = new Map<string, Promise<Float32Array>>();
+export function textEmbedding(text: string): Promise<Float32Array> {
+  const key = text.trim().toLowerCase();
+  let p = textCache.get(key);
+  if (!p) {
+    p = import('#lib/ml/embedder.ts').then(({ embedText }) => embedText(text.trim()));
+    textCache.set(key, p);
+    if (textCache.size > 50) textCache.delete(textCache.keys().next().value!);
+  }
+  return p;
+}
+
+/** Vecteur de requête : image principale, vues supplémentaires et description éventuelle, moyennés. */
+export async function queryVector(image: File | null | undefined, extra: File[] = [], text?: string): Promise<Float32Array> {
+  const parts: Promise<Float32Array>[] = [...(image ? [image] : []), ...extra].map(queryEmbedding);
+  if (text?.trim()) parts.push(textEmbedding(text));
+  if (!parts.length) throw new Error('requête vide : ni image ni description');
+  return averageNormalized(await Promise.all(parts));
 }

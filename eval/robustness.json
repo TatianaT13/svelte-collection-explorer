@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-11-09T10:05:47.938Z",
+  "queries": 39,
+  "tau": 0.747,
+  "conditions": {
+    "flou": "sharp.blur(2.5) à 1024 px",
+    "sombre": "luminosité × 0,45",
+    "rotation": "15°, fond gris",
+    "recadrage": "60 % centré",
+    "compression": "JPEG qualité 25",
+    "basse_resolution": "320 px côté max",
+    "flou_et_sombre": "les deux"
+  },
+  "results": {
+    "clip": {
+      "original": {
+        "recall@1": 66.7,
+        "recall@5": 89.7,
+        "mrr": 0.775,
+        "medianTruthScore": 0.853,
+        "aboveTau": 84.6,
+        "inconclusive": 10.3
+      },
+      "flou": {
+        "recall@1": 66.7,
+        "recall@5": 87.2,
+        "mrr": 0.761,
+        "medianTruthScore": 0.846,
+        "aboveTau": 76.9,
+        "inconclusive": 7.7
+      },
+      "sombre": {
+        "recall@1": 59,
+        "recall@5": 84.6,
+        "mrr": 0.708,
+        "medianTruthScore": 0.825,
+        "aboveTau": 74.4,
+        "inconclusive": 10.3
+      },
+      "rotation": {
+        "recall@1": 53.8,
+        "recall@5": 76.9,
+        "mrr": 0.664,
+        "medianTruthScore": 0.8,
+        "aboveTau": 64.1,
+        "inconclusive": 15.4
+      },
+      "recadrage": {
+        "recall@1": 48.7,
+        "recall@5": 79.5,
+        "mrr": 0.641,
+        "medianTruthScore": 0.816,
+        "aboveTau": 74.4,
+        "inconclusive": 15.4
+      },
+      "compression": {
+        "recall@1": 69.2,
+        "recall@5": 87.2,
+        "mrr": 0.779,
+        "medianTruthScore": 0.854,
+        "aboveTau": 82.1,
+        "inconclusive": 7.7
+      },
+      "basse_resolution": {
+        "recall@1": 69.2,
+        "recall@5": 87.2,
+        "mrr": 0.768,
+        "medianTruthScore": 0.859,
+        "aboveTau": 84.6,
+        "inconclusive": 7.7
+      },
+      "flou_et_sombre": {
+        "recall@1": 56.4,
+        "recall@5": 82.1,
+        "mrr": 0.678,
+        "medianTruthScore": 0.822,
+        "aboveTau": 71.8,
+        "inconclusive": 15.4
+      }
+    }
+  }
+}

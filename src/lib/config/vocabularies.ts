@@ -14,7 +14,7 @@ export interface Term {
   order?: number;
 }
 
-export type VocabularyId = 'category' | 'material' | 'technique' | 'period' | 'subject';
+export type VocabularyId = 'category' | 'material' | 'technique' | 'period' | 'subject' | 'origin_basis';
 
 const t = (code: string, fr: string, en: string, order?: number): Term => ({
   code,
@@ -23,6 +23,8 @@ const t = (code: string, fr: string, en: string, order?: number): Term => ({
 });
 
 export const vocabularies: Record<VocabularyId, Term[]> = {
+  /** D'où vient le pays d'origine : enregistré par le musée, ou déduit de la culture / du style par règle de mots-clés. */
+  origin_basis: [t('recorded', 'Enregistrée par le musée', 'Recorded by the museum'), t('inferred', 'Déduite de la culture', 'Inferred from culture')],
   /** Type d'objet (Object ID : "Type of object"). */
   category: [
     t('painting', 'Peinture', 'Painting'),

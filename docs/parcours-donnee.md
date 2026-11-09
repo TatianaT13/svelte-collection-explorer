@@ -21,7 +21,7 @@ est de l'arithmétique sur des tableaux de 512 nombres.
 | # | Entrée | Transformation | Sortie | Où |
 |---|---|---|---|---|
 | A1 | Thèmes de recherche (une vingtaine) | Appel à l'API du Met `v1.1/search`, garde domaine public + image | Liste d'identifiants | `scripts/build-data.mjs` |
-| A2 | Fiche JSON du Met (titre, `medium`, `objectDate`, tags, `culture`, `country`) | Règles de mots-clés → codes du schéma : type, pays ISO, matériaux, techniques, période, sujet | Métadonnées normalisées, ~700 octets par objet | `build-data.mjs` (`toPeriod`, tables de correspondance) |
+| A2 | Fiche JSON du Met (titre, `medium`, `objectDate`, tags, `culture`, `country`) | Règles de mots-clés → codes du schéma : type, pays ISO, matériaux, techniques, période, sujet. Origine : pays enregistré par le musée (`recorded`), sinon déduit de la culture et marqué `inferred`, sinon vide | Métadonnées normalisées, ~700 octets par objet | `build-data.mjs` (`toOrigin`, `toPeriod`, tables de correspondance) |
 | A3 | `primaryImageSmall` du Met (JPEG, 1 000 à 2 000 px) | Réduction au côté max 512 px, enregistrement JPEG | `static/data/thumbs/<id>.jpg`, ~33 Ko chacune, 2,1 Mo pour 64 | `build-data.mjs:427-429` |
 | A4 | **La vignette telle que stockée** (relue depuis le disque) | Prétraitement CLIP puis modèle (révision Hugging Face épinglée, la même que le navigateur), voir B5 | Vecteur Float32 × 512, norme 1 | `build-data.mjs:433-436` |
 | A5 | 64 vecteurs | Concaténation dans l'ordre des objets | `static/data/embeddings.bin` : 64 × 512 × 4 octets = **131 072 octets** | `build-data.mjs:473` |
@@ -107,7 +107,9 @@ Temps mesuré : 28 à 104 ms selon la machine (médiane 33 ms dans `eval/results
 - Les poids int8 : perte faible, non mesurée contre la version 32 bits.
 - On ne peut pas reconstruire la photo depuis le vecteur. C'est une signature, pas une compression.
 
-Plusieurs vues du même objet : un vecteur par vue, puis moyenne renormalisée (`shared.ts:21-31`).
+Plusieurs vues du même objet : un vecteur par vue, puis moyenne renormalisée (`shared.ts`, `averageNormalized`).
+
+**Variante texte.** En mode « par description », la phrase passe par la tour texte de CLIP (tokenisation, 12 couches, projection vers les mêmes 512 dimensions, norme 1 ; `embed.worker.ts`, message `embedText`) et donne un vecteur du même espace, moyenné avec les images s'il y en a. Un texte et une image se comparent par le même cosinus, avec des scores plus bas (0,2 à 0,35) : classement seulement, pas de τ.
 
 ### B6. Classement
 
@@ -165,7 +167,7 @@ enregistrée dans `lastQuery` avec le résumé de la lecture à cet instant.
 | Sortie | Contenu | Format | Où |
 |---|---|---|---|
 | `QueryRecord` | nom, taille, SHA-256, date de prise de vue, appareil, recadrée ou non, décision, résumé | `sessionStorage`, sans l'image | `src/lib/stores/query.svelte.ts` |
-| Dossier | horodatage, collection, `QueryRecord`, lecture (types, origines, matériaux, périodes), candidats (id, titre, score, métadonnées, listes rouges) | JSON téléchargé `dossier-AAAA-MM-JJ-hh-mm-ss.json` | `src/lib/utils/caseFile.ts` |
+| Dossier | horodatage, collection, **modèle et révision**, **base interrogée** (`adapter.info()`), **seuils** (τ, α, source), `QueryRecord`, lecture (meilleur score, fiabilité, ensemble conforme, types, origines, matériaux, périodes, risques), candidats (id, titre, score, métadonnées, listes rouges) | JSON téléchargé `dossier-AAAA-MM-JJ-hh-mm-ss.json` | `src/lib/utils/caseFile.ts` |
 | Archive | **l'original** (pas la version réduite) + SHA-256 annoncé + `ImageInfo` sans GPS | `POST /archive` multipart, image/* seulement, 25 Mo max | `remoteAdapter.ts:93`, `service/main.py:195` |
 
 Le service **recalcule** le SHA-256 sur les octets reçus ; s'il diffère de celui annoncé, 409 : le fichier
@@ -173,8 +175,7 @@ archivé n'est pas celui qui a été analysé. C'est une intégrité de fichier,
 complète (pas d'identité d'opérateur, pas de journal d'audit inaltérable). En local, `archiveImage` rend un
 identifiant et l'empreinte lue côté client, rien n'est conservé.
 
-Le dossier exporté ne porte pas encore l'identifiant du modèle, la date du jeu ni τ : c'est une proposition
-en attente dans `propositions.md`.
+Le dossier exporté porte le modèle, sa révision, la base interrogée et τ : un résultat se rejoue.
 
 ---
 
@@ -186,6 +187,7 @@ en attente dans `propositions.md`.
 | C2 | 400 objets du Met à deux vues | Vecteur de la vue principale et de la vue alternative | `eval/pairs/<modèle>.json` (ignoré par git) | `scripts/build-pairs.mjs` |
 | C3 | Paires, partition par hachage de l'identifiant (lots 6–7 = calibration, 8–9 = test) | τ_α = ⌊α(n+1)⌋-ième plus petite similarité du bon objet sur la calibration | `eval/calibration-clip.json` : τ = 0,747 pour α = 0,1 | `scripts/calibrate.mjs`, `scripts/lib/metrics.mjs` |
 | C4 | `eval/calibration-clip.json` | Importé par le schéma, qui prend la ligne α = 0,1 ; un test vérifie que le modèle du fichier est celui du navigateur | `schema.similarity.calibration` : le seuil que B8 utilise | `src/lib/config/schema.ts` (`calibrationFrom`) |
+| C6 | Les 39 requêtes dégradées (flou, sombre, rotation, recadrage, compression, basse résolution) | Rejouées contre l'index | `eval/robustness.json` : la rotation et le cadrage partiel coûtent 13 et 18 points de recall@1, la compression rien | `scripts/robustness.mjs` |
 | C5 (expérience) | Paires d'entraînement (lots 0–5) | Projection W 512 × 512 apprise par InfoNCE, rappelée vers l'identité | recall inchangé, marge +63 % ; non intégrée | `experiments/train-head.mjs` |
 
 Le contrôle de dérive de C1 (écart entre `embeddings.bin` et un recalcul : 0,0001) est ce qui garantit que

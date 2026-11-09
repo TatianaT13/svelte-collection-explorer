@@ -6,7 +6,7 @@ test.describe('Explorer', () => {
     await expect(page.locator('article.card').first()).toBeVisible();
     await expect(page.locator('.status')).toContainText('64');
 
-    const origin = page.locator('.ms', { has: page.locator('.head .label', { hasText: 'Origine' }) });
+    const origin = page.locator('.ms', { has: page.locator('.head .label', { hasText: /^\s*Origine\s*$/ }) });
     await origin.locator('.head').click();
     await origin.locator('input[type=search]').fill('ukr');
     await origin.getByRole('checkbox', { name: 'Ukraine', exact: true }).check();

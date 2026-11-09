@@ -4,7 +4,7 @@
  *   loadTokens() → tokens(image) : { global, patches, n, d } (DINO seulement : jetons de patch)
  * Garder cette liste courte : chaque entrée est un modèle qu'on a mesuré et qu'on sait expliquer.
  */
-import { AutoModel, AutoProcessor, CLIPVisionModelWithProjection, env } from '@huggingface/transformers';
+import { AutoModel, AutoProcessor, AutoTokenizer, CLIPTextModelWithProjection, CLIPVisionModelWithProjection, env } from '@huggingface/transformers';
 
 env.allowLocalModels = false;
 
@@ -47,6 +47,12 @@ export const MODELS = {
       const processor = await AutoProcessor.from_pretrained(this.id, { revision: this.revision });
       const model = await CLIPVisionModelWithProjection.from_pretrained(this.id, { revision: this.revision, dtype: 'q8' });
       return async (img) => Float32Array.from((await model(await processor(img))).image_embeds.normalize(2, -1).data);
+    },
+    /** Tour texte : une description → un vecteur du même espace que les images (recherche « par description »). */
+    async loadText() {
+      const tokenizer = await AutoTokenizer.from_pretrained(this.id, { revision: this.revision });
+      const model = await CLIPTextModelWithProjection.from_pretrained(this.id, { revision: this.revision, dtype: 'q8' });
+      return async (text) => Float32Array.from((await model(tokenizer(text, { padding: true, truncation: true }))).text_embeds.normalize(2, -1).data);
     }
   },
   /** Auto-supervisé, sans texte : meilleur pour « même objet sous un autre angle » (mesuré § 16 du README). */

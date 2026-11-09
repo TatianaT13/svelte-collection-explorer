@@ -4,7 +4,7 @@ import { MODEL_ID } from '#lib/ml/model.ts';
 vi.mock('$app/paths', () => ({ asset: (p: string) => `/app/${p}`, resolve: (p: string) => `/app/${p}` }));
 vi.mock('#lib/ml/embedder.ts', async (importOriginal) => {
   const real = await importOriginal<typeof import('#lib/ml/embedder.ts')>();
-  return { ...real, embedImage: vi.fn(async () => new Float32Array([0, 1])), preloadModel: vi.fn() };
+  return { ...real, embedImage: vi.fn(async () => new Float32Array([0, 1])), embedText: vi.fn(async () => new Float32Array([1, 0])), preloadModel: vi.fn(), preloadTextModel: vi.fn() };
 });
 
 const candidate = (id: string, score: number, category: string) => ({ id, title: id, imageUrl: `${id}.jpg`, thumbnailUrl: `data/thumbs/${id}.jpg`, score, metadata: { category, origin: 'UA' } });
@@ -71,9 +71,20 @@ describe('remoteAdapter', () => {
     expect(calls.filter((c) => c.url.endsWith('/meta'))).toHaveLength(1);
   });
 
-  it('getItem rend null sur 404, getFacets relaie le service', async () => {
+  it('« par description » : le vecteur du texte part, le texte lui-même non, pas de lecture agrégée', async () => {
+    const calls = stubService();
+    const api = await fresh();
+    const r = await api.search({ filters: {}, text: 'icône dorée', semantic: true, page: 1, pageSize: 1 });
+    const body = JSON.parse(String(calls.find((c) => c.url.endsWith('/search'))!.init?.body));
+    expect(body.vector).toEqual([1, 0]);
+    expect(body.text).toBe('');
+    expect(r.insights).toBeUndefined();
+  });
+
+  it('getItem rend null sur 404, getFacets relaie le service, info décrit l’index', async () => {
     stubService();
     const api = await fresh();
+    expect(await api.info()).toMatchObject({ model: MODEL_ID, dim: 2, count: 2, engine: 'service' });
     expect((await api.getItem('b'))?.thumbnailUrl).toBe('/app/data/thumbs/b.jpg');
     expect(await api.getItem('zz')).toBeNull();
     expect(await api.getFacets()).toEqual({ category: ['icon', 'vessel'] });

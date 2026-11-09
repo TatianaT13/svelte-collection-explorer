@@ -6,6 +6,7 @@
  *   node scripts/evaluate.mjs --build               # constitue d'abord eval/queries.json : une vue alternative par objet qui en a une
  *   node scripts/evaluate.mjs --models clip,dinov2-small
  *   node scripts/evaluate.mjs --models dinov2-small --head eval/heads/dinov2-small.json   # tête apprise (experiments/)
+ *   node scripts/evaluate.mjs --text                 # ajoute la mesure « par description » : le titre de chaque objet retrouve-t-il son image ?
  *   node scripts/evaluate.mjs --check                # garde-fou (CI) : compare au eval/results.json versionné sans l'écraser,
  *                                                     échoue si recall@1, recall@5, category@1 ou le MRR perdent plus que ce
  *                                                     qu'une seule requête peut expliquer, ou si embeddings.bin ne vient pas du modèle
@@ -23,6 +24,7 @@ const API = 'https://collectionapi.metmuseum.org/public/collection/v1';
 const PX = 1024;
 const BUILD = process.argv.includes('--build');
 const CHECK = process.argv.includes('--check');
+const TEXT = process.argv.includes('--text');
 /**
  * Tolérances de --check. D'une machine à l'autre (décodage JPEG, exécution ONNX), le même modèle épinglé donne des
  * vecteurs qui s'écartent de ~0,01 en cosinus (mesuré : 0,0001 sur la machine qui a produit l'index, 0,013 macOS → Linux)
@@ -110,10 +112,10 @@ export async function corpusEmbeddings(key, embed, items) {
   const def = getModel(key);
   // Le cache ne vaut que pour le même modèle (révision épinglée), la même bibliothèque et les mêmes objets :
   // un changement de transformers.js ou de poids doit se voir dans la mesure, pas être masqué par le cache.
-  const stamp = { model: def.id, revision: def.revision ?? null, runtime: `transformers.js ${env.version}` };
+  const stamp = { model: def.id, revision: def.revision ?? null, runtime: `transformers.js ${env.version}`, dataset: corpusGeneratedAt };
   if (await exists(cache)) {
     const c = JSON.parse(await readFile(cache, 'utf8'));
-    const same = c.model === stamp.model && (c.revision ?? null) === stamp.revision && c.runtime === stamp.runtime;
+    const same = c.model === stamp.model && (c.revision ?? null) === stamp.revision && c.runtime === stamp.runtime && c.dataset === stamp.dataset;
     if (same && c.ids.length === items.length && c.ids.every((id, i) => id === items[i].id)) return c.vectors.map((v) => Float32Array.from(v));
     console.log(`  cache ${cache} ignoré (${c.runtime ?? 'sans version'}, ${c.revision ? c.revision.slice(0, 7) : 'sans révision'}) : recalcul`);
   }
@@ -139,6 +141,8 @@ async function loadHead(modelId) {
 }
 
 const failures = [];
+/** Date de construction du corpus : fait partie de la clé du cache (des vignettes refaites invalident les vecteurs mis en cache). */
+let corpusGeneratedAt = null;
 
 /** Compare une synthèse à la précédente : une baisse au-delà de la tolérance est une régression. */
 function compare(key, summary, previous) {
@@ -157,6 +161,7 @@ async function evaluate(key, corpusData, queries) {
   const embed = async (img) => project(await raw(img));
   const { items } = corpusData;
   const corpus = (await corpusEmbeddings(key, raw, items)).map(project);
+  const text = TEXT && !head ? await evaluateText(key, corpusData, corpus) : undefined;
 
   // Cohérence index / requête : embeddings.bin doit être ce que le modèle du navigateur produit sur les vignettes.
   if (def.id === corpusData.model && !head) {
@@ -198,7 +203,35 @@ async function evaluate(key, corpusData, queries) {
     medianMargin: round3(median(rows.map((r) => r.marginVsBestOther))),
     medianMs: median(rows.map((r) => r.ms))
   };
-  return { summary, rows };
+  return { summary, rows, text };
+}
+
+/**
+ * Recherche par description : le titre du musée (« Icon Fragment », « Amphora ») est vectorisé par la tour texte et
+ * doit retrouver l'image de l'objet. Mesure de l'espace commun texte-image, pas de la reconnaissance : les titres
+ * sont courts et souvent partagés par plusieurs objets.
+ */
+async function evaluateText(key, corpusData, corpus) {
+  const def = getModel(key);
+  if (!def.loadText) return undefined;
+  const embed = await def.loadText();
+  const { items } = corpusData;
+  const rows = [];
+  for (const [i, it] of items.entries()) {
+    const v = await embed(it.title);
+    const ranked = items.map((other, j) => ({ id: other.id, title: other.title, score: cosine(v, corpus[j]) })).sort((a, b) => b.score - a.score);
+    // Des titres identiques (plusieurs « Icon ») sont tous de bonnes réponses.
+    const rank = ranked.findIndex((r) => r.id === it.id || r.title === it.title) + 1;
+    rows.push({ objectId: it.id, title: it.title, rank, bestScore: round3(ranked[0].score), truthScore: round3(cosine(v, corpus[i])) });
+    process.stdout.write(`\r  descriptions ${rows.length}/${items.length}`);
+  }
+  console.log();
+  const n = rows.length;
+  const share = (f) => pct(rows.filter(f).length / n);
+  return {
+    summary: { queries: n, 'recall@1': share((r) => r.rank === 1), 'recall@5': share((r) => r.rank <= 5), 'recall@10': share((r) => r.rank <= 10), mrr: round3(rows.reduce((s, r) => s + 1 / r.rank, 0) / n), medianTruthScore: round3(median(rows.map((r) => r.truthScore))), medianBestScore: round3(median(rows.map((r) => r.bestScore))) },
+    rows
+  };
 }
 
 function table(results) {
@@ -211,10 +244,17 @@ function table(results) {
 
 async function main() {
   const corpusData = await loadCorpus();
-  const queries = await loadQueries(corpusData.items);
+  corpusGeneratedAt = corpusData.generatedAt;
+  // La vérité terrain (catégorie, origine) est celle du corpus courant, pas la copie figée dans queries.json.
+  const byId = new Map(corpusData.items.map((it) => [it.id, it]));
+  const queries = (await loadQueries(corpusData.items)).map((q) => {
+    const it = byId.get(q.objectId);
+    return it ? { ...q, category: it.metadata.category, origin: it.metadata.origin } : q;
+  });
   console.log(`${corpusData.items.length} objets de référence, ${queries.length} requêtes (vues alternatives)`);
   const results = {};
   for (const key of MODELS) results[key] = await evaluate(key, corpusData, queries);
+  for (const [key, r] of Object.entries(results)) if (r.text) console.log(`\n== ${key}, par description (titre → image, ${r.text.summary.queries} titres) : recall@1 ${r.text.summary['recall@1']} % · recall@5 ${r.text.summary['recall@5']} % · recall@10 ${r.text.summary['recall@10']} % · MRR ${r.text.summary.mrr} · score médian du bon objet ${r.text.summary.medianTruthScore}`);
   console.log(`\n${table(results)}\n\nrecall@k : part des requêtes dont le bon objet est dans les k premiers · MRR : moyenne de 1/rang\ncategory@1, origin@1 : le premier résultat a la même catégorie / origine que le bon objet\ntruth>=0.75 : part des bonnes réponses au-dessus de ce seuil · margin : score du bon objet − meilleur autre`);
   if (CHECK) {
     const previous = (await exists('eval/results.json')) ? JSON.parse(await readFile('eval/results.json', 'utf8')) : { results: {} };

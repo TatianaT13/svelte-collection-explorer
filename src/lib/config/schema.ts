@@ -149,6 +149,7 @@ export const schema: CollectionSchema = {
   fields: [
     { key: 'category', label: { fr: 'Type d’objet', en: 'Object type' }, kind: 'vocab', vocabulary: 'category', showOnCard: true, filterable: true, group: G.identification },
     { key: 'origin', label: { fr: 'Origine', en: 'Origin' }, kind: 'country', showOnCard: true, filterable: true, group: G.identification },
+    { key: 'origin_basis', label: { fr: 'Base de l’origine', en: 'Origin basis' }, kind: 'vocab', vocabulary: 'origin_basis', filterable: true, group: G.identification },
     { key: 'place', label: { fr: 'Lieu', en: 'Place' }, kind: 'place', filterable: true, group: G.identification },
     { key: 'period', label: { fr: 'Période', en: 'Period' }, kind: 'vocab', vocabulary: 'period', showOnCard: true, filterable: true, group: G.identification },
     { key: 'date_text', label: { fr: 'Date', en: 'Date' }, kind: 'text', group: G.identification },

@@ -164,8 +164,9 @@
     selected = result?.items.find((it) => it.id === id) ?? (await api.getItem(id));
   }
 
-  function exportCase() {
-    downloadJson(caseFileName(), buildCaseFile(result?.items ?? [], insights));
+  async function exportCase() {
+    const info = await api.info().catch(() => undefined);
+    downloadJson(caseFileName(), buildCaseFile(result?.items ?? [], insights, info));
   }
 
   const record = $derived(lastQuery.record);

@@ -15,6 +15,7 @@
   import ImageCompare from '#lib/components/ImageCompare.svelte';
   import { lastQuery } from '#lib/stores/query.svelte.ts';
   import { buildCaseFile, caseFileName, downloadJson } from '#lib/utils/caseFile.ts';
+  import { api } from '#lib/api/index.ts';
 
   const items = $derived(compare.items);
   let onlyDiff = $state(false);
@@ -34,8 +35,9 @@
 
   const diffCount = $derived(fieldGroups.flatMap((g) => g.fields).filter((f) => differs(f.key)).length);
 
-  function exportCase() {
-    downloadJson(caseFileName(), buildCaseFile(items));
+  async function exportCase() {
+    const info = await api.info().catch(() => undefined);
+    downloadJson(caseFileName(), buildCaseFile(items, undefined, info));
   }
 
   async function copyTable() {

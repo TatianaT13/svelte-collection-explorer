@@ -4,7 +4,7 @@ import type { CollectionItem } from './types';
 vi.mock('$app/paths', () => ({ asset: (p: string) => `/app/${p}`, resolve: (p: string) => `/app/${p}` }));
 vi.mock('#lib/ml/embedder.ts', async (importOriginal) => {
   const real = await importOriginal<typeof import('#lib/ml/embedder.ts')>();
-  return { ...real, embedImage: vi.fn(async () => new Float32Array([0, 1, 0])), preloadModel: vi.fn() };
+  return { ...real, embedImage: vi.fn(async () => new Float32Array([0, 1, 0])), embedText: vi.fn(async () => new Float32Array([0, 0, 1])), preloadModel: vi.fn(), preloadTextModel: vi.fn() };
 });
 
 /** Trois objets, vecteurs orthogonaux : la requête [0, 1, 0] doit retrouver « b » avec un score de 1. */
@@ -76,6 +76,24 @@ describe('localAdapter', () => {
     const page2 = await api.search({ filters: {}, page: 2, pageSize: 2 });
     expect(page2.items.map((it: CollectionItem) => it.id)).toEqual(['c']);
     expect(page2.total).toBe(3);
+  });
+
+  it('« par description » : le texte devient un vecteur, ne filtre plus les métadonnées, et n’a pas de lecture agrégée', async () => {
+    stubData();
+    const api = await fresh();
+    const r = await api.search({ filters: {}, text: 'bague en or', semantic: true, page: 1, pageSize: 10 });
+    expect(r.items.map((it: CollectionItem) => it.id)).toEqual(['c', 'a', 'b']); // vecteur texte [0,0,1] → « c »
+    expect(r.total).toBe(3); // « bague en or » ne filtre pas sur les titres
+    expect(r.items[0].score).toBe(1);
+    expect(r.insights).toBeUndefined();
+    const plain = await api.search({ filters: {}, text: 'bague en or', semantic: false, page: 1, pageSize: 10 });
+    expect(plain.total).toBe(0); // en recherche de métadonnées, la même phrase ne correspond à rien
+  });
+
+  it('info décrit la base chargée', async () => {
+    stubData();
+    const api = await fresh();
+    expect(await api.info()).toEqual({ model: 'm', dim: 3, count: 3, generatedAt: '', source: '', engine: 'browser' });
   });
 
   it('getItem retrouve un objet ou rend null ; sans serveur, l’archivage rend un reçu local avec l’empreinte lue', async () => {

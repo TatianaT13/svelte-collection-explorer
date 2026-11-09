@@ -75,6 +75,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     'search.label': 'Recherche',
     'search.clear': 'Effacer la recherche',
     'search.hint': 'Appuyer sur / pour rechercher',
+    'search.semantic': 'Par description',
+    'search.semanticHint': 'Décrire l’objet en mots (« vase à figures rouges, deux anses ») : le modèle compare la description aux images ; l’anglais est mieux compris. Désactivé : recherche dans les métadonnées.',
+    'search.semanticPlaceholder': 'Décrire l’objet : forme, matière, motif, couleur…',
 
     'filters.title': 'Filtres',
     'filters.reset': 'Réinitialiser',
@@ -332,6 +335,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     'search.label': 'Search',
     'search.clear': 'Clear search',
     'search.hint': 'Press / to search',
+    'search.semantic': 'By description',
+    'search.semanticHint': 'Describe the object in words (“red-figure vase, two handles”): the model compares the description with the images. Off: search in the metadata.',
+    'search.semanticPlaceholder': 'Describe the object: shape, material, motif, colour…',
 
     'filters.title': 'Filters',
     'filters.reset': 'Reset',

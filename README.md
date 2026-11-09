@@ -448,7 +448,12 @@ et le Proche-Orient. `npm run data` lance `scripts/build-data.mjs`, qui :
 
 1. interroge l'API du Met sur une vingtaine de thèmes et garde les objets du domaine public avec image ;
 2. traduit les champs du Met vers les codes du schéma (type, pays ISO, matériaux, techniques,
-   période depuis la date, sujet depuis les tags) par règles de mots-clés. L'année est lue dans la
+   période depuis la date, sujet depuis les tags) par règles de mots-clés. Pour le **pays d'origine**, le pays
+   enregistré par le musée fait foi (`origin_basis: recorded`) ; à défaut, une règle sur la culture ou le style
+   le déduit et l'objet le dit (`origin_basis: inferred`, affiché et filtrable). Pas de règle pour « byzantine »
+   ni « tibet » : un empire sur trois continents et une région disputée ne se réduisent pas à un code ISO, l'origine
+   reste vide. Sur les 64 objets : 22 enregistrées, 32 déduites, 10 vides. `npm run data -- --metadata-only` refait
+   ces règles sans retélécharger les images ni recalculer les vecteurs. L'année est lue dans la
    **date affichée** par le musée (`objectDate`, « 1892 », « ca. 1570–80 »), pas dans la borne de
    recherche `objectBeginDate`, qui reflète souvent la période d'activité de l'artiste : un testeur
    avait relevé « 1837 » pour un tableau de 1892. La date textuelle est conservée telle quelle ;
@@ -464,6 +469,20 @@ cache), calcule le vecteur de la photo et renvoie le résultat ; l'interface ne 
 pendant le chargement. Le modèle est préchargé dès qu'une image est choisie, avant même que la
 recherche parte. Les objets sont classés par similarité cosinus ; les seuils « forte / moyenne /
 faible » sont dans `schema.similarity`.
+
+**Recherche par description.** CLIP a une seconde tour, textuelle, qui projette une phrase dans le même espace que
+les images : « vase à figures rouges, deux anses » devient un vecteur de 512 nombres comparé aux objets par le même
+cosinus. Le bouton **Par description** de l'explorateur bascule la barre de recherche dans ce mode : le texte n'est plus
+un filtre sur les métadonnées mais une requête visuelle, vectorisée dans le même worker (tour texte de 64 Mo, chargée à
+la demande, `embedText`). Avec une photo en plus, les deux vecteurs sont moyennés. Les scores texte → image sont plus
+bas qu'image → image (0,2 à 0,35 pour une bonne correspondance) : ils classent, ils ne se comparent pas à τ, donc pas de
+lecture agrégée ni d'ensemble conforme dans ce mode, seulement le classement. Mesure (`npm run evaluate -- --text`) : le
+titre du musée de chaque objet (« Icon Fragment », « Amphora ») retrouve son image en premier dans **53 %** des cas, dans
+les 5 premiers dans **88 %**, dans les 10 premiers dans **94 %** (MRR 0,66, score médian 0,29) sur les 64 objets. C'est la
+fonctionnalité qu'un modèle auto-supervisé comme DINO ne peut pas offrir, et le cas « l'agent n'a qu'un signalement écrit ».
+Limite : la tour texte de CLIP a été entraînée sur des légendes surtout anglaises. Le français marche (« manuscrit
+enluminé » rend le lectionnaire en premier, « icône dorée du Christ » trois icônes), mais une description en anglais est
+plus sûre, et les termes rares ou les motifs précis (« oiseaux affrontés ») sont mal compris.
 
 **Lecture des résultats.** Une liste d'objets similaires ne répond pas à la question de l'agent.
 `api/insights.ts` agrège les `topK` meilleurs résultats (12 par défaut, `schema.similarity.topK`),
@@ -611,7 +630,7 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | Recadrer la photo avant recherche | `ImageUpload.svelte` | cadre tracé au pointeur sur l'aperçu, découpe dans un canvas, l'original est conservé |
 | Position GPS exclue par défaut | `+page.svelte` | `includeGps = false` : la position ne part que si l'agent le demande |
 | Délai sur la saisie (250 ms) | `+page.svelte` | `$effect` avec `setTimeout` et nettoyage : `text` (saisie) alimente `query` (recherche) |
-| Export du dossier et impression | `compare/+page.svelte` | JSON avec photo de référence (empreinte, pas l'image), candidats et scores ; feuille de style `@media print` pour un PDF propre |
+| Export du dossier et impression | `compare/+page.svelte`, `utils/caseFile.ts` | JSON rejouable : modèle et révision du navigateur, base interrogée (`adapter.info()` : modèle, taille, date, moteur), seuils en vigueur (τ calibré et sa source), photo de référence (empreinte, pas l'image), lecture (meilleur score, fiabilité, ensemble conforme, risques) et candidats avec scores ; feuille de style `@media print` pour un PDF propre |
 | Piège de focus dans le volet | `ItemDrawer.svelte` | Tab et Maj+Tab restent dans le dialogue, le focus revient à l'élément d'origine à la fermeture |
 | Hors ligne | `service-worker/index.ts` | application, données et vignettes en cache à l'installation ; le modèle est mis en cache par transformers.js ; l'image grand format retombe sur la vignette |
 | Prendre une photo sur mobile | `ImageUpload.svelte` | second `<input type="file" capture="environment">`, bouton visible seulement sur écran tactile |
@@ -710,13 +729,14 @@ Trois niveaux, exécutés par le workflow avant chaque déploiement, plus la mes
   schéma vient bien du modèle du navigateur ; chaque fichier cité par `static/architecture.html` existe et
   chaque fichier de `src/` y figure. `npm run test:coverage` applique un seuil de 50 % de lignes sur l'ensemble de `src/lib`, fichiers jamais importés par un test compris (56 % mesurés ; le reste est du code de navigateur, canvas, worker, thème, couvert par les parcours de bout en bout).
 - `npm run test:service` : 15 tests pytest du service (validation, recherche filtrée, archive, empreinte).
-- `npm run evaluate`, `npm run calibrate` : mesures de la recherche par image (§ 16). Elles téléchargent les
+- `npm run evaluate`, `npm run calibrate`, `npm run robustness` : mesures de la recherche par image (§ 16). Elles téléchargent les
   modèles, donc elles vivent dans leur propre workflow (`evaluation.yml`, § 14) et non dans le déploiement.
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
-  (`e2e/`). Huit parcours : filtres et URL partageable, recherche texte avec délai, attributs
-  cochables, volet puis comparaison, bascule de langue, page de contrôle, et **deux recherches par image réelles** :
-  le modèle CLIP est chargé dans le worker du navigateur, une vue alternative d'un objet du corpus est vectorisée,
-  et l'objet doit sortir en premier avec le panneau de lecture affiché et aucune erreur de console. Les poids
+  (`e2e/`). Neuf parcours : filtres et URL partageable, recherche texte avec délai, attributs
+  cochables, volet puis comparaison, bascule de langue, page de contrôle, **deux recherches par image réelles** (le
+  modèle CLIP est chargé dans le worker du navigateur, une vue alternative d'un objet du corpus est vectorisée, et
+  l'objet doit sortir en premier avec le panneau de lecture affiché et aucune erreur de console) et **une recherche par
+  description** (« manuscrit enluminé » doit rendre le lectionnaire en premier). Les poids
   (90 Mo) sont servis depuis le cache local de transformers.js quand il existe (en CI, celui du workflow
   d'évaluation, restauré avant les parcours), sinon depuis le Hub.
 
@@ -895,6 +915,30 @@ tirant vers le bas. Coût : ~700 ms par requête pour 20 candidats en JavaScript
 numpy ou ONNX). C'est la brique à placer **après** un index ANN, jamais à sa place.
 
 ---
+
+### Robustesse au terrain, mesurée
+
+L'évaluation ci-dessus porte sur des vues de studio. `npm run robustness` (`scripts/robustness.mjs`) dégrade les 39
+requêtes comme le seraient des photos de comptoir et les rejoue contre l'index (CLIP, τ = 0,747) :
+
+| condition | recall@1 | recall@5 | MRR | score médian du bon objet | bon objet ≥ τ | « non concluant » |
+|---|---:|---:|---:|---:|---:|---:|
+| original | 66,7 % | 89,7 % | 0,775 | 0,853 | 84,6 % | 10,3 % |
+| flou (sigma 2,5 à 1 024 px) | 66,7 % | 87,2 % | 0,761 | 0,846 | 76,9 % | 7,7 % |
+| sombre (luminosité × 0,45) | 59,0 % | 84,6 % | 0,708 | 0,825 | 74,4 % | 10,3 % |
+| rotation 15° | 53,8 % | 76,9 % | 0,664 | 0,800 | 64,1 % | 15,4 % |
+| recadrage 60 % centré | 48,7 % | 79,5 % | 0,641 | 0,816 | 74,4 % | 15,4 % |
+| JPEG qualité 25 | 69,2 % | 87,2 % | 0,779 | 0,854 | 82,1 % | 7,7 % |
+| 320 px côté max | 69,2 % | 87,2 % | 0,768 | 0,859 | 84,6 % | 7,7 % |
+| flou + sombre | 56,4 % | 82,1 % | 0,678 | 0,822 | 71,8 % | 15,4 % |
+
+Ce que ça dit. La **compression** et la **basse résolution** ne coûtent rien : le modèle ramène de toute façon tout à
+224 px (§ 8), une photo de messagerie suffit. Le **flou** coûte peu au classement mais fait descendre le bon objet sous τ
+pour 8 % de requêtes en plus : l'agent verra plus souvent « non concluant ». La **sous-exposition** coûte 8 points de
+recall@1. Les deux conditions qui font mal sont géométriques : la **rotation** (−13 points) et le **cadrage partiel**
+(−18 points, et 15 % de « non concluant »). C'est exactement ce qu'une prise de vue guidée corrigerait à la source
+(cadre, horizon, objet entier), avant toute amélioration du modèle. Sur 39 requêtes, une requête vaut 2,6 points : les
+écarts inférieurs sont du bruit, les deux derniers ne le sont pas. Résultats dans `eval/robustness.json`.
 
 ## 17. Passage à l'échelle : l'inférence sur le poste, l'index sur le serveur
 

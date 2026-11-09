@@ -4,7 +4,8 @@
  *
  *   node scripts/build-data.mjs            # ~64 objets
  *   node scripts/build-data.mjs --max 40
- *   node scripts/build-data.mjs --reuse    # mêmes objets que le items.json existant
+ *   node scripts/build-data.mjs --reuse           # mêmes objets que le items.json existant
+ *   node scripts/build-data.mjs --metadata-only   # mêmes objets, vignettes et vecteurs conservés : seules les métadonnées sont refaites
  *
  * Produit :
  *   static/data/thumbs/<id>.jpg   vignettes 512 px
@@ -23,7 +24,8 @@ const MODEL = 'Xenova/clip-vit-base-patch32';
 /** Révision épinglée : la même que src/lib/ml/model.ts (vérifié par un test). */
 const REVISION = '6b7c523703ae26e39be4b03774966f8571c7f523';
 const MAX = Number(process.argv[process.argv.indexOf('--max') + 1]) || 64;
-const REUSE = process.argv.includes('--reuse');
+const METADATA_ONLY = process.argv.includes('--metadata-only');
+const REUSE = process.argv.includes('--reuse') || METADATA_ONLY;
 const PER_QUERY = 4;
 const THUMB_PX = 512;
 
@@ -45,28 +47,33 @@ const COUNTRY_BY_NAME = {
   afghanistan: 'AF', pakistan: 'PK', uzbekistan: 'UZ', georgia: 'GE', armenia: 'AM', poland: 'PL', austria: 'AT',
   switzerland: 'CH', hungary: 'HU', bulgaria: 'BG', romania: 'RO', serbia: 'RS', 'united states': 'US',
   colombia: 'CO', ecuador: 'EC', bolivia: 'BO', guatemala: 'GT', 'costa rica': 'CR', panama: 'PA', sudan: 'SD',
-  libya: 'LY', algeria: 'DZ', 'sri lanka': 'LK', nepal: 'NP', tibet: 'CN', vietnam: 'VN', cambodia: 'KH', myanmar: 'MM'
+  libya: 'LY', algeria: 'DZ', 'sri lanka': 'LK', nepal: 'NP', vietnam: 'VN', cambodia: 'KH', myanmar: 'MM'
 };
 const COUNTRY_BY_CULTURE = [
   ['ukrain', 'UA'], ['kiev', 'UA'], ['kyiv', 'UA'], ['russia', 'RU'], ['novgorod', 'RU'], ['moscow', 'RU'],
   ['greek', 'GR'], ['attic', 'GR'], ['corinth', 'GR'], ['cycladic', 'GR'], ['minoan', 'GR'], ['mycenaean', 'GR'],
   ['egypt', 'EG'], ['coptic', 'EG'], ['roman', 'IT'], ['etruscan', 'IT'], ['italian', 'IT'], ['venetian', 'IT'],
-  ['byzantine', 'TR'], ['ottoman', 'TR'], ['turkish', 'TR'], ['anatolia', 'TR'], ['iran', 'IR'], ['persian', 'IR'],
+  ['ottoman', 'TR'], ['turkish', 'TR'], ['anatolia', 'TR'], ['iran', 'IR'], ['persian', 'IR'],
   ['sasanian', 'IR'], ['safavid', 'IR'], ['chinese', 'CN'], ['china', 'CN'], ['peru', 'PE'], ['inca', 'PE'], ['moche', 'PE'],
   ['chimú', 'PE'], ['nazca', 'PE'], ['french', 'FR'], ['syria', 'SY'], ['mesopotamia', 'IQ'], ['assyrian', 'IQ'],
   ['babylon', 'IQ'], ['sumerian', 'IQ'], ['india', 'IN'], ['mughal', 'IN'], ['japan', 'JP'], ['german', 'DE'],
   ['spanish', 'ES'], ['british', 'GB'], ['english', 'GB'], ['netherland', 'NL'], ['dutch', 'NL'], ['flemish', 'BE'],
-  ['aztec', 'MX'], ['maya', 'MX'], ['mexic', 'MX'], ['cypriot', 'CY'], ['korea', 'KR'], ['tibet', 'CN'],
+  ['aztec', 'MX'], ['maya', 'MX'], ['mexic', 'MX'], ['cypriot', 'CY'], ['korea', 'KR'],
   ['armenia', 'AM'], ['georgia', 'GE'], ['polish', 'PL'], ['american', 'US'], ['nubia', 'SD'], ['edo', 'NG'],
   ['yoruba', 'NG'], ['kongo', 'CD'], ['dogon', 'ML'], ['akan', 'GH'], ['thai', 'TH'], ['khmer', 'KH'], ['balkan', 'RS'],
   ['bulgar', 'BG'], ['romania', 'RO'], ['hungar', 'HU'], ['austria', 'AT'], ['swiss', 'CH']
 ];
+/**
+ * Pays d'origine : le pays enregistré par le musée fait foi (basis « recorded »). À défaut, une règle de mots-clés
+ * sur la culture ou le style (basis « inferred »), et l'objet le dit. Pas de règle pour « byzantine » ni « tibet » :
+ * un empire sur trois continents et une région disputée ne se réduisent pas à un code ISO.
+ */
 function toOrigin(o) {
   const c = (o.country || '').toLowerCase().trim();
-  if (c && COUNTRY_BY_NAME[c]) return COUNTRY_BY_NAME[c];
-  const hay = `${o.culture} ${o.country} ${o.region} ${o.subregion} ${o.artistNationality}`.toLowerCase();
-  for (const [k, code] of COUNTRY_BY_CULTURE) if (hay.includes(k)) return code;
-  return '';
+  if (c && COUNTRY_BY_NAME[c]) return { origin: COUNTRY_BY_NAME[c], basis: 'recorded' };
+  const hay = `${o.culture} ${o.region} ${o.subregion} ${o.artistNationality}`.toLowerCase();
+  for (const [k, code] of COUNTRY_BY_CULTURE) if (hay.includes(k)) return { origin: code, basis: 'inferred' };
+  return { origin: '', basis: '' };
 }
 
 const CATEGORY_RULES = [
@@ -393,11 +400,11 @@ async function main() {
   const collected = await collect();
 
   console.log('résolution des lieux (Wikidata)');
-  await resolveCountries(collected.map(({ o }) => toOrigin(o)));
+  await resolveCountries(collected.map(({ o }) => toOrigin(o).origin));
   const gazetteer = new Map();
   const placeById = new Map();
   for (const { o } of collected) {
-    const { place, nodes } = await resolvePlace(o, toOrigin(o));
+    const { place, nodes } = await resolvePlace(o, toOrigin(o).origin);
     placeById.set(o.objectID, place);
     for (const n of nodes) gazetteer.set(n.id, n);
   }
@@ -411,31 +418,51 @@ async function main() {
   console.log(`écrit static/data/places.json (${Object.keys(places).length} lieux)`);
 
   env.allowLocalModels = false;
-  console.log('chargement du modèle', MODEL);
-  const processor = await AutoProcessor.from_pretrained(MODEL, { revision: REVISION });
-  const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { revision: REVISION, dtype: 'q8' });
+  let processor;
+  let vision;
+  /** --metadata-only : vecteurs repris de l'embeddings.bin existant, par identifiant. */
+  let previousVectors = null;
+  if (METADATA_ONLY) {
+    const prev = JSON.parse(await readFile('static/data/items.json', 'utf8'));
+    const all = new Float32Array((await readFile('static/data/embeddings.bin')).buffer.slice(0));
+    previousVectors = new Map(prev.items.map((it, i) => [it.id, all.subarray(i * prev.dim, (i + 1) * prev.dim)]));
+    console.log(`métadonnées seules : ${previousVectors.size} vecteurs repris, vignettes conservées`);
+  } else {
+    console.log('chargement du modèle', MODEL);
+    processor = await AutoProcessor.from_pretrained(MODEL, { revision: REVISION });
+    vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { revision: REVISION, dtype: 'q8' });
+  }
 
   const items = [];
   const vectors = [];
   for (const { o, category } of collected) {
     const id = String(o.objectID);
-    let img;
-    try {
-      img = await RawImage.read(o.primaryImageSmall);
-    } catch (e) {
-      console.warn('image illisible', id, e.message);
-      continue;
-    }
-    const scale = Math.min(1, THUMB_PX / Math.max(img.width, img.height));
-    const thumb = scale < 1 ? await img.resize(Math.round(img.width * scale), Math.round(img.height * scale)) : img;
-    await thumb.save(`static/data/thumbs/${id}.jpg`);
+    if (previousVectors) {
+      const v = previousVectors.get(id);
+      if (!v) {
+        console.warn('pas de vecteur existant pour', id, ': objet ignoré');
+        continue;
+      }
+      vectors.push(v);
+    } else {
+      let img;
+      try {
+        img = await RawImage.read(o.primaryImageSmall);
+      } catch (e) {
+        console.warn('image illisible', id, e.message);
+        continue;
+      }
+      const scale = Math.min(1, THUMB_PX / Math.max(img.width, img.height));
+      const thumb = scale < 1 ? await img.resize(Math.round(img.width * scale), Math.round(img.height * scale)) : img;
+      await thumb.save(`static/data/thumbs/${id}.jpg`);
 
-    // L'embedding est calculé sur la vignette telle que stockée (JPEG), pas sur l'image en mémoire :
-    // l'index doit décrire exactement l'artefact que l'on sert, sinon l'écart de compression se retrouve dans les scores.
-    const stored = await RawImage.read(`static/data/thumbs/${id}.jpg`);
-    const inputs = await processor(stored);
-    const { image_embeds } = await vision(inputs);
-    vectors.push(Float32Array.from(image_embeds.normalize(2, -1).data));
+      // L'embedding est calculé sur la vignette telle que stockée (JPEG), pas sur l'image en mémoire :
+      // l'index doit décrire exactement l'artefact que l'on sert, sinon l'écart de compression se retrouve dans les scores.
+      const stored = await RawImage.read(`static/data/thumbs/${id}.jpg`);
+      const inputs = await processor(stored);
+      const { image_embeds } = await vision(inputs);
+      vectors.push(Float32Array.from(image_embeds.normalize(2, -1).data));
+    }
 
     const medium = o.medium || '';
     items.push({
@@ -445,7 +472,8 @@ async function main() {
       thumbnailUrl: `data/thumbs/${id}.jpg`,
       metadata: {
         category,
-        origin: toOrigin(o),
+        origin: toOrigin(o).origin,
+        origin_basis: toOrigin(o).basis,
         place: placeById.get(o.objectID) ?? '',
         period: toPeriod(o),
         year: toYear(o),

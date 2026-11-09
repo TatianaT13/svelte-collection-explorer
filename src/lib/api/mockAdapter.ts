@@ -1,4 +1,4 @@
-import type { ArchiveReceipt, CollectionAdapter } from './adapter';
+import type { ArchiveReceipt, CollectionAdapter, CollectionInfo } from './adapter';
 import type { ImageInfo } from './imageInfo';
 import type { CollectionItem, FacetValues, SearchQuery, SearchResult } from './types';
 import { countryName } from '#lib/config/countries.ts';
@@ -99,6 +99,10 @@ function delay(ms: number) {
 }
 
 export const mockAdapter: CollectionAdapter = {
+  async info(): Promise<CollectionInfo> {
+    return { model: 'aucun (données simulées)', count: RAW.length, engine: 'mock' };
+  },
+
   async search(query: SearchQuery): Promise<SearchResult> {
     await delay(300);
     let results = RAW.map(present).filter((it) => matchesFilters(it, query.filters) && matchesText(it, query.text, i18n.locale));

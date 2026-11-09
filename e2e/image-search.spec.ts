@@ -73,4 +73,21 @@ test.describe('Recherche par image', () => {
       expect(errors).toEqual([]);
     });
   }
+
+  test('une description en mots retrouve le lectionnaire en premier (tour texte de CLIP)', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await serveModelFromCache(page);
+    await page.goto('./');
+    await expect(page.locator('article.card').first()).toBeVisible();
+    await page.locator('button.mode').click();
+    await expect(page.locator('button.mode')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('input[type=search]').fill('manuscrit enluminé');
+    await expect(page.locator('article.card .score').first()).toBeVisible({ timeout: 240_000 });
+    await expect(page.locator('.status')).toContainText(/similarit/);
+    await expect(page.locator('article.card .title').first()).toHaveText(/Lectionary/);
+    // Pas de lecture agrégée en mode description : τ est calibré image contre image.
+    await expect(page.locator('section.insights')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
 });

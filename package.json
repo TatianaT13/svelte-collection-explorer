@@ -23,7 +23,8 @@
     "lint": "eslint .",
     "prepare": "git config core.hooksPath .githooks || true",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "robustness": "node scripts/robustness.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -37,6 +38,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-svelte": "^3.24.1",
     "globals": "^17.14.0",
+    "sharp": "^0.35.5",
     "svelte": "^5.57.2",
     "svelte-check": "^4.7.5",
     "typescript": "^6.0.0",

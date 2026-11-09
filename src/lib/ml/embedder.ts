@@ -68,6 +68,16 @@ function getWorker(): Worker | null {
   return worker;
 }
 
+/** Repli sans worker (anciens navigateurs) : tour texte. */
+async function embedTextInline(text: string): Promise<Float32Array> {
+  const { AutoTokenizer, CLIPTextModelWithProjection, env } = await import('@huggingface/transformers');
+  env.allowLocalModels = false;
+  const tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID, { revision: MODEL_REVISION });
+  const model = await CLIPTextModelWithProjection.from_pretrained(MODEL_ID, { revision: MODEL_REVISION, dtype: 'q8' });
+  const { text_embeds } = await model(tokenizer(text, { padding: true, truncation: true }));
+  return new Float32Array(text_embeds.normalize(2, -1).data as Float32Array);
+}
+
 /** Repli sans worker (anciens navigateurs). */
 async function embedInline(file: Blob): Promise<Float32Array> {
   modelStatus.loading(0);
@@ -97,6 +107,33 @@ export function embedImage(file: Blob): Promise<Float32Array> {
     if (workerFailed) return embedInline(file);
     throw e;
   });
+}
+
+/**
+ * Vecteur normalisé (512 dimensions) d'une description textuelle, dans le même espace que les images.
+ * Les scores texte → image sont plus bas que image → image (0,2 à 0,35 pour une bonne correspondance) :
+ * ils classent, ils ne se comparent pas à τ.
+ */
+export function embedText(text: string): Promise<Float32Array> {
+  const w = getWorker();
+  if (!w) return embedTextInline(text);
+  const id = nextId++;
+  return new Promise<Float32Array>((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    w.postMessage({ id, type: 'embedText', text });
+  }).catch(async (e) => {
+    if (workerFailed) return embedTextInline(text);
+    throw e;
+  });
+}
+
+/** Lance le chargement de la tour texte en avance (dès que le mode « par description » est activé). */
+export function preloadTextModel(): void {
+  const w = getWorker();
+  if (!w) return;
+  const id = nextId++;
+  pending.set(id, { resolve: () => {}, reject: () => {} });
+  w.postMessage({ id, type: 'loadText' });
 }
 
 /** Lance le chargement du modèle en avance (par exemple dès qu'une image est choisie). */

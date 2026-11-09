@@ -44,6 +44,7 @@
   let ready = $state(false);
   let text = $state(''); // saisie
   let query = $state(''); // saisie après délai, utilisée pour chercher
+  let semantic = $state(false); // le texte décrit l'objet (vecteur CLIP) au lieu de filtrer les métadonnées
   let filters = $state<ActiveFilters>({});
   let pageNo = $state(1);
   let image = $state<File | null>(null); // original : aperçu + métadonnées + archivage
@@ -99,7 +100,7 @@
     error = null;
     try {
       const info = imageInfo ? (includeGps ? imageInfo : withoutGps(imageInfo)) : undefined;
-      const res = await api.search({ text: query, image: imageToSend?.file, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
+      const res = await api.search({ text: query, semantic, image: imageToSend?.file, imageInfo: info, filters, page: pageNo, pageSize: schema.pageSize });
       if (id === requestId) result = res;
     } catch (e) {
       if (id === requestId) error = e instanceof Error ? e.message : i18n.t('error.unknown');
@@ -323,7 +324,7 @@
         <input
           bind:this={searchEl}
           type="search"
-          placeholder={i18n.t('search.placeholder')}
+          placeholder={i18n.t(semantic ? 'search.semanticPlaceholder' : 'search.placeholder')}
           aria-label={i18n.t('search.label')}
           bind:value={text}
           oninput={resetPage}
@@ -334,6 +335,16 @@
           <kbd title={i18n.t('search.hint')}>/</kbd>
         {/if}
       </div>
+      <button
+        type="button"
+        class="filters-btn mode"
+        aria-pressed={semantic}
+        title={i18n.t('search.semanticHint')}
+        onclick={() => {
+          semantic = !semantic;
+          if (semantic) import('#lib/ml/embedder.ts').then(({ preloadTextModel }) => preloadTextModel());
+          resetPage();
+        }}>{i18n.t('search.semantic')}</button>
       <button type="button" class="filters-btn" onclick={() => (filtersOpen = true)}>
         {i18n.t('filters.title')} {#if activeFilterCount}<span class="badge">{activeFilterCount}</span>{/if}
       </button>
@@ -353,7 +364,7 @@
       <span class="status" aria-live="polite">
         {#if result}
           <strong>{result.total}</strong> {i18n.t('results.count', { n: result.total }).replace(/^\d+\s*/, '')}
-          {#if image}<span class="muted"> · {i18n.t('results.bySimilarity')}</span>{/if}
+          {#if image || (semantic && query)}<span class="muted"> · {i18n.t('results.bySimilarity')}</span>{/if}
         {:else}
           &nbsp;
         {/if}
@@ -500,6 +511,25 @@
   }
   .filters-btn {
     display: none;
+  }
+  /* Bascule « par description » : visible à toutes les tailles, même habillage que le bouton de filtres mobile. */
+  .mode {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mode[aria-pressed='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
   }
   .badge {
     display: inline-block;
