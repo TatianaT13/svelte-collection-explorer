@@ -76,9 +76,29 @@ test.describe('Explorer', () => {
     const m = (await page.locator('.leaflet-container').boundingBox())!;
     const x = Math.max(d.x, m.x) + 10;
     const y = Math.max(d.y, m.y) + 10;
-    expect(x).toBeLessThan(Math.min(d.x + d.width, m.x + m.width)); // les deux se chevauchent bien dans ce test
-    const onTop = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('[role=dialog]') !== null, [x, y]);
-    expect(onTop).toBe(true);
+    const overlap = x < Math.min(d.x + d.width, m.x + m.width) && y < Math.min(d.y + d.height, m.y + m.height);
+    if (overlap) {
+      const onTop = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('[role=dialog]') !== null, [x, y]);
+      expect(onTop).toBe(true);
+    } else {
+      // Grand écran : le volet pousse le contenu, il n'y a plus de chevauchement du tout.
+      expect(d.x).toBeGreaterThanOrEqual(m.x + m.width - 1);
+    }
+  });
+
+  test('cliquer un point de la carte filtre sur ce lieu', async ({ page }) => {
+    await page.goto('./');
+    await expect(page.locator('article.card').first()).toBeVisible();
+    await page.locator('.map-toggle').click();
+    await expect(page.locator('.leaflet-interactive').first()).toBeVisible();
+    await expect(page.locator('.map .legend')).toContainText(/filtrer/);
+    // Le dernier cercle dessiné est au-dessus des autres : c'est celui qui reçoit le clic.
+    await page.locator('.leaflet-interactive').last().click();
+    await expect(page.locator('.chips .chip .v')).toHaveCount(1);
+    await expect(page).toHaveURL(/place=/);
+    const count = await page.locator('article.card').count();
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThan(64);
   });
 
   test('bascule de langue persistante', async ({ page }) => {

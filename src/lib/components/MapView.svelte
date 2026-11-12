@@ -22,6 +22,8 @@
   let layer: import('leaflet').LayerGroup | null = null;
   let Lmod: typeof import('leaflet') | null = null;
   let ready = $state(false);
+  /** Sans recherche par image, aucun lieu n'a de score : la légende des couleurs n'a rien à dire. */
+  const hasScores = $derived(buckets.some((b) => b.bestScore !== undefined));
 
   onMount(() => {
     let alive = true;
@@ -72,7 +74,7 @@
       });
       const title = places.fullLabel(b.place, lang);
       const score = b.bestScore !== undefined ? ` · ${i18n.t('map.best', { pct: Math.round(b.bestScore * 100) })}` : '';
-      m.bindTooltip(`<b>${title}</b><br>${i18n.t('map.objects', { n: b.count })}${score}${isCountry ? `<br><i>${i18n.t('map.countryOnly')}</i>` : ''}`, { direction: 'top' });
+      m.bindTooltip(`<b>${title}</b><br>${i18n.t('map.objects', { n: b.count })}${score}${isCountry ? `<br><i>${i18n.t('map.countryOnly')}</i>` : ''}${onselect ? `<br><i>${i18n.t('map.clickHint')}</i>` : ''}`, { direction: 'top' });
       m.on('click', () => onselect?.(b.place));
       m.addTo(layer);
       bounds.push([n.lat, n.lon]);
@@ -98,11 +100,16 @@
 <div class="map">
   <div bind:this={el} class="canvas" role="region" aria-label={i18n.t('map.title')}></div>
   <div class="legend">
-    <span><i class="dot strong"></i>{i18n.t('score.strong')}</span>
-    <span><i class="dot medium"></i>{i18n.t('score.medium')}</span>
-    <span><i class="dot weak"></i>{i18n.t('score.weak')}</span>
+    {#if hasScores}
+      <span><i class="dot strong"></i>{i18n.t('score.strong')}</span>
+      <span><i class="dot medium"></i>{i18n.t('score.medium')}</span>
+      <span><i class="dot weak"></i>{i18n.t('score.weak')}</span>
+    {:else}
+      <span><i class="dot plain"></i>{i18n.t('map.sizeHint')}</span>
+    {/if}
     <span><i class="dot country"></i>{i18n.t('map.countryOnly')}</span>
     {#if photo}<span><i class="dot photo"></i>{i18n.t('map.photo')}</span>{/if}
+    {#if onselect}<span class="hint">{i18n.t('map.clickHint')}</span>{/if}
   </div>
 </div>
 
@@ -145,7 +152,9 @@
   .dot.strong { background: #0f7b70; }
   .dot.medium { background: #3457d5; }
   .dot.weak { background: #9a9ea6; }
+  .dot.plain { background: var(--accent); }
   .dot.country { border: 2px dashed var(--muted); }
+  .hint { margin-left: auto; font-style: italic; }
   .dot.photo { background: #fff; border: 3px solid #b42318; }
   :global(.leaflet-container) {
     font: inherit;

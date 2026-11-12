@@ -190,6 +190,14 @@
     margin: 0 auto;
     padding: 1.25rem 1.25rem 6rem;
   }
+  /* Volet de détail ouvert sur grand écran : la page se rétrécit de la largeur du volet (520 px) au lieu d'être recouverte. */
+  @media (min-width: 1400px) {
+    :global(html.drawer-open) main {
+      max-width: calc(1240px + 520px);
+      padding-right: 520px;
+      transition: padding-right 0.2s ease;
+    }
+  }
   @media (max-width: 520px) {
     .brand :global(.word) { display: none; }
   }

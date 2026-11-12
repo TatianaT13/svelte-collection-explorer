@@ -261,6 +261,22 @@ mais 8 % de « non concluant » en plus. Sous-exposition : −8 points de recall
 prise de vue guidée comme prochain gain, avant tout changement de modèle. Table dans le README § 16, données dans
 `eval/robustness.json`. — fait
 
+## Retours d'écran (12 novembre 2026)
+
+Sur une capture de l'explorateur avec un filtre de lieu, la carte et le volet ouverts :
+
+- La carte passait devant le volet (couches Leaflet à z-index 400 et 1000) : contexte d'empilement isolé sur le conteneur. — fait
+- La légende « forte · moyenne · faible » s'affichait sans recherche par image, alors qu'aucun point n'a de score :
+  elle ne s'affiche qu'avec des scores, sinon « un point par lieu, taille selon le nombre d'objets ». — fait
+- Une carte de résultat seule devenait un poster : largeur plafonnée à 360 px. — fait
+- Le volet recouvrait la moitié de la liste sur grand écran : au-delà de 1 400 px il pousse le contenu, sans voile, la
+  liste et la carte restent cliquables. — fait
+- Le numéro d'inventaire n'était pas nommé : « inv. » et lien vers la fiche du musée. — fait
+- Le clic sur un point de la carte filtrait déjà sur ce lieu mais rien ne le disait : annoncé dans l'infobulle et la
+  légende, vérifié par un parcours. — fait
+- Non fait : « chercher dans cette zone » (filtre par emprise de carte), qui demanderait un filtre géographique dans les
+  deux adapters et le service.
+
 ## Réserves
 
 Les gains cités viennent de benchmarks de monuments (Oxford, Paris), pas d'antiquités : ils se

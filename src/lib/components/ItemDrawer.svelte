@@ -45,19 +45,30 @@
     }
   }
 
+  /** Grand écran : le volet pousse le contenu (classe sur <html>, voir +layout.svelte) au lieu de le recouvrir ; la liste reste lisible et cliquable. */
+  const WIDE = '(min-width: 1400px)';
+
   $effect(() => {
     if (!item) return;
+    const wide = window.matchMedia(WIDE).matches;
     const opener = document.activeElement as HTMLElement | null;
     closeBtn?.focus();
+    document.documentElement.classList.add('drawer-open');
     const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', trapTab);
+    if (!wide) {
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', trapTab);
+    }
     return () => {
+      document.documentElement.classList.remove('drawer-open');
       document.body.style.overflow = prev;
       document.removeEventListener('keydown', trapTab);
       opener?.focus?.();
     };
   });
+
+  /** Lien vers la fiche du musée, s'il y en a un dans la source. */
+  const museumUrl = $derived(item ? (String(item.metadata.source ?? '').match(/https?:\/\/\S+/)?.[0] ?? null) : null);
 
   const selected = $derived(item ? compare.has(item.id) : false);
   const origin = $derived(item ? String(item.metadata.origin ?? '') : '');
@@ -72,7 +83,8 @@
         <h2 id="drawer-title">{item.title}</h2>
         <p class="sub">
           {#if origin}<span class="flag" aria-hidden="true">{flagEmoji(origin)}</span>{/if}
-          <span class="mono">{item.metadata.inventory ?? item.id}</span>
+          <span class="mono">{i18n.t('drawer.inventory')} {item.metadata.inventory ?? item.id}</span>
+          {#if museumUrl}<a class="record" href={museumUrl} target="_blank" rel="noopener">{i18n.t('drawer.museumRecord')} ↗</a>{/if}
         </p>
       </div>
       <button bind:this={closeBtn} type="button" class="close" aria-label={i18n.t('drawer.close')} onclick={onclose}>×</button>
@@ -127,6 +139,21 @@
     inset: 0;
     z-index: 40;
     background: rgb(0 0 0 / 0.35);
+  }
+  /* Grand écran : pas de voile, le contenu est poussé (+layout.svelte) et reste utilisable. */
+  @media (min-width: 1400px) {
+    .backdrop {
+      display: none;
+    }
+  }
+  .record {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .record:hover {
+    text-decoration: underline;
   }
   .drawer {
     position: fixed;

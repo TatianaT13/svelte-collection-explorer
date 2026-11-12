@@ -604,6 +604,11 @@
     gap: 1rem;
     transition: opacity 0.15s;
   }
+  /* Un ou deux résultats : la cellule s'étire, pas la carte. */
+  .grid > :global(.card) {
+    width: 100%;
+    max-width: 360px;
+  }
   .grid.dim {
     opacity: 0.6;
   }
