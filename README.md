@@ -581,6 +581,15 @@ experte, avec filtres et comparaison.
 
 ---
 
+**Prise de vue guidée.** Le bouton « Prise de vue guidée » (quand le navigateur donne accès à la caméra) ouvre le
+flux vidéo plein écran avec un cadre à remplir et des mesures en direct, toutes les 300 ms sur une réduction à 256 px
+(`measureFrame`) : netteté, exposition, contraste, reflets, et deux mesures propres au direct, **l'objet coupé par le
+bord** (énergie des contours dans la bande extérieure du cadre rapportée à la moyenne, seuil `cutEdges`) et
+**l'inclinaison** (capteur d'orientation, seuil `maxTilt`). Le déclencheur reste toujours actif : on conseille, on ne
+bloque pas. Pourquoi ces deux mesures-là : la robustesse mesurée (§ 16) montre que le cadrage partiel et la rotation
+coûtent 18 et 13 points de recall@1, le flou et la compression presque rien. Corriger la prise de vue à la source vaut
+plus que changer de modèle. Vérifié par un parcours Playwright avec la caméra factice de Chromium.
+
 ## 10. Métadonnées des images
 
 `src/lib/api/imageInfo.ts` lit, côté client, EXIF/IPTC/XMP (librairie `exifr`), les dimensions
@@ -630,6 +639,7 @@ Quelques mécanismes qui font la différence à l'usage, et comment ils sont fai
 | Recadrer la photo avant recherche | `ImageUpload.svelte` | cadre tracé au pointeur sur l'aperçu, découpe dans un canvas, l'original est conservé |
 | Position GPS exclue par défaut | `+page.svelte` | `includeGps = false` : la position ne part que si l'agent le demande |
 | Délai sur la saisie (250 ms) | `+page.svelte` | `$effect` avec `setTimeout` et nettoyage : `text` (saisie) alimente `query` (recherche) |
+| Prise de vue guidée | `GuidedCapture.svelte` | flux caméra, cadre, mesures en direct, horizon ; déclencheur toujours actif ; JPEG à la résolution du flux |
 | Carte des résultats | `MapView.svelte` | un cercle par lieu, taille selon le nombre d'objets ; couleur selon le meilleur score seulement quand il y a une recherche par image (sinon la légende le dit) ; **cliquer un cercle filtre sur ce lieu**, et la légende l'annonce |
 | Volet de détail | `ItemDrawer.svelte` | sous 1 400 px, volet modal avec voile ; au-delà, il **pousse** le contenu (classe `drawer-open` sur `<html>`, `+layout.svelte`) : la liste et la carte restent visibles et cliquables ; inventaire nommé (« inv. ») avec lien vers la fiche du musée |
 | Export du dossier et impression | `compare/+page.svelte`, `utils/caseFile.ts` | JSON rejouable : modèle et révision du navigateur, base interrogée (`adapter.info()` : modèle, taille, date, moteur), seuils en vigueur (τ calibré et sa source), photo de référence (empreinte, pas l'image), lecture (meilleur score, fiabilité, ensemble conforme, risques) et candidats avec scores ; feuille de style `@media print` pour un PDF propre |
@@ -734,8 +744,8 @@ Trois niveaux, exécutés par le workflow avant chaque déploiement, plus la mes
 - `npm run evaluate`, `npm run calibrate`, `npm run robustness` : mesures de la recherche par image (§ 16). Elles téléchargent les
   modèles, donc elles vivent dans leur propre workflow (`evaluation.yml`, § 14) et non dans le déploiement.
 - `npm run test:e2e` : Playwright sur le build statique servi sous le chemin de base de GitHub Pages
-  (`e2e/`, Chromium, et WebKit pour les parcours d'interface afin de couvrir Safari). Dix parcours : filtres et URL partageable, recherche texte avec délai, attributs
-  cochables, volet puis comparaison, volet au-dessus de la carte (contexte d'empilement de Leaflet), bascule de langue, page de contrôle, **deux recherches par image réelles** (le
+  (`e2e/`, Chromium, et WebKit pour les parcours d'interface afin de couvrir Safari). Douze parcours : filtres et URL partageable, recherche texte avec délai, attributs
+  cochables, volet puis comparaison, volet au-dessus de la carte (contexte d'empilement de Leaflet), clic sur la carte qui filtre, bascule de langue, page de contrôle, prise de vue guidée avec la caméra factice de Chromium, **deux recherches par image réelles** (le
   modèle CLIP est chargé dans le worker du navigateur, une vue alternative d'un objet du corpus est vectorisée, et
   l'objet doit sortir en premier avec le panneau de lecture affiché et aucune erreur de console) et **une recherche par
   description** (« manuscrit enluminé » doit rendre le lectionnaire en premier). Les poids

@@ -18,7 +18,8 @@ export default defineConfig({
     timeout: 60_000
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium' } },
+    // Caméra factice (mire animée) : le parcours de prise de vue guidée tourne sans matériel.
+    { name: 'chromium', use: { browserName: 'chromium', permissions: ['camera'], launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } } },
     // Les parcours d'interface tournent aussi dans WebKit (Safari) : empilement, position fixe et filtres s'y comportent
     // différemment. La recherche par image reste sur Chromium seul pour ne charger le modèle qu'une fois.
     { name: 'webkit', use: { browserName: 'webkit', viewport: { width: 1600, height: 1000 } }, testMatch: /explore\.spec\.ts/ }

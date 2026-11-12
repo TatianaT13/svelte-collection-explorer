@@ -4,7 +4,9 @@
    * tracer un cadre sur l'aperçu limite la recherche à cette zone.
    * `file` est toujours l'original ; `oncrop` reçoit la zone découpée (ou null).
    */
+  import { onMount } from 'svelte';
   import { i18n } from '#lib/i18n/index.svelte.ts';
+  import GuidedCapture from './GuidedCapture.svelte';
 
   let {
     file = $bindable<File | null>(null),
@@ -21,6 +23,12 @@
   }
 
   let dragging = $state(false);
+  // Prise de vue guidée : flux caméra avec cadre et mesures en direct, quand le navigateur donne accès à la caméra.
+  let canGuide = $state(false);
+  let guided = $state(false);
+  onMount(() => {
+    canGuide = !!navigator.mediaDevices?.getUserMedia;
+  });
   let inputEl: HTMLInputElement;
   let cameraEl: HTMLInputElement;
   let imgEl = $state<HTMLImageElement | null>(null);
@@ -175,8 +183,24 @@
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
       {i18n.t('upload.camera')}
     </button>
+    {#if canGuide}
+      <button type="button" class="camera guided" onclick={() => (guided = true)}>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="3.5"/></svg>
+        {i18n.t('upload.guided')}
+      </button>
+    {/if}
   {/if}
 </div>
+
+{#if guided}
+  <GuidedCapture
+    onconfirm={(f) => {
+      guided = false;
+      setFile(f);
+    }}
+    oncancel={() => (guided = false)}
+  />
+{/if}
 
 <style>
   .dropzone {
@@ -309,5 +333,10 @@
     .camera {
       display: inline-flex;
     }
+  }
+  /* La prise de vue guidée vaut partout où la caméra est accessible, y compris sur un portable avec webcam. */
+  .dropzone .guided {
+    display: inline-flex;
+    margin-left: 0.5rem;
   }
 </style>

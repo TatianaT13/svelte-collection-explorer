@@ -49,7 +49,7 @@ est de l'arithmétique sur des tableaux de 512 nombres.
 
 | Entrée | Transformation | Sortie | Où |
 |---|---|---|---|
-| `File` du téléphone, 12 Mpx, 4 à 8 Mo, JPEG ou HEIC converti | Dépôt ou prise de vue, zone optionnelle (`oncrop`) | L'original reste en mémoire ; un `File` recadré éventuel `-zone.jpg` | `src/lib/components/ImageUpload.svelte` |
+| `File` du téléphone, 12 Mpx, 4 à 8 Mo, JPEG ou HEIC converti | Dépôt, prise de vue, ou **prise de vue guidée** (flux caméra, cadre à remplir, mesures en direct toutes les 300 ms sur une réduction à 256 px : netteté, exposition, reflets, contours au bord du cadre, inclinaison) ; zone optionnelle (`oncrop`) | L'original reste en mémoire ; un `File` recadré éventuel `-zone.jpg` | `src/lib/components/ImageUpload.svelte`, `GuidedCapture.svelte` |
 
 Dès que la souris survole la zone de dépôt, le modèle commence à se télécharger (90 Mo, une fois, puis
 cache du navigateur) : `ImageUpload.svelte:17-20` → `preloadModel()`.

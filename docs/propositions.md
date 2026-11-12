@@ -277,6 +277,16 @@ Sur une capture de l'explorateur avec un filtre de lieu, la carte et le volet ou
 - Non fait : « chercher dans cette zone » (filtre par emprise de carte), qui demanderait un filtre géographique dans les
   deux adapters et le service.
 
+## Prise de vue guidée (12 novembre 2026)
+
+`GuidedCapture.svelte`, ouvert depuis la zone de dépôt quand la caméra est accessible : flux plein écran, cadre à
+remplir, mesures en direct toutes les 300 ms (netteté, exposition, contraste, reflets), plus deux mesures propres au
+direct choisies d'après la robustesse mesurée : **objet coupé par le bord** (énergie des contours dans la bande
+extérieure du cadre, seuil `cutEdges` = 0,6, testé sur images synthétiques ; un fond encombré jusqu'au bord déclenche le même conseil) et **inclinaison** (capteur d'orientation,
+seuil `maxTilt` = 6°). Le déclencheur ne bloque jamais. Parcours Playwright avec la caméra factice de Chromium. Non
+mesuré : l'effet réel sur le terrain, qui demande des photos d'agents ; la mesure de robustesse dit seulement que ce
+sont les bons défauts à viser. — fait
+
 ## Réserves
 
 Les gains cités viennent de benchmarks de monuments (Oxford, Paris), pas d'antiquités : ils se

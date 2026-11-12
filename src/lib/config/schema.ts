@@ -105,6 +105,9 @@ export interface PhotoQualityPolicy {
   lowContrast: number;
   /** Part de pixels saturés au-delà de laquelle on suspecte des reflets. */
   clipped: number;
+  /** Prise de vue guidée : seuil de contours au bord (objet coupé) et inclinaison maximale en degrés. */
+  cutEdges?: number;
+  maxTilt?: number;
 }
 
 export interface CollectionSchema {
@@ -145,7 +148,8 @@ export const schema: CollectionSchema = {
   },
   upload: { maxPx: 1600, skipBelowBytes: 2 * 1024 * 1024, quality: 0.85 },
   // Calibré sur des photos de test : nette 0,08–0,16, floutée 0,001 ; contraste d'un tableau aux tons doux ≈ 20.
-  photoQuality: { minSide: 300, blur: 0.02, dark: 55, bright: 205, lowContrast: 15, clipped: 0.25 },
+  // cutEdges et maxTilt ne servent qu'en prise de vue guidée (flux caméra) : contours au bord du cadre, inclinaison.
+  photoQuality: { minSide: 300, blur: 0.02, dark: 55, bright: 205, lowContrast: 15, clipped: 0.25, cutEdges: 0.6, maxTilt: 6 },
   fields: [
     { key: 'category', label: { fr: 'Type d’objet', en: 'Object type' }, kind: 'vocab', vocabulary: 'category', showOnCard: true, filterable: true, group: G.identification },
     { key: 'origin', label: { fr: 'Origine', en: 'Origin' }, kind: 'country', showOnCard: true, filterable: true, group: G.identification },
