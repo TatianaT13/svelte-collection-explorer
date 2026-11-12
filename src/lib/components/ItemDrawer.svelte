@@ -10,6 +10,7 @@
   import { fallbackToThumb } from '#lib/utils/imgFallback.ts';
   import { riskFor } from '#lib/config/risk.ts';
   import ScoreRing from './ScoreRing.svelte';
+  import { portal } from '#lib/utils/portal.ts';
 
   let {
     item,
@@ -76,6 +77,8 @@
 </script>
 
 {#if item}
+  <!-- Sous <body> (use:portal) : aucun ancêtre ne peut enfermer le volet dans une colonne. -->
+  <div use:portal>
   <div class="backdrop" transition:fade={{ duration: 150 }} onclick={onclose} aria-hidden="true"></div>
   <div bind:this={drawerEl} class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" transition:fly={{ x: 40, duration: 200 }}>
     <header>
@@ -130,6 +133,7 @@
         {selected ? i18n.t('drawer.removeCompare') : i18n.t('drawer.addCompare')}
       </button>
     </footer>
+  </div>
   </div>
 {/if}
 

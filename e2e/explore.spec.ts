@@ -48,6 +48,7 @@ test.describe('Explorer', () => {
     await page.locator('article.card .title').first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
+    expect(await dialog.evaluate((el) => el.parentElement?.parentElement === document.body)).toBe(true); // monté sous <body>
     await expect(dialog.locator('h3').first()).toHaveText(/identification/i);
     await dialog.locator('footer button').click();
     await page.keyboard.press('Escape');

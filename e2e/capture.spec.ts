@@ -9,6 +9,11 @@ test('prise de vue guidée : caméra, mesures en direct, déclenchement', async 
   const capture = page.locator('.capture');
   await expect(capture).toBeVisible();
   await expect(capture.locator('video')).toBeVisible();
+  // Plein écran, quel que soit l'endroit du bouton dans la page : monté sous <body>.
+  const box = (await capture.boundingBox())!;
+  const vp = page.viewportSize()!;
+  expect([Math.round(box.x), Math.round(box.y), Math.round(box.width), Math.round(box.height)]).toEqual([0, 0, vp.width, vp.height]);
+  expect(await capture.evaluate((el) => el.parentElement === document.body)).toBe(true);
   await expect(capture.locator('.status.measured')).toBeVisible({ timeout: 15_000 });
 
   await capture.locator('.shutter').click();

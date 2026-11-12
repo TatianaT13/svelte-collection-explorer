@@ -10,6 +10,7 @@
   import { i18n } from '#lib/i18n/index.svelte.ts';
   import { schema } from '#lib/config/schema.ts';
   import { assessPhoto, measureFrame, type QualityIssue } from '#lib/utils/photoQuality.ts';
+  import { portal } from '#lib/utils/portal.ts';
 
   let { onconfirm, oncancel }: { onconfirm: (f: File) => void; oncancel: () => void } = $props();
 
@@ -91,7 +92,7 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && oncancel()} />
 
-<div class="capture" role="dialog" aria-modal="true" aria-label={i18n.t('capture.title')}>
+<div class="capture" use:portal role="dialog" aria-modal="true" aria-label={i18n.t('capture.title')}>
   <video bind:this={video} autoplay playsinline muted></video>
   <div class="frame" aria-hidden="true"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 
