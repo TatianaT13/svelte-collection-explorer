@@ -31,7 +31,7 @@
     "@huggingface/transformers": "^4.3.2",
     "@playwright/test": "^1.65.0",
     "@sveltejs/adapter-static": "^4.0.0",
-    "@sveltejs/kit": "^3.0.0",
+    "@sveltejs/kit": "^3.2.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@types/leaflet": "^1.9.22",
     "@vitest/coverage-v8": "^5.1.0",
@@ -42,8 +42,8 @@
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
     "typescript": "^6.0.0",
-    "typescript-eslint": "^8.72.1",
-    "vite": "^8.0.12",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   },
   "dependencies": {
