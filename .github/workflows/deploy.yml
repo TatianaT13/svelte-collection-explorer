@@ -57,9 +57,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-          cache: pip
-          cache-dependency-path: service/requirements.txt
+      # hnswlib se compile avec les instructions du processeur de la machine qui l'installe (-march=native) : une roue
+      # mise en cache puis restaurée sur un autre type de runner plante à l'import (« Illegal instruction »). Donc pas de
+      # cache pip ici, et compilation portable.
       - run: pip install -r service/requirements.txt
+        env:
+          HNSWLIB_NO_NATIVE: '1'
       - run: python -m pytest service -q
 
   deploy:
